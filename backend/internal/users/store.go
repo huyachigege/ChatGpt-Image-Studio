@@ -230,7 +230,7 @@ func (s *Store) Authenticate(ctx context.Context, username, password string) (*U
 	var user User
 	var hash string
 	var disabledAt string
-	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,password_hash,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE username = ? OR email = ?`, username, username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id,COALESCE(username, ''),COALESCE(email, ''),COALESCE(name, ''),password_hash,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE username = ? OR email = ?`, username, username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("用户名或密码不正确")
 	}
@@ -270,7 +270,7 @@ func (s *Store) UserBySession(ctx context.Context, token string) (*User, error) 
 	var user User
 	var expiresAt string
 	var disabledAt string
-	err := s.db.QueryRowContext(ctx, `SELECT u.id,u.username,u.email,u.name,u.role,u.image_api_key,u.created_at,s.expires_at,COALESCE(u.disabled_at, '') FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt, &disabledAt)
+	err := s.db.QueryRowContext(ctx, `SELECT u.id,COALESCE(u.username, ''),COALESCE(u.email, ''),COALESCE(u.name, ''),u.role,u.image_api_key,u.created_at,s.expires_at,COALESCE(u.disabled_at, '') FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("session not found")
 	}
@@ -298,7 +298,7 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 	}
 	var user User
 	var disabledAt string
-	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id,COALESCE(username, ''),COALESCE(email, ''),COALESCE(name, ''),role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("image api key not found")
 	}
@@ -315,7 +315,7 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 }
 
 func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users ORDER BY created_at DESC`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,COALESCE(username, ''),COALESCE(email, ''),COALESCE(name, ''),role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
@@ -391,7 +391,7 @@ func (s *Store) CreateInvite(ctx context.Context, createdBy string) (*Invite, er
 }
 
 func (s *Store) ListInvites(ctx context.Context) ([]Invite, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT i.code,i.created_by,i.created_at,i.used_by_user_id,i.used_at,u.username,u.name FROM app_invites i LEFT JOIN app_users u ON u.id = i.used_by_user_id ORDER BY i.created_at DESC`)
+	rows, err := s.db.QueryContext(ctx, `SELECT i.code,COALESCE(i.created_by, ''),COALESCE(i.created_at, ''),COALESCE(i.used_by_user_id, ''),COALESCE(i.used_at, ''),COALESCE(u.username, ''),COALESCE(u.name, '') FROM app_invites i LEFT JOIN app_users u ON u.id = i.used_by_user_id ORDER BY i.created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
