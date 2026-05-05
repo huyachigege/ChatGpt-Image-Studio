@@ -7,7 +7,8 @@ export const AUTH_USER_STORAGE_KEY = "chatgpt2api_auth_user";
 
 export type AuthUser = {
   id: string;
-  email: string;
+  username?: string;
+  email?: string;
   name?: string;
   role: "admin" | "user" | string;
   imageApiKey?: string;

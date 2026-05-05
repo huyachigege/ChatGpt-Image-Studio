@@ -6,7 +6,7 @@ import { Activity, ChevronLeft, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen
 
 import webConfig from "@/constants/common-env";
 import { fetchVersionInfo } from "@/lib/api";
-import { clearStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
+import { clearStoredAuthKey, getStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 
@@ -65,8 +65,9 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogou
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const visibleNavItems = user?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"));
   const apiBaseUrl = webConfig.apiUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
-  const requestExample = user?.imageApiKey
-    ? `curl ${apiBaseUrl.replace(/\/$/, "")}/v1/images/generations \\\n  -H "Authorization: Bearer ${user.imageApiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
+  const exampleToken = user?.imageApiKey ?? "";
+  const requestExample = exampleToken
+    ? `curl ${apiBaseUrl.replace(/\/$/, "")}/v1/images/generations \\\n  -H "Authorization: Bearer ${exampleToken}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
     : "";
 
   return (
@@ -185,6 +186,7 @@ export function TopNav() {
   const isMobileWorkspaceRoute = pathname === "/image/workspace";
   const [versionLabel, setVersionLabel] = useState("读取中");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [authKey, setAuthKey] = useState("");
   const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
   const [mobileHeaderHeight, setMobileHeaderHeight] = useState(0);
   const [mobileWorkspaceHeaderHeight, setMobileWorkspaceHeaderHeight] = useState(0);
@@ -198,14 +200,15 @@ export function TopNav() {
   useEffect(() => {
     let cancelled = false;
 
-    const loadAuthUser = async () => {
-      const user = await getStoredAuthUser();
+    const loadAuthState = async () => {
+      const [user, token] = await Promise.all([getStoredAuthUser(), getStoredAuthKey()]);
       if (!cancelled) {
         setAuthUser(user);
+        setAuthKey(token);
       }
     };
 
-    void loadAuthUser();
+    void loadAuthState();
 
     const loadVersion = async () => {
       try {
@@ -224,7 +227,7 @@ export function TopNav() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pathname]);
 
   useEffect(() => {
     setMobileNavExpanded(false);
@@ -466,7 +469,7 @@ export function TopNav() {
         pathname={pathname}
         defaultCollapsed={isImageRoute}
         versionLabel={versionLabel}
-        user={authUser}
+        user={authUser ? { ...authUser, imageApiKey: authUser.imageApiKey || (authUser.role === "admin" ? authKey : authUser.imageApiKey) } : null}
         onLogout={handleLogout}
       />
     </>

@@ -26,11 +26,22 @@ const (
 
 type User struct {
 	ID          string `json:"id"`
-	Email       string `json:"email"`
+	Username    string `json:"username"`
+	Email       string `json:"email,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Role        string `json:"role"`
 	ImageAPIKey string `json:"imageApiKey,omitempty"`
 	CreatedAt   string `json:"createdAt,omitempty"`
+}
+
+type Invite struct {
+	Code              string `json:"code"`
+	CreatedBy         string `json:"createdBy,omitempty"`
+	CreatedAt         string `json:"createdAt,omitempty"`
+	UsedByUserID      string `json:"usedByUserId,omitempty"`
+	UsedByUsername    string `json:"usedByUsername,omitempty"`
+	UsedByDisplayName string `json:"usedByDisplayName,omitempty"`
+	UsedAt            string `json:"usedAt,omitempty"`
 }
 
 type Store struct {
@@ -68,7 +79,8 @@ func (s *Store) Init(ctx context.Context) error {
 	stmts := []string{
 		`CREATE TABLE IF NOT EXISTS app_users (
 			id TEXT PRIMARY KEY,
-			email TEXT NOT NULL UNIQUE,
+			username TEXT NOT NULL DEFAULT '',
+			email TEXT NOT NULL DEFAULT '',
 			name TEXT NOT NULL DEFAULT '',
 			password_hash TEXT NOT NULL,
 			role TEXT NOT NULL DEFAULT 'user',
@@ -82,14 +94,31 @@ func (s *Store) Init(ctx context.Context) error {
 			expires_at TEXT NOT NULL,
 			FOREIGN KEY(user_id) REFERENCES app_users(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS app_invites (
+			code TEXT PRIMARY KEY,
+			created_by TEXT NOT NULL DEFAULT '',
+			created_at TEXT NOT NULL,
+			used_by_user_id TEXT NOT NULL DEFAULT '',
+			used_at TEXT NOT NULL DEFAULT ''
+		)`,
 		`CREATE INDEX IF NOT EXISTS idx_app_user_sessions_user_id ON app_user_sessions(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_app_invites_created_at ON app_invites(created_at DESC)`,
 	}
 	for _, stmt := range stmts {
 		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
 			return err
 		}
 	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_users ADD COLUMN username TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+		return err
+	}
 	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_users ADD COLUMN image_api_key TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+		return err
+	}
+	if err := s.ensureUsernames(ctx); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_username ON app_users(username)`); err != nil {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_image_api_key ON app_users(image_api_key)`); err != nil {
@@ -101,47 +130,84 @@ func (s *Store) Init(ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) Register(ctx context.Context, email, password, name string) (*User, error) {
-	email = normalizeEmail(email)
+func (s *Store) RegisterWithInvite(ctx context.Context, username, password, name, inviteCode string) (*User, error) {
+	username = normalizeUsername(username)
 	name = strings.TrimSpace(name)
-	if email == "" || !strings.Contains(email, "@") {
-		return nil, fmt.Errorf("请输入有效邮箱")
+	inviteCode = normalizeInviteCode(inviteCode)
+	if username == "" {
+		return nil, fmt.Errorf("请输入用户名")
+	}
+	if !isValidUsername(username) {
+		return nil, fmt.Errorf("用户名仅支持 3-32 位小写字母、数字、下划线和中横线")
+	}
+	if inviteCode == "" {
+		return nil, fmt.Errorf("请输入邀请码")
 	}
 	if len([]rune(password)) < 6 {
 		return nil, fmt.Errorf("密码至少 6 位")
 	}
 	if name == "" {
-		name = strings.Split(email, "@")[0]
+		name = username
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	user := &User{ID: newUserID(), Email: email, Name: name, Role: RoleUser, ImageAPIKey: newImageAPIKey(), CreatedAt: now}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO app_users (id,email,name,password_hash,role,image_api_key,created_at) VALUES (?,?,?,?,?,?,?)`, user.ID, user.Email, user.Name, string(hash), user.Role, user.ImageAPIKey, now)
+	user := &User{ID: newUserID(), Username: username, Email: "", Name: name, Role: RoleUser, ImageAPIKey: newImageAPIKey(), CreatedAt: now}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if tx != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var usedBy string
+	err = tx.QueryRowContext(ctx, `SELECT used_by_user_id FROM app_invites WHERE code = ?`, inviteCode).Scan(&usedBy)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("邀请码不存在")
+	}
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(usedBy) != "" {
+		return nil, fmt.Errorf("邀请码已被使用")
+	}
+	_, err = tx.ExecContext(ctx, `INSERT INTO app_users (id,username,email,name,password_hash,role,image_api_key,created_at) VALUES (?,?,?,?,?,?,?,?)`, user.ID, user.Username, user.Email, user.Name, string(hash), user.Role, user.ImageAPIKey, now)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
-			return nil, fmt.Errorf("邮箱已注册")
+			return nil, fmt.Errorf("用户名已存在")
 		}
 		return nil, err
 	}
+	_, err = tx.ExecContext(ctx, `UPDATE app_invites SET used_by_user_id = ?, used_at = ? WHERE code = ? AND COALESCE(used_by_user_id, '') = ''`, user.ID, now, inviteCode)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	tx = nil
 	return user, nil
 }
 
-func (s *Store) Authenticate(ctx context.Context, email, password string) (*User, error) {
-	email = normalizeEmail(email)
+func (s *Store) Authenticate(ctx context.Context, username, password string) (*User, error) {
+	username = normalizeUsername(username)
 	var user User
 	var hash string
-	err := s.db.QueryRowContext(ctx, `SELECT id,email,name,password_hash,role,image_api_key,created_at FROM app_users WHERE email = ?`, email).Scan(&user.ID, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,password_hash,role,image_api_key,created_at FROM app_users WHERE username = ? OR email = ?`, username, username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("邮箱或密码不正确")
+		return nil, fmt.Errorf("用户名或密码不正确")
 	}
 	if err != nil {
 		return nil, err
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
-		return nil, fmt.Errorf("邮箱或密码不正确")
+		return nil, fmt.Errorf("用户名或密码不正确")
 	}
 	return &user, nil
 }
@@ -165,7 +231,7 @@ func (s *Store) CreateSession(ctx context.Context, userID string, ttl time.Durat
 func (s *Store) UserBySession(ctx context.Context, token string) (*User, error) {
 	var user User
 	var expiresAt string
-	err := s.db.QueryRowContext(ctx, `SELECT u.id,u.email,u.name,u.role,u.image_api_key,u.created_at,s.expires_at FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt)
+	err := s.db.QueryRowContext(ctx, `SELECT u.id,u.username,u.email,u.name,u.role,u.image_api_key,u.created_at,s.expires_at FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("session not found")
 	}
@@ -186,7 +252,7 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 		return nil, fmt.Errorf("image api key is required")
 	}
 	var user User
-	err := s.db.QueryRowContext(ctx, `SELECT id,email,name,role,image_api_key,created_at FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
+	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("image api key not found")
 	}
@@ -194,6 +260,37 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (s *Store) CreateInvite(ctx context.Context, createdBy string) (*Invite, error) {
+	createdBy = strings.TrimSpace(createdBy)
+	invite := &Invite{
+		Code:      newInviteCode(),
+		CreatedBy: createdBy,
+		CreatedAt: time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO app_invites (code,created_by,created_at,used_by_user_id,used_at) VALUES (?,?,?,?,?)`, invite.Code, invite.CreatedBy, invite.CreatedAt, "", "")
+	if err != nil {
+		return nil, err
+	}
+	return invite, nil
+}
+
+func (s *Store) ListInvites(ctx context.Context) ([]Invite, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT i.code,i.created_by,i.created_at,i.used_by_user_id,i.used_at,u.username,u.name FROM app_invites i LEFT JOIN app_users u ON u.id = i.used_by_user_id ORDER BY i.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]Invite, 0)
+	for rows.Next() {
+		var item Invite
+		if err := rows.Scan(&item.Code, &item.CreatedBy, &item.CreatedAt, &item.UsedByUserID, &item.UsedAt, &item.UsedByUsername, &item.UsedByDisplayName); err != nil {
+			return nil, err
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (s *Store) ensureImageAPIKeys(ctx context.Context) error {
@@ -218,8 +315,75 @@ func (s *Store) ensureImageAPIKeys(ctx context.Context) error {
 	return rows.Err()
 }
 
-func normalizeEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+func (s *Store) ensureUsernames(ctx context.Context) error {
+	rows, err := s.db.QueryContext(ctx, `SELECT id,email FROM app_users WHERE COALESCE(username, '') = ''`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type userSeed struct {
+		id    string
+		email string
+	}
+	items := make([]userSeed, 0)
+	for rows.Next() {
+		var item userSeed
+		if err := rows.Scan(&item.id, &item.email); err != nil {
+			return err
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, item := range items {
+		base := normalizeUsername(strings.TrimSuffix(item.email, filepath.Ext(item.email)))
+		if base == "" {
+			base = "user"
+		}
+		candidate := base
+		for index := 1; ; index++ {
+			var exists int
+			if err := s.db.QueryRowContext(ctx, `SELECT COUNT(1) FROM app_users WHERE username = ? AND id <> ?`, candidate, item.id).Scan(&exists); err != nil {
+				return err
+			}
+			if exists == 0 {
+				if _, err := s.db.ExecContext(ctx, `UPDATE app_users SET username = ? WHERE id = ? AND COALESCE(username, '') = ''`, candidate, item.id); err != nil {
+					return err
+				}
+				break
+			}
+			candidate = fmt.Sprintf("%s-%d", base, index)
+		}
+	}
+	return nil
+}
+
+func normalizeUsername(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	builder := strings.Builder{}
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z':
+			builder.WriteRune(r)
+		case r >= '0' && r <= '9':
+			builder.WriteRune(r)
+		case r == '_' || r == '-':
+			builder.WriteRune(r)
+		}
+	}
+	return builder.String()
+}
+
+func isValidUsername(value string) bool {
+	if len(value) < 3 || len(value) > 32 {
+		return false
+	}
+	return value == normalizeUsername(value)
+}
+
+func normalizeInviteCode(value string) string {
+	return strings.ToUpper(strings.TrimSpace(value))
 }
 
 func newUserID() string {
@@ -244,6 +408,15 @@ func newImageAPIKey() string {
 		return fmt.Sprintf("img_%d", time.Now().UnixNano())
 	}
 	return "img_" + hex.EncodeToString(b)
+}
+
+func newInviteCode() string {
+	b := make([]byte, 6)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("INV-%d", time.Now().UnixNano())
+	}
+	hexPart := strings.ToUpper(hex.EncodeToString(b))
+	return fmt.Sprintf("INV-%s-%s", hexPart[:4], hexPart[4:8])
 }
 
 func hashToken(token string) string {

@@ -579,14 +579,24 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+export type InviteItem = {
+  code: string;
+  createdBy?: string;
+  createdAt?: string;
+  usedByUserId?: string;
+  usedByUsername?: string;
+  usedByDisplayName?: string;
+  usedAt?: string;
+};
+
 export async function login(authKey: string): Promise<AuthResponse>;
-export async function login(email: string, password: string): Promise<AuthResponse>;
-export async function login(emailOrKey: string, password?: string) {
-  const first = String(emailOrKey || "").trim();
+export async function login(username: string, password: string): Promise<AuthResponse>;
+export async function login(usernameOrKey: string, password?: string) {
+  const first = String(usernameOrKey || "").trim();
   if (typeof password === "string") {
     return httpRequest<AuthResponse>("/auth/login", {
       method: "POST",
-      body: { email: first, password },
+      body: { username: first, password },
       redirectOnUnauthorized: false,
     });
   }
@@ -600,11 +610,21 @@ export async function login(emailOrKey: string, password?: string) {
   });
 }
 
-export async function registerUser(payload: { email: string; password: string; name?: string }) {
+export async function registerUser(payload: { username: string; password: string; inviteCode: string; name?: string }) {
   return httpRequest<AuthResponse>("/auth/register", {
     method: "POST",
     body: payload,
     redirectOnUnauthorized: false,
+  });
+}
+
+export async function fetchInvites() {
+  return httpRequest<{ items: InviteItem[] }>("/api/invites");
+}
+
+export async function createInvite() {
+  return httpRequest<{ item: InviteItem }>("/api/invites", {
+    method: "POST",
   });
 }
 

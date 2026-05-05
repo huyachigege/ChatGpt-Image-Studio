@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Copy,
+  KeyRound,
   LoaderCircle,
   RefreshCcw,
   RefreshCw,
@@ -12,11 +14,15 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
+  createInvite,
   fetchConfig,
   fetchDefaultConfig,
+  fetchInvites,
   updateConfig,
   type ConfigPayload,
+  type InviteItem,
 } from "@/lib/api";
 import {
   exportLocalImageConversationsSnapshot,
@@ -211,8 +217,12 @@ export default function SettingsPage() {
   const [defaultConfig, setDefaultConfig] =
     useState<ConfigPayload>(defaultConfigPayload);
   const [savedConfig, setSavedConfig] = useState<ConfigPayload | null>(null);
+  const [invites, setInvites] = useState<InviteItem[]>([]);
+  const [latestInviteCode, setLatestInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingInvites, setIsLoadingInvites] = useState(false);
+  const [isCreatingInvite, setIsCreatingInvite] = useState(false);
 
   const isStudioMode = config.chatgpt.imageMode === "studio";
   const isCPAMode = config.chatgpt.imageMode === "cpa";
@@ -323,6 +333,43 @@ export default function SettingsPage() {
     return messages.join(" ");
   }, [config, savedConfig]);
 
+  const loadInvites = async () => {
+    setIsLoadingInvites(true);
+    try {
+      const payload = await fetchInvites();
+      setInvites(payload.items || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "读取邀请码失败");
+    } finally {
+      setIsLoadingInvites(false);
+    }
+  };
+
+  const handleCreateInvite = async () => {
+    setIsCreatingInvite(true);
+    try {
+      const payload = await createInvite();
+      if (payload.item?.code) {
+        setLatestInviteCode(payload.item.code);
+        setInvites((current) => [payload.item, ...current]);
+        toast.success(`邀请码已生成：${payload.item.code}`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "生成邀请码失败");
+    } finally {
+      setIsCreatingInvite(false);
+    }
+  };
+
+  const copyInviteCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      toast.success("邀请码已复制");
+    } catch {
+      toast.error("复制失败，请手动复制");
+    }
+  };
+
   const loadConfig = async () => {
     setIsLoading(true);
     try {
@@ -349,6 +396,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void loadConfig();
+    void loadInvites();
   }, []);
 
   const setSection = <K extends keyof ConfigPayload>(
@@ -520,6 +568,81 @@ export default function SettingsPage() {
         ) : null}
 
         <div className="mt-5 space-y-5">
+          <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-stone-950 dark:text-[var(--studio-text-strong)]">
+                  <KeyRound className="size-4" />
+                  <h2 className="text-lg font-semibold tracking-tight">邀请码管理</h2>
+                </div>
+                <p className="text-sm leading-6 text-stone-500 dark:text-[var(--studio-text-muted)]">
+                  管理员生成邀请码后，普通用户使用“用户名 + 密码 + 邀请码”完成注册。每个邀请码只能绑定一个用户。
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none"
+                  onClick={() => void loadInvites()}
+                  disabled={isLoadingInvites || isCreatingInvite}
+                >
+                  {isLoadingInvites ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                  刷新邀请码
+                </Button>
+                <Button
+                  type="button"
+                  className="h-10 rounded-full bg-stone-950 px-4 text-[13px] text-white hover:bg-stone-800"
+                  onClick={() => void handleCreateInvite()}
+                  disabled={isCreatingInvite}
+                >
+                  {isCreatingInvite ? <LoaderCircle className="size-4 animate-spin" /> : <KeyRound className="size-4" />}
+                  生成邀请码
+                </Button>
+              </div>
+            </div>
+
+            {latestInviteCode ? (
+              <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                <div className="text-xs text-emerald-700 dark:text-emerald-300">最新生成的邀请码</div>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input value={latestInviteCode} readOnly className="h-11 rounded-2xl border-emerald-200 bg-white font-mono text-sm shadow-none" />
+                  <Button type="button" variant="outline" className="h-11 rounded-2xl border-emerald-200 bg-white text-emerald-700 shadow-none" onClick={() => void copyInviteCode(latestInviteCode)}>
+                    <Copy className="size-4" />
+                    复制
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 dark:border-[var(--studio-border)]">
+              <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
+                <span>邀请码</span>
+                <span>状态</span>
+                <span>绑定用户</span>
+              </div>
+              <div className="divide-y divide-stone-200 dark:divide-[var(--studio-border)]">
+                {invites.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingInvites ? "正在读取邀请码..." : "还没有邀请码，先生成一个。"}</div>
+                ) : (
+                  invites.map((item) => (
+                    <div key={item.code} className="grid grid-cols-[1.2fr_1fr_1fr] gap-3 px-4 py-4 text-sm">
+                      <button type="button" className="min-w-0 truncate text-left font-mono text-stone-950 dark:text-[var(--studio-text-strong)]" onClick={() => void copyInviteCode(item.code)} title="点击复制邀请码">
+                        {item.code}
+                      </button>
+                      <span className={item.usedByUserId ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}>
+                        {item.usedByUserId ? "已使用" : "未使用"}
+                      </span>
+                      <span className="truncate text-stone-600 dark:text-[var(--studio-text)]">
+                        {item.usedByUsername || item.usedByDisplayName || "—"}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+
           <ImageModeSection
             config={config}
             isStudioMode={isStudioMode}

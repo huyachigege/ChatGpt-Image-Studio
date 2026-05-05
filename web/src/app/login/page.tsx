@@ -13,7 +13,8 @@ import { setStoredAuthKey, setStoredAuthUser } from "@/store/auth";
 export default function LoginPage() {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register" | "admin">("login");
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [authKey, setAuthKey] = useState("");
@@ -38,15 +39,20 @@ export default function LoginPage() {
         return;
       }
 
-      const normalizedEmail = email.trim();
-      if (!normalizedEmail || !password) {
-        toast.error("请输入邮箱和密码");
+      const normalizedUsername = username.trim().toLowerCase();
+      if (!normalizedUsername || !password) {
+        toast.error("请输入用户名和密码");
         return;
       }
       const payload =
         mode === "register"
-          ? await registerUser({ email: normalizedEmail, password, name: name.trim() || undefined })
-          : await login(normalizedEmail, password);
+          ? await registerUser({
+              username: normalizedUsername,
+              password,
+              inviteCode: inviteCode.trim().toUpperCase(),
+              name: name.trim() || undefined,
+            })
+          : await login(normalizedUsername, password);
       await handleAuthSuccess(payload);
     } catch (error) {
       const message = error instanceof Error ? error.message : mode === "register" ? "注册失败" : "登录失败";
@@ -77,13 +83,13 @@ export default function LoginPage() {
                 每个用户都有自己的图片工作台。
               </h1>
               <p className="max-w-[430px] text-sm leading-7 text-white/72">
-                普通用户只进入生成与编辑界面，历史记录、任务队列和图片文件按用户隔离；管理员单独管理账号、配置与同步。
+                普通用户通过用户名、密码和邀请码注册；历史记录、任务队列和图片文件按用户隔离；管理员单独管理账号、配置、同步和邀请码。
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["注册", "邮箱密码创建用户"],
+                ["注册", "用户名 + 邀请码创建用户"],
                 ["隔离", "历史与任务按用户划分"],
                 ["后台", "管理员专用入口"],
               ].map(([title, desc]) => (
@@ -109,7 +115,7 @@ export default function LoginPage() {
                   {mode === "register" ? "注册工作台账号" : mode === "admin" ? "管理员登录" : "登录工作台"}
                 </h1>
                 <p className="text-sm leading-7 text-stone-500">
-                  {mode === "admin" ? "使用后端管理员密钥进入配置和账号后台。" : "使用邮箱和密码进入自己的图片工作台。"}
+                  {mode === "admin" ? "使用后端管理员密钥进入配置和账号后台。" : "使用用户名和密码进入自己的图片工作台。"}
                 </p>
               </div>
             </div>
@@ -159,12 +165,19 @@ export default function LoginPage() {
                   />
                 ) : null}
                 <Input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="邮箱"
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="用户名，例如 xiaochige"
                   className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
                 />
+                {mode === "register" ? (
+                  <Input
+                    value={inviteCode}
+                    onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                    placeholder="邀请码"
+                    className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                  />
+                ) : null}
                 <Input
                   type="password"
                   value={password}

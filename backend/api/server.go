@@ -404,6 +404,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/accounts/update", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateAccount)))
 	mux.Handle("GET /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
 	mux.Handle("PUT /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
+	mux.Handle("GET /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleListInvites)))
+	mux.Handle("POST /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleCreateInvite)))
 	mux.Handle("GET /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleGetConfig)))
 	mux.Handle("GET /api/config/defaults", s.requireAdminAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
 	mux.Handle("PUT /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateConfig)))
@@ -457,7 +459,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var body struct {
-		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -470,7 +472,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer store.Close()
-	user, err := store.Authenticate(r.Context(), body.Email, body.Password)
+	user, err := store.Authenticate(r.Context(), body.Username, body.Password)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": err.Error()})
 		return
@@ -490,9 +492,10 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-		Name     string `json:"name"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		InviteCode string `json:"inviteCode"`
+		Name       string `json:"name"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
@@ -504,7 +507,7 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer store.Close()
-	user, err := store.Register(r.Context(), body.Email, body.Password, body.Name)
+	user, err := store.RegisterWithInvite(r.Context(), body.Username, body.Password, body.Name, body.InviteCode)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
@@ -520,6 +523,37 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		"token":   token,
 		"user":    user,
 	})
+}
+
+func (s *Server) handleListInvites(w http.ResponseWriter, r *http.Request) {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	items, err := store.ListInvites(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	identity := identityFromContext(r.Context())
+	item, err := store.CreateInvite(r.Context(), firstNonEmpty(identity.UserID, identity.Name, "admin"))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"item": item})
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
