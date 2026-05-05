@@ -161,6 +161,9 @@ func (s *Store) RegisterWithInvite(ctx context.Context, username, password, name
 	if !isValidUsername(username) {
 		return nil, fmt.Errorf("用户名仅支持 3-32 位小写字母、数字、下划线和中横线")
 	}
+	if username == "admin" {
+		return nil, fmt.Errorf("admin 是内置管理员用户名，不能注册")
+	}
 	if inviteCode == "" {
 		return nil, fmt.Errorf("请输入邀请码")
 	}

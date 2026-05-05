@@ -12,12 +12,11 @@ import { setStoredAuthKey, setStoredAuthUser } from "@/store/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"login" | "register" | "admin">("login");
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [authKey, setAuthKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleAuthSuccess = async (payload: Awaited<ReturnType<typeof login>>) => {
@@ -29,16 +28,6 @@ export default function LoginPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      if (mode === "admin") {
-        const normalizedAuthKey = authKey.trim();
-        if (!normalizedAuthKey) {
-          toast.error("请输入管理员密钥");
-          return;
-        }
-        await handleAuthSuccess(await login(normalizedAuthKey));
-        return;
-      }
-
       const normalizedUsername = username.trim().toLowerCase();
       if (!normalizedUsername || !password) {
         toast.error("请输入用户名和密码");
@@ -62,6 +51,8 @@ export default function LoginPage() {
     }
   };
 
+  const isRegister = mode === "register";
+
   return (
     <div className="grid h-full min-h-0 w-full place-items-center overflow-y-auto">
       <div className="grid w-full max-w-[1120px] overflow-hidden rounded-[32px] border border-stone-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:grid-cols-[1.05fr_0.95fr]">
@@ -83,15 +74,15 @@ export default function LoginPage() {
                 每个用户都有自己的图片工作台。
               </h1>
               <p className="max-w-[430px] text-sm leading-7 text-white/72">
-                普通用户通过用户名、密码和邀请码注册；历史记录、任务队列和图片文件按用户隔离；管理员单独管理账号、配置、同步和邀请码。
+                普通用户通过用户名、密码和邀请码注册；管理员使用 admin 加管理员密码登录；历史记录、任务队列和图片文件按用户隔离。
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["注册", "用户名 + 邀请码创建用户"],
-                ["隔离", "历史与任务按用户划分"],
-                ["后台", "管理员专用入口"],
+                ["登录", "用户名 + 密码进入工作区"],
+                ["注册", "邀请码创建普通用户"],
+                ["后台", "admin 用户管理配置"],
               ].map(([title, desc]) => (
                 <div key={title} className="rounded-2xl border border-white/12 bg-white/6 p-4 backdrop-blur-sm">
                   <div className="text-sm font-semibold">{title}</div>
@@ -101,7 +92,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="text-xs text-white/50">普通用户登录后默认进入图片工作台。</div>
+          <div className="text-xs text-white/50">管理员用户名固定为 admin，密码使用后端管理员密码。</div>
         </div>
 
         <div className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
@@ -112,84 +103,48 @@ export default function LoginPage() {
               </div>
               <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-tight text-stone-950">
-                  {mode === "register" ? "注册工作台账号" : mode === "admin" ? "管理员登录" : "登录工作台"}
+                  {isRegister ? "注册工作台账号" : "登录工作台"}
                 </h1>
                 <p className="text-sm leading-7 text-stone-500">
-                  {mode === "admin" ? "使用后端管理员密钥进入配置和账号后台。" : "使用用户名和密码进入自己的图片工作台。"}
+                  {isRegister ? "使用邀请码创建普通用户账号。" : "普通用户用自己的用户名登录；管理员使用 admin 加管理员密码登录。"}
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-stone-100 p-1 text-sm">
-              {[
-                ["login", "登录"],
-                ["register", "注册"],
-                ["admin", "管理员"],
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  type="button"
-                  className={`rounded-xl px-3 py-2 transition ${mode === key ? "bg-white text-stone-950 shadow-sm" : "text-stone-500"}`}
-                  onClick={() => setMode(key as "login" | "register" | "admin")}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className="space-y-3">
+              {isRegister ? (
+                <Input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="昵称（可选）"
+                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                />
+              ) : null}
+              <Input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder={isRegister ? "用户名，例如 xiaochige" : "用户名，管理员为 admin"}
+                className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+              />
+              {isRegister ? (
+                <Input
+                  value={inviteCode}
+                  onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
+                  placeholder="邀请码"
+                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                />
+              ) : null}
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") void handleSubmit();
+                }}
+                placeholder={isRegister ? "密码，至少 6 位" : "密码"}
+                className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+              />
             </div>
-
-            {mode === "admin" ? (
-              <div className="space-y-3">
-                <label htmlFor="auth-key" className="block text-sm font-medium text-stone-700">
-                  管理员密钥
-                </label>
-                <Input
-                  id="auth-key"
-                  type="password"
-                  value={authKey}
-                  onChange={(event) => setAuthKey(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void handleSubmit();
-                  }}
-                  placeholder="请输入管理员密钥"
-                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-                />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {mode === "register" ? (
-                  <Input
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="昵称（可选）"
-                    className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-                  />
-                ) : null}
-                <Input
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  placeholder="用户名，例如 xiaochige"
-                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-                />
-                {mode === "register" ? (
-                  <Input
-                    value={inviteCode}
-                    onChange={(event) => setInviteCode(event.target.value.toUpperCase())}
-                    placeholder="邀请码"
-                    className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-                  />
-                ) : null}
-                <Input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") void handleSubmit();
-                  }}
-                  placeholder="密码，至少 6 位"
-                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-                />
-              </div>
-            )}
 
             <Button
               className="h-13 w-full rounded-2xl bg-stone-950 text-white hover:bg-stone-800"
@@ -197,8 +152,19 @@ export default function LoginPage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? <LoaderCircle className="size-4 animate-spin" /> : null}
-              {mode === "register" ? "注册并进入" : "进入"}
+              {isRegister ? "注册并进入" : "登录"}
             </Button>
+
+            <div className="text-center text-sm text-stone-500">
+              {isRegister ? "已有账号？" : "还没有账号？"}
+              <button
+                type="button"
+                className="ml-2 font-medium text-stone-950 underline underline-offset-4"
+                onClick={() => setMode(isRegister ? "login" : "register")}
+              >
+                {isRegister ? "返回登录" : "注册账号"}
+              </button>
+            </div>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-xs leading-6 text-stone-500">
               普通用户只能访问图片工作台；账号、配置、同步、诊断等入口仅管理员可见并由后端拦截。

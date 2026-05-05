@@ -77,12 +77,13 @@ const maxBulkAccountRefreshWorkers = 4
 const userSessionTTL = 30 * 24 * time.Hour
 
 type authIdentity struct {
-	UserID   string `json:"id,omitempty"`
-	Username string `json:"username,omitempty"`
-	Email    string `json:"email,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Role     string `json:"role,omitempty"`
-	Token    string `json:"token,omitempty"`
+	UserID      string `json:"id,omitempty"`
+	Username    string `json:"username,omitempty"`
+	Email       string `json:"email,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Role        string `json:"role,omitempty"`
+	Token       string `json:"token,omitempty"`
+	ImageAPIKey string `json:"imageApiKey,omitempty"`
 }
 
 type authIdentityContextKey struct{}
@@ -450,8 +451,9 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if s.hasExactBearer(r, s.cfg.App.AuthKey) {
-		identity := authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: strings.TrimSpace(s.cfg.App.AuthKey)}
+	adminPassword := strings.TrimSpace(s.cfg.App.AuthKey)
+	if s.hasExactBearer(r, adminPassword) {
+		identity := authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: adminPassword, ImageAPIKey: adminPassword}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"ok":      true,
 			"version": buildinfo.ResolveVersion(s.cfg.App.Version),
@@ -467,6 +469,20 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if strings.EqualFold(strings.TrimSpace(body.Username), "admin") {
+		if adminPassword == "" || strings.TrimSpace(body.Password) != adminPassword {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "管理员用户名或密码错误"})
+			return
+		}
+		identity := authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: adminPassword, ImageAPIKey: adminPassword}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":      true,
+			"version": buildinfo.ResolveVersion(s.cfg.App.Version),
+			"token":   identity.Token,
+			"user":    identity,
+		})
 		return
 	}
 	store, err := users.NewStore(s.cfg)
@@ -1834,7 +1850,7 @@ func (s *Server) identityFromRequest(r *http.Request) (authIdentity, bool) {
 		return authIdentity{}, false
 	}
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
-		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
 	store, err := users.NewStore(s.cfg)
 	if err != nil {
@@ -1871,11 +1887,11 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 		return authIdentity{}, false
 	}
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
-		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
 	for _, key := range parseKeys(s.cfg.App.APIKey) {
 		if token == key {
-			return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+			return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 		}
 	}
 	store, err := users.NewStore(s.cfg)
