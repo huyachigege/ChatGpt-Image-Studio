@@ -42,8 +42,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		return nil, fmt.Errorf("task not found")
 	}
 
-	fakeIdentity := authIdentity{UserID: task.UserID, Role: "user"}
-	fakeReq := httptest.NewRequest("POST", "http://"+imageTaskFakeHost+"/api/image/tasks", nil).WithContext(context.WithValue(ctx, authIdentityContextKey{}, fakeIdentity))
+	fakeIdentity := authIdentity{UserID: task.UserID, Username: firstNonEmpty(task.Username, task.UserID), Role: "user"}
+	taskCtx := context.WithValue(ctx, authIdentityContextKey{}, fakeIdentity)
+	fakeReq := httptest.NewRequest("POST", "http://"+imageTaskFakeHost+"/api/image/tasks", nil).WithContext(taskCtx)
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
@@ -63,7 +64,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
 		items, retryable, err = s.runImageRequestWithAdmission(
-			ctx,
+			taskCtx,
 			lease.auth,
 			lease.account,
 			lease.release,
@@ -76,7 +77,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 				return client.InpaintImageByMask(
-					ctx,
+					taskCtx,
 					task.Prompt,
 					upstreamModel,
 					task.SourceReference.OriginalFileID,
@@ -99,7 +100,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		}
 		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
 		items, retryable, err = s.runImageRequestWithAdmission(
-			ctx,
+			taskCtx,
 			lease.auth,
 			lease.account,
 			lease.release,
@@ -111,14 +112,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			responsesEligible,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				return client.EditImageByUpload(ctx, task.Prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				return client.EditImageByUpload(taskCtx, task.Prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			},
 			fakeReq,
 			false,
 		)
 	default:
 		items, retryable, err = s.runImageRequestWithAdmission(
-			ctx,
+			taskCtx,
 			lease.auth,
 			lease.account,
 			lease.release,
@@ -130,7 +131,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			true,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				return client.GenerateImage(ctx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+				return client.GenerateImage(taskCtx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
 			},
 			fakeReq,
 			false,

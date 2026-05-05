@@ -12,6 +12,7 @@ export type AuthUser = {
   name?: string;
   role: "admin" | "user" | string;
   imageApiKey?: string;
+  disabled?: boolean;
 };
 
 const authStorage = localforage.createInstance({

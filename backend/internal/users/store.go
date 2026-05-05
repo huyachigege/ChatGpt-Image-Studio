@@ -34,6 +34,7 @@ type User struct {
 	Name        string `json:"name,omitempty"`
 	Role        string `json:"role"`
 	ImageAPIKey string `json:"imageApiKey,omitempty"`
+	Disabled    bool   `json:"disabled,omitempty"`
 	CreatedAt   string `json:"createdAt,omitempty"`
 }
 
@@ -98,6 +99,7 @@ func (s *Store) Init(ctx context.Context) error {
 			password_hash TEXT NOT NULL,
 			role TEXT NOT NULL DEFAULT 'user',
 			image_api_key TEXT NOT NULL DEFAULT '',
+			disabled_at TEXT NOT NULL DEFAULT '',
 			created_at TEXT NOT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS app_user_sessions (
@@ -136,16 +138,19 @@ func (s *Store) Init(ctx context.Context) error {
 	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_users ADD COLUMN image_api_key TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 		return err
 	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_users ADD COLUMN disabled_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+		return err
+	}
 	if err := s.ensureUsernames(ctx); err != nil {
+		return err
+	}
+	if err := s.ensureImageAPIKeys(ctx); err != nil {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_username ON app_users(username)`); err != nil {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `CREATE UNIQUE INDEX IF NOT EXISTS idx_app_users_image_api_key ON app_users(image_api_key)`); err != nil {
-		return err
-	}
-	if err := s.ensureImageAPIKeys(ctx); err != nil {
 		return err
 	}
 	return nil
@@ -201,7 +206,8 @@ func (s *Store) RegisterWithInvite(ctx context.Context, username, password, name
 	if strings.TrimSpace(usedBy) != "" {
 		return nil, fmt.Errorf("邀请码已被使用")
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO app_users (id,username,email,name,password_hash,role,image_api_key,created_at) VALUES (?,?,?,?,?,?,?,?)`, user.ID, user.Username, user.Email, user.Name, string(hash), user.Role, user.ImageAPIKey, now)
+	storedEmail := username + "@local.user"
+	_, err = tx.ExecContext(ctx, `INSERT INTO app_users (id,username,email,name,password_hash,role,image_api_key,created_at) VALUES (?,?,?,?,?,?,?,?)`, user.ID, user.Username, storedEmail, user.Name, string(hash), user.Role, user.ImageAPIKey, now)
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return nil, fmt.Errorf("用户名已存在")
@@ -223,15 +229,23 @@ func (s *Store) Authenticate(ctx context.Context, username, password string) (*U
 	username = normalizeUsername(username)
 	var user User
 	var hash string
-	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,password_hash,role,image_api_key,created_at FROM app_users WHERE username = ? OR email = ?`, username, username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
+	var disabledAt string
+	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,password_hash,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE username = ? OR email = ?`, username, username).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &hash, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("用户名或密码不正确")
 	}
 	if err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(disabledAt) != "" {
+		return nil, fmt.Errorf("用户已被禁用")
+	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
 		return nil, fmt.Errorf("用户名或密码不正确")
+	}
+	user.Disabled = false
+	if strings.HasSuffix(user.Email, "@local.user") {
+		user.Email = ""
 	}
 	return &user, nil
 }
@@ -255,7 +269,8 @@ func (s *Store) CreateSession(ctx context.Context, userID string, ttl time.Durat
 func (s *Store) UserBySession(ctx context.Context, token string) (*User, error) {
 	var user User
 	var expiresAt string
-	err := s.db.QueryRowContext(ctx, `SELECT u.id,u.username,u.email,u.name,u.role,u.image_api_key,u.created_at,s.expires_at FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt)
+	var disabledAt string
+	err := s.db.QueryRowContext(ctx, `SELECT u.id,u.username,u.email,u.name,u.role,u.image_api_key,u.created_at,s.expires_at,COALESCE(u.disabled_at, '') FROM app_user_sessions s JOIN app_users u ON u.id = s.user_id WHERE s.token_hash = ?`, hashToken(token)).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &expiresAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("session not found")
 	}
@@ -267,6 +282,12 @@ func (s *Store) UserBySession(ctx context.Context, token string) (*User, error) 
 		_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_sessions WHERE token_hash = ?`, hashToken(token))
 		return nil, fmt.Errorf("session expired")
 	}
+	if strings.TrimSpace(disabledAt) != "" {
+		return nil, fmt.Errorf("用户已被禁用")
+	}
+	if strings.HasSuffix(user.Email, "@local.user") {
+		user.Email = ""
+	}
 	return &user, nil
 }
 
@@ -276,14 +297,83 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 		return nil, fmt.Errorf("image api key is required")
 	}
 	var user User
-	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt)
+	var disabledAt string
+	err := s.db.QueryRowContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users WHERE image_api_key = ?`, apiKey).Scan(&user.ID, &user.Username, &user.Email, &user.Name, &user.Role, &user.ImageAPIKey, &user.CreatedAt, &disabledAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("image api key not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	if strings.TrimSpace(disabledAt) != "" {
+		return nil, fmt.Errorf("用户已被禁用")
+	}
+	if strings.HasSuffix(user.Email, "@local.user") {
+		user.Email = ""
+	}
 	return &user, nil
+}
+
+func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT id,username,email,name,role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]User, 0)
+	for rows.Next() {
+		var item User
+		var disabledAt string
+		if err := rows.Scan(&item.ID, &item.Username, &item.Email, &item.Name, &item.Role, &item.ImageAPIKey, &item.CreatedAt, &disabledAt); err != nil {
+			return nil, err
+		}
+		item.Disabled = strings.TrimSpace(disabledAt) != ""
+		if strings.HasSuffix(item.Email, "@local.user") {
+			item.Email = ""
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) SetUserDisabled(ctx context.Context, userID string, disabled bool) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return fmt.Errorf("user id is required")
+	}
+	disabledAt := ""
+	if disabled {
+		disabledAt = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	result, err := s.db.ExecContext(ctx, `UPDATE app_users SET disabled_at = ? WHERE id = ?`, disabledAt, userID)
+	if err != nil {
+		return err
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	if disabled {
+		_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_sessions WHERE user_id = ?`, userID)
+	}
+	return nil
+}
+
+func (s *Store) DeleteUser(ctx context.Context, userID string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return fmt.Errorf("user id is required")
+	}
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_sessions WHERE user_id = ?`, userID)
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_daily_image_quotas WHERE user_id = ?`, userID)
+	_, _ = s.db.ExecContext(ctx, `UPDATE app_invites SET used_by_user_id = '', used_at = '' WHERE used_by_user_id = ?`, userID)
+	result, err := s.db.ExecContext(ctx, `DELETE FROM app_users WHERE id = ?`, userID)
+	if err != nil {
+		return err
+	}
+	if rows, _ := result.RowsAffected(); rows == 0 {
+		return fmt.Errorf("user not found")
+	}
+	return nil
 }
 
 func (s *Store) CreateInvite(ctx context.Context, createdBy string) (*Invite, error) {

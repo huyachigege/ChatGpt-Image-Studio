@@ -26,6 +26,7 @@ func (s *Server) handleCreateImageTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	body.UserID = identity.UserID
+	body.Username = identity.Username
 	task, err := s.imageTasks.createTask(body)
 	if err != nil {
 		writeImageRequestError(w, err)

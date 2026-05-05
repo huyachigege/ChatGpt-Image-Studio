@@ -6,6 +6,8 @@ import {
   KeyRound,
   LoaderCircle,
   RefreshCcw,
+  Trash2,
+  UserRound,
   RefreshCw,
   Save,
   Settings2,
@@ -17,10 +19,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   createInvite,
+  deleteUser,
   fetchConfig,
   fetchDefaultConfig,
   fetchInvites,
+  fetchUsers,
   updateConfig,
+  updateUserDisabled,
+  type AppUserItem,
   type ConfigPayload,
   type InviteItem,
 } from "@/lib/api";
@@ -218,11 +224,14 @@ export default function SettingsPage() {
     useState<ConfigPayload>(defaultConfigPayload);
   const [savedConfig, setSavedConfig] = useState<ConfigPayload | null>(null);
   const [invites, setInvites] = useState<InviteItem[]>([]);
+  const [users, setUsers] = useState<AppUserItem[]>([]);
   const [latestInviteCode, setLatestInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingInvites, setIsLoadingInvites] = useState(false);
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [mutatingUserID, setMutatingUserID] = useState("");
 
   const isStudioMode = config.chatgpt.imageMode === "studio";
   const isCPAMode = config.chatgpt.imageMode === "cpa";
@@ -370,6 +379,44 @@ export default function SettingsPage() {
     }
   };
 
+  const loadUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const payload = await fetchUsers();
+      setUsers(payload.items || []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "读取用户失败");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  const handleToggleUserDisabled = async (item: AppUserItem) => {
+    setMutatingUserID(item.id);
+    try {
+      await updateUserDisabled(item.id, !item.disabled);
+      setUsers((current) => current.map((user) => (user.id === item.id ? { ...user, disabled: !item.disabled } : user)));
+      toast.success(item.disabled ? "用户已启用" : "用户已禁用");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "更新用户状态失败");
+    } finally {
+      setMutatingUserID("");
+    }
+  };
+
+  const handleDeleteUser = async (item: AppUserItem) => {
+    setMutatingUserID(item.id);
+    try {
+      await deleteUser(item.id);
+      setUsers((current) => current.filter((user) => user.id !== item.id));
+      toast.success("用户已删除");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "删除用户失败");
+    } finally {
+      setMutatingUserID("");
+    }
+  };
+
   const loadConfig = async () => {
     setIsLoading(true);
     try {
@@ -397,6 +444,7 @@ export default function SettingsPage() {
   useEffect(() => {
     void loadConfig();
     void loadInvites();
+    void loadUsers();
   }, []);
 
   const setSection = <K extends keyof ConfigPayload>(
@@ -636,6 +684,79 @@ export default function SettingsPage() {
                       <span className="truncate text-stone-600 dark:text-[var(--studio-text)]">
                         {item.usedByUsername || item.usedByDisplayName || "—"}
                       </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-stone-950 dark:text-[var(--studio-text-strong)]">
+                  <UserRound className="size-4" />
+                  <h2 className="text-lg font-semibold tracking-tight">用户管理</h2>
+                </div>
+                <p className="text-sm leading-6 text-stone-500 dark:text-[var(--studio-text-muted)]">
+                  查看普通用户、禁用登录与 API 调用，或删除用户账号。内置 admin 不在这里维护。
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none"
+                onClick={() => void loadUsers()}
+                disabled={isLoadingUsers || !!mutatingUserID}
+              >
+                {isLoadingUsers ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
+                刷新用户
+              </Button>
+            </div>
+
+            <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 dark:border-[var(--studio-border)]">
+              <div className="grid grid-cols-[1fr_1fr_0.8fr_1.2fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
+                <span>用户</span>
+                <span>状态</span>
+                <span>角色</span>
+                <span>操作</span>
+              </div>
+              <div className="divide-y divide-stone-200 dark:divide-[var(--studio-border)]">
+                {users.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingUsers ? "正在读取用户..." : "还没有普通用户。"}</div>
+                ) : (
+                  users.map((item) => (
+                    <div key={item.id} className="grid grid-cols-[1fr_1fr_0.8fr_1.2fr] gap-3 px-4 py-4 text-sm">
+                      <div className="min-w-0">
+                        <div className="truncate font-medium text-stone-950 dark:text-[var(--studio-text-strong)]">{item.username}</div>
+                        <div className="mt-1 truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{item.name || item.id}</div>
+                      </div>
+                      <span className={item.disabled ? "text-red-600 dark:text-red-300" : "text-emerald-700 dark:text-emerald-300"}>
+                        {item.disabled ? "已禁用" : "正常"}
+                      </span>
+                      <span className="text-stone-600 dark:text-[var(--studio-text)]">{item.role}</span>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-xl border-stone-200 bg-white px-3 text-xs text-stone-700 shadow-none"
+                          onClick={() => void handleToggleUserDisabled(item)}
+                          disabled={mutatingUserID === item.id}
+                        >
+                          {mutatingUserID === item.id ? <LoaderCircle className="size-3 animate-spin" /> : null}
+                          {item.disabled ? "启用" : "禁用"}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-xl border-red-200 bg-white px-3 text-xs text-red-600 shadow-none hover:bg-red-50"
+                          onClick={() => void handleDeleteUser(item)}
+                          disabled={mutatingUserID === item.id}
+                        >
+                          <Trash2 className="size-3" />
+                          删除
+                        </Button>
+                      </div>
                     </div>
                   ))
                 )}

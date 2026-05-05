@@ -585,9 +585,21 @@ export type AuthResponse = {
 export type ImageGalleryItem = {
   id: string;
   name: string;
+  folder?: string;
   url: string;
   size: number;
   createdAt: string;
+};
+
+export type AppUserItem = {
+  id: string;
+  username: string;
+  email?: string;
+  name?: string;
+  role: string;
+  imageApiKey?: string;
+  disabled?: boolean;
+  createdAt?: string;
 };
 
 export type InviteItem = {
@@ -645,6 +657,30 @@ export async function listImageGallery() {
 
 export async function deleteImageGalleryItem(name: string) {
   return httpRequest<{ ok: boolean; name: string }>(`/api/image/gallery/${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function deleteImageGalleryItems(names: string[]) {
+  return httpRequest<{ ok: boolean; deleted: string[] }>("/api/image/gallery/delete", {
+    method: "POST",
+    body: { names },
+  });
+}
+
+export async function fetchUsers() {
+  return httpRequest<{ items: AppUserItem[] }>("/api/users");
+}
+
+export async function updateUserDisabled(id: string, disabled: boolean) {
+  return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: { disabled },
+  });
+}
+
+export async function deleteUser(id: string) {
+  return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
 }

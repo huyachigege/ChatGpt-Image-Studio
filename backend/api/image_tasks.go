@@ -49,6 +49,7 @@ type imageTaskSourceReferencePayload struct {
 
 type createImageTaskRequest struct {
 	UserID          string                              `json:"-"`
+	Username        string                              `json:"-"`
 	TaskID          string                              `json:"taskId,omitempty"`
 	ConversationID  string                              `json:"conversationId"`
 	TurnID          string                              `json:"turnId"`
@@ -158,6 +159,7 @@ type imageTaskUnit struct {
 type imageTask struct {
 	ID              string
 	UserID          string
+	Username        string
 	ConversationID  string
 	TurnID          string
 	Source          string

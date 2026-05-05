@@ -408,6 +408,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
 	mux.Handle("GET /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleListInvites)))
 	mux.Handle("POST /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleCreateInvite)))
+	mux.Handle("GET /api/users", s.requireAdminAuth(http.HandlerFunc(s.handleListUsers)))
+	mux.Handle("PATCH /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateUser)))
+	mux.Handle("DELETE /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteUser)))
 	mux.Handle("GET /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleGetConfig)))
 	mux.Handle("GET /api/config/defaults", s.requireAdminAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
 	mux.Handle("PUT /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateConfig)))
@@ -423,6 +426,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/status", s.requireAdminAuth(http.HandlerFunc(s.handleSyncStatus)))
 	mux.Handle("POST /api/sync/run", s.requireAdminAuth(http.HandlerFunc(s.handleRunSync)))
 	mux.Handle("GET /api/image/gallery", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageGallery)))
+	mux.Handle("POST /api/image/gallery/delete", s.requireWorkspaceAuth(http.HandlerFunc(s.handleBatchDeleteImageGallery)))
 	mux.Handle("DELETE /api/image/gallery/{name}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageGalleryItem)))
 	mux.Handle("GET /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageConversations)))
 	mux.Handle("DELETE /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleClearImageConversations)))
@@ -573,6 +577,60 @@ func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"item": item})
+}
+
+func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	items, err := store.ListUsers(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Disabled *bool `json:"disabled"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if body.Disabled == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "disabled is required"})
+		return
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	if err := store.SetUserDisabled(r.Context(), r.PathValue("id"), *body.Disabled); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	if err := store.DeleteUser(r.Context(), r.PathValue("id")); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
 func (s *Server) handleVersion(w http.ResponseWriter, r *http.Request) {
