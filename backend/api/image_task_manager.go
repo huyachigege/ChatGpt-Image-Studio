@@ -94,30 +94,38 @@ func (m *imageTaskManager) createTask(req createImageTaskRequest) (*imageTaskVie
 }
 
 func (m *imageTaskManager) listTasks() ([]imageTaskView, *imageTaskSnapshot) {
+	return m.listTasksForUser("")
+}
+
+func (m *imageTaskManager) listTasksForUser(userID string) ([]imageTaskView, *imageTaskSnapshot) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	items := make([]imageTaskView, 0, len(m.order))
 	for _, id := range m.order {
 		task := m.tasks[id]
-		if task == nil {
+		if task == nil || !imageTaskVisibleToUser(task, userID) {
 			continue
 		}
 		items = append(items, *m.buildTaskViewLocked(task))
 	}
-	snapshot := m.snapshotLocked()
+	snapshot := m.snapshotLockedForUser(userID)
 	return items, snapshot
 }
 
 func (m *imageTaskManager) getTask(id string) (*imageTaskView, *imageTaskSnapshot, error) {
+	return m.getTaskForUser(id, "")
+}
+
+func (m *imageTaskManager) getTaskForUser(id string, userID string) (*imageTaskView, *imageTaskSnapshot, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	task := m.tasks[strings.TrimSpace(id)]
-	if task == nil {
+	if task == nil || !imageTaskVisibleToUser(task, userID) {
 		return nil, nil, fmt.Errorf("task not found")
 	}
-	return m.buildTaskViewLocked(task), m.snapshotLocked(), nil
+	return m.buildTaskViewLocked(task), m.snapshotLockedForUser(userID), nil
 }
 
 func (m *imageTaskManager) waitForTask(ctx context.Context, taskID string) (*imageTaskView, error) {
@@ -154,10 +162,14 @@ func (m *imageTaskManager) waitForTask(ctx context.Context, taskID string) (*ima
 }
 
 func (m *imageTaskManager) cancelTask(id string) (*imageTaskView, error) {
+	return m.cancelTaskForUser(id, "")
+}
+
+func (m *imageTaskManager) cancelTaskForUser(id string, userID string) (*imageTaskView, error) {
 	taskID := strings.TrimSpace(id)
 	m.mu.Lock()
 	task := m.tasks[taskID]
-	if task == nil {
+	if task == nil || !imageTaskVisibleToUser(task, userID) {
 		m.mu.Unlock()
 		return nil, fmt.Errorf("task not found")
 	}
@@ -834,6 +846,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 
 	return &imageTask{
 		ID:              id,
+		UserID:          strings.TrimSpace(req.UserID),
 		ConversationID:  strings.TrimSpace(req.ConversationID),
 		TurnID:          strings.TrimSpace(req.TurnID),
 		Source:          firstNonEmpty(strings.TrimSpace(req.Source), "workspace"),
@@ -1051,6 +1064,7 @@ func (m *imageTaskManager) buildTaskViewLocked(task *imageTask) *imageTaskView {
 
 	view := &imageTaskView{
 		ID:              task.ID,
+		UserID:          task.UserID,
 		ConversationID:  task.ConversationID,
 		TurnID:          task.TurnID,
 		Mode:            task.Mode,
@@ -1075,13 +1089,17 @@ func (m *imageTaskManager) buildTaskViewLocked(task *imageTask) *imageTaskView {
 }
 
 func (m *imageTaskManager) snapshotLocked() *imageTaskSnapshot {
+	return m.snapshotLockedForUser("")
+}
+
+func (m *imageTaskManager) snapshotLockedForUser(userID string) *imageTaskSnapshot {
 	queued := 0
 	total := 0
 	activeSources := imageTaskSourceSnapshot{}
 	finalStatuses := imageTaskFinalStatusSnapshot{}
 	for _, id := range m.order {
 		task := m.tasks[id]
-		if task == nil {
+		if task == nil || !imageTaskVisibleToUser(task, userID) {
 			continue
 		}
 		total++
@@ -1113,7 +1131,7 @@ func (m *imageTaskManager) snapshotLocked() *imageTaskSnapshot {
 		}
 	}
 	return &imageTaskSnapshot{
-		Running:          m.runningUnits,
+		Running:          runningUnitsForUser(m, userID),
 		MaxRunning:       m.maxRunningLocked(),
 		Queued:           queued,
 		Total:            total,
@@ -1129,6 +1147,31 @@ func (m *imageTaskManager) subscriberChannelsLocked() []chan imageTaskEvent {
 		channels = append(channels, ch)
 	}
 	return channels
+}
+
+func imageTaskVisibleToUser(task *imageTask, userID string) bool {
+	if strings.TrimSpace(userID) == "" {
+		return true
+	}
+	return task != nil && strings.TrimSpace(task.UserID) == strings.TrimSpace(userID)
+}
+
+func runningUnitsForUser(m *imageTaskManager, userID string) int {
+	if strings.TrimSpace(userID) == "" {
+		return m.runningUnits
+	}
+	running := 0
+	for _, task := range m.tasks {
+		if !imageTaskVisibleToUser(task, userID) {
+			continue
+		}
+		for _, unit := range task.Units {
+			if unit.Status == imageTaskStatusRunning {
+				running++
+			}
+		}
+	}
+	return running
 }
 
 func (m *imageTaskManager) broadcast(subscribers []chan imageTaskEvent, event imageTaskEvent) {

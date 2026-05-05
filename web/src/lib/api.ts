@@ -1,6 +1,6 @@
 import { httpRequest } from "@/lib/request";
 import webConfig from "@/constants/common-env";
-import { getStoredAuthKey } from "@/store/auth";
+import { getStoredAuthKey, type AuthUser } from "@/store/auth";
 import {
   buildImageAccountPolicyHeader,
   normalizeImageAccountPolicy,
@@ -572,14 +572,38 @@ export type Sub2APIGroupsResult = {
   groups: Sub2APIGroupOption[];
 };
 
-export async function login(authKey: string) {
-  const normalizedAuthKey = String(authKey || "").trim();
-  return httpRequest<{ ok: boolean }>("/auth/login", {
+export type AuthResponse = {
+  ok: boolean;
+  version?: string;
+  token: string;
+  user: AuthUser;
+};
+
+export async function login(authKey: string): Promise<AuthResponse>;
+export async function login(email: string, password: string): Promise<AuthResponse>;
+export async function login(emailOrKey: string, password?: string) {
+  const first = String(emailOrKey || "").trim();
+  if (typeof password === "string") {
+    return httpRequest<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: { email: first, password },
+      redirectOnUnauthorized: false,
+    });
+  }
+  return httpRequest<AuthResponse>("/auth/login", {
     method: "POST",
     body: {},
     headers: {
-      Authorization: `Bearer ${normalizedAuthKey}`,
+      Authorization: `Bearer ${first}`,
     },
+    redirectOnUnauthorized: false,
+  });
+}
+
+export async function registerUser(payload: { email: string; password: string; name?: string }) {
+  return httpRequest<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: payload,
     redirectOnUnauthorized: false,
   });
 }

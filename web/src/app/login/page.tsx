@@ -7,28 +7,49 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login } from "@/lib/api";
-import { setStoredAuthKey } from "@/store/auth";
+import { login, registerUser } from "@/lib/api";
+import { setStoredAuthKey, setStoredAuthUser } from "@/store/auth";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState<"login" | "register" | "admin">("login");
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
   const [authKey, setAuthKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleLogin = async () => {
-    const normalizedAuthKey = authKey.trim();
-    if (!normalizedAuthKey) {
-      toast.error("请输入 密钥");
-      return;
-    }
+  const handleAuthSuccess = async (payload: Awaited<ReturnType<typeof login>>) => {
+    await setStoredAuthKey(payload.token);
+    await setStoredAuthUser(payload.user);
+    navigate(payload.user.role === "admin" ? "/accounts" : "/image", { replace: true });
+  };
 
+  const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      await login(normalizedAuthKey);
-      await setStoredAuthKey(normalizedAuthKey);
-      navigate("/image", { replace: true });
+      if (mode === "admin") {
+        const normalizedAuthKey = authKey.trim();
+        if (!normalizedAuthKey) {
+          toast.error("请输入管理员密钥");
+          return;
+        }
+        await handleAuthSuccess(await login(normalizedAuthKey));
+        return;
+      }
+
+      const normalizedEmail = email.trim();
+      if (!normalizedEmail || !password) {
+        toast.error("请输入邮箱和密码");
+        return;
+      }
+      const payload =
+        mode === "register"
+          ? await registerUser({ email: normalizedEmail, password, name: name.trim() || undefined })
+          : await login(normalizedEmail, password);
+      await handleAuthSuccess(payload);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "登录失败";
+      const message = error instanceof Error ? error.message : mode === "register" ? "注册失败" : "登录失败";
       toast.error(message);
     } finally {
       setIsSubmitting(false);
@@ -45,7 +66,7 @@ export default function LoginPage() {
             </span>
             <div>
               <div className="text-sm font-semibold tracking-tight">ChatGpt Image Studio</div>
-              <div className="mt-1 text-xs text-white/65">轻量、克制、连续处理的图片工作区</div>
+              <div className="mt-1 text-xs text-white/65">多人隔离的图片工作区</div>
             </div>
           </div>
 
@@ -53,18 +74,18 @@ export default function LoginPage() {
             <div className="space-y-3">
               <div className="text-sm font-medium uppercase tracking-[0.24em] text-white/55">Image Studio</div>
               <h1 className="max-w-[420px] text-[40px] font-semibold leading-[1.1] tracking-tight">
-                在一个界面里完成生成、编辑与账号调度。
+                每个用户都有自己的图片工作台。
               </h1>
               <p className="max-w-[430px] text-sm leading-7 text-white/72">
-                登录后直接进入图片工作台。最近任务、选区编辑、额度信息和账号同步都会保持在同一套工作流里。
+                普通用户只进入生成与编辑界面，历史记录、任务队列和图片文件按用户隔离；管理员单独管理账号、配置与同步。
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["生成", "从提示词或参考图开始"],
-                ["编辑", "继续改图，保留上下文"],
-                ["管理", "查看额度与同步状态"],
+                ["注册", "邮箱密码创建用户"],
+                ["隔离", "历史与任务按用户划分"],
+                ["后台", "管理员专用入口"],
               ].map(([title, desc]) => (
                 <div key={title} className="rounded-2xl border border-white/12 bg-white/6 p-4 backdrop-blur-sm">
                   <div className="text-sm font-semibold">{title}</div>
@@ -74,53 +95,100 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="text-xs text-white/50">进入后默认落在图片工作台，可继续切换到账号管理。</div>
+          <div className="text-xs text-white/50">普通用户登录后默认进入图片工作台。</div>
         </div>
 
         <div className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
-          <div className="w-full max-w-[420px] space-y-8">
+          <div className="w-full max-w-[420px] space-y-7">
             <div className="space-y-4">
               <div className="inline-flex size-14 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
                 <LockKeyhole className="size-5" />
               </div>
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight text-stone-950">登录工作区</h1>
+                <h1 className="text-3xl font-semibold tracking-tight text-stone-950">
+                  {mode === "register" ? "注册工作台账号" : mode === "admin" ? "管理员登录" : "登录工作台"}
+                </h1>
                 <p className="text-sm leading-7 text-stone-500">
-                  输入后端密钥，进入图片工作台与账号管理界面。
+                  {mode === "admin" ? "使用后端管理员密钥进入配置和账号后台。" : "使用邮箱和密码进入自己的图片工作台。"}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label htmlFor="auth-key" className="block text-sm font-medium text-stone-700">
-                密钥
-              </label>
-              <Input
-                id="auth-key"
-                type="password"
-                value={authKey}
-                onChange={(event) => setAuthKey(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    void handleLogin();
-                  }
-                }}
-                placeholder="请输入密钥"
-                className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
-              />
+            <div className="grid grid-cols-3 gap-2 rounded-2xl bg-stone-100 p-1 text-sm">
+              {[
+                ["login", "登录"],
+                ["register", "注册"],
+                ["admin", "管理员"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`rounded-xl px-3 py-2 transition ${mode === key ? "bg-white text-stone-950 shadow-sm" : "text-stone-500"}`}
+                  onClick={() => setMode(key as "login" | "register" | "admin")}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+
+            {mode === "admin" ? (
+              <div className="space-y-3">
+                <label htmlFor="auth-key" className="block text-sm font-medium text-stone-700">
+                  管理员密钥
+                </label>
+                <Input
+                  id="auth-key"
+                  type="password"
+                  value={authKey}
+                  onChange={(event) => setAuthKey(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void handleSubmit();
+                  }}
+                  placeholder="请输入管理员密钥"
+                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {mode === "register" ? (
+                  <Input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="昵称（可选）"
+                    className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                  />
+                ) : null}
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="邮箱"
+                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                />
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void handleSubmit();
+                  }}
+                  placeholder="密码，至少 6 位"
+                  className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
+                />
+              </div>
+            )}
 
             <Button
               className="h-13 w-full rounded-2xl bg-stone-950 text-white hover:bg-stone-800"
-              onClick={() => void handleLogin()}
+              onClick={() => void handleSubmit()}
               disabled={isSubmitting}
             >
               {isSubmitting ? <LoaderCircle className="size-4 animate-spin" /> : null}
-              进入工作区
+              {mode === "register" ? "注册并进入" : "进入"}
             </Button>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-xs leading-6 text-stone-500">
-              使用同一个密钥即可访问图片生成接口和后台管理页，不需要额外登录步骤。
+              普通用户只能访问图片工作台；账号、配置、同步、诊断等入口仅管理员可见并由后端拦截。
             </div>
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-950">
@@ -129,9 +197,6 @@ export default function LoginPage() {
                 使用与风险提示
               </div>
               <div className="mt-2">
-                本项目仅供个人学习、技术研究与非商业交流使用，严禁用于违法违规、批量滥用或其他不当用途。
-              </div>
-              <div className="mt-1">
                 项目基于对 ChatGPT 官网相关能力的研究实现，存在账号被限制、临时封禁或永久封禁的风险。请勿使用常用、大号或高价值账号测试。
               </div>
             </div>

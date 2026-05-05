@@ -55,16 +55,24 @@ func gatewayImageURL(r *http.Request, filename string) string {
 		scheme = "https"
 	}
 	host := r.Host
-	return fmt.Sprintf("%s://%s/v1/files/image/%s", scheme, host, filename)
+	return fmt.Sprintf("%s://%s/v1/files/image/%s", scheme, host, strings.TrimLeft(filename, "/"))
 }
 
 func (s *Server) resolveImageFilePath(name string) string {
-	baseName := filepath.Base(strings.TrimSpace(name))
-	candidates := []string{
-		filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), baseName),
+	cleaned := strings.Trim(strings.TrimSpace(name), "/")
+	parts := strings.Split(cleaned, "/")
+	baseName := filepath.Base(cleaned)
+	imageRoot := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
+	candidates := []string{}
+	if len(parts) >= 2 {
+		userID := strings.ReplaceAll(parts[0], "\\", "-")
+		fileName := filepath.Base(parts[len(parts)-1])
+		candidates = append(candidates, filepath.Join(imageRoot, userID, fileName))
+		baseName = fileName
 	}
+	candidates = append(candidates, filepath.Join(imageRoot, baseName))
 	legacyPath := filepath.Join(s.cfg.ResolvePath(defaultImageDir), baseName)
-	if !strings.EqualFold(filepath.Clean(legacyPath), filepath.Clean(candidates[0])) {
+	if len(candidates) == 0 || !strings.EqualFold(filepath.Clean(legacyPath), filepath.Clean(candidates[len(candidates)-1])) {
 		candidates = append(candidates, legacyPath)
 	}
 	for _, candidate := range candidates {
@@ -111,8 +119,7 @@ func (s *Server) searchImageFilePathFallback(name string) string {
 
 // handleImageFile serves cached and server-stored images from storage.image_dir.
 func (s *Server) handleImageFile(w http.ResponseWriter, r *http.Request) {
-	name := strings.TrimPrefix(r.URL.Path, "/v1/files/image/")
-	name = strings.ReplaceAll(name, "/", "-")
+	name := strings.Trim(strings.TrimPrefix(r.URL.Path, "/v1/files/image/"), "/")
 	if name == "" {
 		writeError(w, http.StatusNotFound, "image not found")
 		return

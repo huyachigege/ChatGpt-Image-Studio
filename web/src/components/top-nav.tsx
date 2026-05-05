@@ -5,7 +5,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, ChevronLeft, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield } from "lucide-react";
 
 import { fetchVersionInfo } from "@/lib/api";
-import { clearStoredAuthKey } from "@/store/auth";
+import { clearStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
 import { cn } from "@/lib/utils";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 
@@ -56,11 +56,16 @@ type DesktopTopNavProps = {
   pathname: string;
   defaultCollapsed: boolean;
   versionLabel: string;
+  user: AuthUser | null;
   onLogout: () => Promise<void>;
 };
 
-function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, onLogout }: DesktopTopNavProps) {
+function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogout }: DesktopTopNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const visibleNavItems = user?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"));
+  const requestExample = user?.imageApiKey
+    ? `curl ${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/v1/images/generations \\\n  -H "Authorization: Bearer ${user.imageApiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
+    : "";
 
   return (
     <aside className={cn("hidden shrink-0 transition-[width] duration-200 lg:flex", collapsed ? "w-[92px]" : "w-[228px]")}>
@@ -95,7 +100,7 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, onLogout }: D
         </div>
 
         <nav className="mt-4 space-y-1">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const active = isNavItemActive(pathname, item.href, item.matchPrefix);
             const Icon = item.icon;
             return (
@@ -134,6 +139,12 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, onLogout }: D
         </nav>
 
         <div className="mt-auto space-y-3">
+          {requestExample && !collapsed ? (
+            <div className="rounded-2xl bg-white/70 px-4 py-3 text-[11px] leading-5 text-stone-600 shadow-sm dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">
+              <div className="font-medium text-stone-700 dark:text-[var(--studio-text)]">图片 API 请求示例</div>
+              <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] leading-5">{requestExample}</pre>
+            </div>
+          ) : null}
           <a
             href={repositoryUrl}
             target="_blank"
@@ -171,6 +182,7 @@ export function TopNav() {
   const isImageRoute = pathname === "/image" || pathname?.startsWith("/image/");
   const isMobileWorkspaceRoute = pathname === "/image/workspace";
   const [versionLabel, setVersionLabel] = useState("读取中");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [mobileNavExpanded, setMobileNavExpanded] = useState(false);
   const [mobileHeaderHeight, setMobileHeaderHeight] = useState(0);
   const [mobileWorkspaceHeaderHeight, setMobileWorkspaceHeaderHeight] = useState(0);
@@ -183,6 +195,15 @@ export function TopNav() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const loadAuthUser = async () => {
+      const user = await getStoredAuthUser();
+      if (!cancelled) {
+        setAuthUser(user);
+      }
+    };
+
+    void loadAuthUser();
 
     const loadVersion = async () => {
       try {
@@ -308,7 +329,7 @@ export function TopNav() {
                 to="/image/history"
                 className="hidden rounded-2xl border border-stone-200 bg-white px-3 py-2 text-xs font-medium text-stone-600 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] sm:inline-flex"
               >
-                {navItems.find((item) => isNavItemActive(pathname, item.href, item.matchPrefix))?.label ?? "导航"}
+                {(authUser?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"))).find((item) => isNavItemActive(pathname, item.href, item.matchPrefix))?.label ?? "导航"}
               </Link>
               <button
                 type="button"
@@ -323,7 +344,7 @@ export function TopNav() {
           {mobileNavExpanded ? (
             <nav className="hide-scrollbar mt-3 -mx-1 overflow-x-auto px-1">
               <div className="inline-flex min-w-full gap-2 rounded-[20px] bg-white/55 p-1">
-                {navItems.map((item) => {
+                {(authUser?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"))).map((item) => {
                   const active = isNavItemActive(pathname, item.href, item.matchPrefix);
                   const Icon = item.icon;
                   return (
@@ -414,7 +435,7 @@ export function TopNav() {
             </div>
             <nav className="hide-scrollbar mt-3 -mx-1 overflow-x-auto px-1">
               <div className="inline-flex min-w-full gap-2 rounded-[20px] bg-white/55 p-1">
-                {navItems.map((item) => {
+                {(authUser?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"))).map((item) => {
                   const active = isNavItemActive(pathname, item.href, item.matchPrefix);
                   const Icon = item.icon;
                   return (
@@ -443,6 +464,7 @@ export function TopNav() {
         pathname={pathname}
         defaultCollapsed={isImageRoute}
         versionLabel={versionLabel}
+        user={authUser}
         onLogout={handleLogout}
       />
     </>

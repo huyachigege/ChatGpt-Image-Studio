@@ -67,6 +67,7 @@ type Turn struct {
 
 type Conversation struct {
 	ID           string        `json:"id"`
+	UserID       string        `json:"userId,omitempty"`
 	Title        string        `json:"title"`
 	Mode         string        `json:"mode"`
 	Prompt       string        `json:"prompt"`
@@ -86,6 +87,7 @@ type Conversation struct {
 type Store struct {
 	backend  backend
 	imageDir string
+	userID   string
 }
 
 type backend interface {
@@ -99,7 +101,15 @@ type backend interface {
 }
 
 func NewStore(cfg *config.Config) (*Store, error) {
+	return NewStoreForUser(cfg, "")
+}
+
+func NewStoreForUser(cfg *config.Config, userID string) (*Store, error) {
+	cleanedUserID := sanitizeUserID(userID)
 	imageDir := cfg.ResolvePath(cfg.Storage.ImageDir)
+	if cleanedUserID != "" {
+		imageDir = filepath.Join(imageDir, cleanedUserID)
+	}
 	var storage backend
 	switch strings.ToLower(strings.TrimSpace(cfg.Storage.Backend)) {
 	case "sqlite":
@@ -124,7 +134,7 @@ func NewStore(cfg *config.Config) (*Store, error) {
 		_ = storage.Close()
 		return nil, err
 	}
-	return &Store{backend: storage, imageDir: imageDir}, nil
+	return &Store{backend: storage, imageDir: imageDir, userID: cleanedUserID}, nil
 }
 
 func (s *Store) Close() error {
@@ -139,12 +149,28 @@ func (s *Store) List(ctx context.Context) ([]Conversation, error) {
 	if err != nil {
 		return nil, err
 	}
+	if s.userID != "" {
+		filtered := make([]Conversation, 0, len(items))
+		for _, item := range items {
+			if sanitizeUserID(item.UserID) == s.userID {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
+	}
 	sortConversations(items)
 	return items, nil
 }
 
 func (s *Store) Get(ctx context.Context, id string) (*Conversation, error) {
-	return s.backend.Get(ctx, cleanID(id))
+	item, err := s.backend.Get(ctx, cleanID(id))
+	if err != nil || item == nil {
+		return item, err
+	}
+	if s.userID != "" && sanitizeUserID(item.UserID) != s.userID {
+		return nil, nil
+	}
+	return item, nil
 }
 
 func (s *Store) Save(ctx context.Context, conversation Conversation) (*Conversation, error) {
@@ -187,6 +213,9 @@ func (s *Store) Clear(ctx context.Context) error {
 
 func (s *Store) normalizeConversation(conversation Conversation) (Conversation, error) {
 	conversation.ID = cleanID(conversation.ID)
+	if s.userID != "" {
+		conversation.UserID = s.userID
+	}
 	if conversation.ID == "" {
 		return Conversation{}, fmt.Errorf("conversation id is required")
 	}
@@ -310,6 +339,9 @@ func (s *Store) saveAsset(payload []byte, kind, mimeType string) (string, error)
 		_ = os.Remove(tmp)
 		return "", err
 	}
+	if s.userID != "" {
+		return "/v1/files/image/" + s.userID + "/" + filename, nil
+	}
 	return "/v1/files/image/" + filename, nil
 }
 
@@ -427,6 +459,13 @@ func sortConversations(items []Conversation) {
 
 func cleanID(id string) string {
 	return strings.ReplaceAll(strings.TrimSpace(id), "/", "-")
+}
+
+func sanitizeUserID(userID string) string {
+	cleaned := strings.TrimSpace(userID)
+	cleaned = strings.ReplaceAll(cleaned, "/", "-")
+	cleaned = strings.ReplaceAll(cleaned, "\\", "-")
+	return cleaned
 }
 
 func firstNonEmpty(values ...string) string {

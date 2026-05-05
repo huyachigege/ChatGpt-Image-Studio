@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"chatgpt2api/handler"
 	"chatgpt2api/internal/imagehistory"
@@ -11,6 +13,8 @@ import (
 // buildImageResponse converts ImageResults to the OpenAI-compatible response format.
 // Only includes url/b64_json and revised_prompt — no internal ChatGPT fields.
 func buildImageResponse(r *http.Request, client imageDownloader, results []handler.ImageResult, responseFormat string, sourceAccountID string, cacheDir string) []map[string]any {
+	userID := identityFromContext(r.Context()).UserID
+	cacheDir = imageCacheDirForUser(cacheDir, userID)
 	return buildImageResponseItems(
 		r.Context(),
 		client,
@@ -19,12 +23,14 @@ func buildImageResponse(r *http.Request, client imageDownloader, results []handl
 		sourceAccountID,
 		cacheDir,
 		func(filename string) string {
-			return gatewayImageURL(r, filename)
+			return gatewayImageURL(r, imageURLName(userID, filename))
 		},
 	)
 }
 
 func buildImageHistoryImages(ctx context.Context, client imageDownloader, results []handler.ImageResult, responseFormat string, sourceAccountID string, cacheDir string) []imagehistory.Image {
+	userID := identityFromContext(ctx).UserID
+	cacheDir = imageCacheDirForUser(cacheDir, userID)
 	items := buildImageResponseItems(
 		ctx,
 		client,
@@ -33,7 +39,7 @@ func buildImageHistoryImages(ctx context.Context, client imageDownloader, result
 		sourceAccountID,
 		cacheDir,
 		func(filename string) string {
-			return "/v1/files/image/" + filename
+			return "/v1/files/image/" + imageURLName(userID, filename)
 		},
 	)
 	historyImages := make([]imagehistory.Image, 0, len(items))
@@ -53,6 +59,22 @@ func buildImageHistoryImages(ctx context.Context, client imageDownloader, result
 		})
 	}
 	return historyImages
+}
+
+func imageCacheDirForUser(cacheDir, userID string) string {
+	userID = strings.Trim(strings.TrimSpace(userID), "/")
+	if userID == "" || userID == "admin" {
+		return cacheDir
+	}
+	return filepath.Join(cacheDir, userID)
+}
+
+func imageURLName(userID, filename string) string {
+	userID = strings.Trim(strings.TrimSpace(userID), "/")
+	if userID == "" || userID == "admin" {
+		return filename
+	}
+	return userID + "/" + filename
 }
 
 func buildImageResponseItems(

@@ -14,7 +14,7 @@ func (s *Server) handleListImageConversations(w http.ResponseWriter, r *http.Req
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "server image storage is disabled"})
 		return
 	}
-	store, err := imagehistory.NewStore(s.cfg)
+	store, err := imagehistory.NewStoreForUser(s.cfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -34,7 +34,7 @@ func (s *Server) handleGetImageConversation(w http.ResponseWriter, r *http.Reque
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "server image storage is disabled"})
 		return
 	}
-	store, err := imagehistory.NewStore(s.cfg)
+	store, err := imagehistory.NewStoreForUser(s.cfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -67,7 +67,7 @@ func (s *Server) handleSaveImageConversation(w http.ResponseWriter, r *http.Requ
 		body.ID = pathID
 	}
 
-	store, err := imagehistory.NewStore(s.cfg)
+	store, err := imagehistory.NewStoreForUser(s.cfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -87,7 +87,7 @@ func (s *Server) handleDeleteImageConversation(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "server image storage is disabled"})
 		return
 	}
-	store, err := imagehistory.NewStore(s.cfg)
+	store, err := imagehistory.NewStoreForUser(s.cfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -106,7 +106,7 @@ func (s *Server) handleClearImageConversations(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "server image storage is disabled"})
 		return
 	}
-	store, err := imagehistory.NewStore(s.cfg)
+	store, err := imagehistory.NewStoreForUser(s.cfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -151,7 +151,7 @@ func (s *Server) handleImportImageConversations(w http.ResponseWriter, r *http.R
 	tempCfg.Storage.ImageConversationStorage = firstNonEmpty(body.Storage.ImageConversationStorage, "server")
 	tempCfg.Storage.ImageDataStorage = firstNonEmpty(body.Storage.ImageDataStorage, tempCfg.Storage.ImageConversationStorage)
 
-	store, err := imagehistory.NewStore(tempCfg)
+	store, err := imagehistory.NewStoreForUser(tempCfg, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return

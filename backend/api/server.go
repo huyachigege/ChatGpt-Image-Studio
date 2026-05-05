@@ -25,6 +25,7 @@ import (
 	"chatgpt2api/internal/middleware"
 	"chatgpt2api/internal/newapi"
 	"chatgpt2api/internal/sub2api"
+	"chatgpt2api/internal/users"
 )
 
 type Server struct {
@@ -73,6 +74,17 @@ type accountRefreshRunResult struct {
 
 const cpaFixedImageModel = "gpt-image-2"
 const maxBulkAccountRefreshWorkers = 4
+const userSessionTTL = 30 * 24 * time.Hour
+
+type authIdentity struct {
+	UserID string
+	Email  string
+	Name   string
+	Role   string
+	Token  string
+}
+
+type authIdentityContextKey struct{}
 
 func (e *requestError) Error() string {
 	return firstNonEmpty(e.message, e.code)
@@ -377,46 +389,47 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.Handle("POST /auth/login", http.HandlerFunc(s.handleLogin))
+	mux.Handle("POST /auth/register", http.HandlerFunc(s.handleRegister))
 	mux.Handle("GET /version", http.HandlerFunc(s.handleVersion))
 	mux.Handle("GET /health", http.HandlerFunc(handleHealth))
 
-	mux.Handle("GET /api/accounts", s.requireUIAuth(http.HandlerFunc(s.handleListAccounts)))
-	mux.Handle("GET /api/accounts/{id}/quota", s.requireUIAuth(http.HandlerFunc(s.handleAccountQuota)))
-	mux.Handle("POST /api/accounts", s.requireUIAuth(http.HandlerFunc(s.handleCreateAccounts)))
-	mux.Handle("POST /api/accounts/import", s.requireUIAuth(http.HandlerFunc(s.handleImportAccounts)))
-	mux.Handle("DELETE /api/accounts", s.requireUIAuth(http.HandlerFunc(s.handleDeleteAccounts)))
-	mux.Handle("POST /api/accounts/refresh", s.requireUIAuth(http.HandlerFunc(s.handleRefreshAccounts)))
-	mux.Handle("POST /api/accounts/refresh-all", s.requireUIAuth(http.HandlerFunc(s.handleRefreshAllAccounts)))
-	mux.Handle("GET /api/accounts/refresh-progress", s.requireUIAuth(http.HandlerFunc(s.handleAccountRefreshProgress)))
-	mux.Handle("POST /api/accounts/update", s.requireUIAuth(http.HandlerFunc(s.handleUpdateAccount)))
-	mux.Handle("GET /api/accounts/image-policy", s.requireUIAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
-	mux.Handle("PUT /api/accounts/image-policy", s.requireUIAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
-	mux.Handle("GET /api/config", s.requireUIAuth(http.HandlerFunc(s.handleGetConfig)))
-	mux.Handle("GET /api/config/defaults", s.requireUIAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
-	mux.Handle("PUT /api/config", s.requireUIAuth(http.HandlerFunc(s.handleUpdateConfig)))
-	mux.Handle("POST /api/proxy/test", s.requireUIAuth(http.HandlerFunc(s.handleProxyTest)))
-	mux.Handle("POST /api/integration/test", s.requireUIAuth(http.HandlerFunc(s.handleIntegrationTest)))
-	mux.Handle("POST /api/integration/newapi/token", s.requireUIAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
-	mux.Handle("POST /api/integration/sub2api/groups", s.requireUIAuth(http.HandlerFunc(s.handleSub2APIGroups)))
-	mux.Handle("GET /api/requests", s.requireUIAuth(http.HandlerFunc(s.handleListRequestLogs)))
-	mux.Handle("GET /api/startup/check", s.requireUIAuth(http.HandlerFunc(s.handleStartupCheck)))
-	mux.Handle("GET /api/runtime/status", s.requireUIAuth(http.HandlerFunc(s.handleRuntimeStatus)))
-	mux.Handle("GET /api/diagnostics/export", s.requireUIAuth(http.HandlerFunc(s.handleExportDiagnostics)))
-	mux.Handle("POST /api/tools/admission-stress", s.requireUIAuth(http.HandlerFunc(s.handleAdmissionStress)))
-	mux.Handle("GET /api/sync/status", s.requireUIAuth(http.HandlerFunc(s.handleSyncStatus)))
-	mux.Handle("POST /api/sync/run", s.requireUIAuth(http.HandlerFunc(s.handleRunSync)))
-	mux.Handle("GET /api/image/conversations", s.requireUIAuth(http.HandlerFunc(s.handleListImageConversations)))
-	mux.Handle("DELETE /api/image/conversations", s.requireUIAuth(http.HandlerFunc(s.handleClearImageConversations)))
-	mux.Handle("POST /api/image/conversations/import", s.requireUIAuth(http.HandlerFunc(s.handleImportImageConversations)))
-	mux.Handle("GET /api/image/conversations/{id}", s.requireUIAuth(http.HandlerFunc(s.handleGetImageConversation)))
-	mux.Handle("PUT /api/image/conversations/{id}", s.requireUIAuth(http.HandlerFunc(s.handleSaveImageConversation)))
-	mux.Handle("DELETE /api/image/conversations/{id}", s.requireUIAuth(http.HandlerFunc(s.handleDeleteImageConversation)))
-	mux.Handle("POST /api/image/tasks", s.requireUIAuth(http.HandlerFunc(s.handleCreateImageTask)))
-	mux.Handle("GET /api/image/tasks", s.requireUIAuth(http.HandlerFunc(s.handleListImageTasks)))
-	mux.Handle("GET /api/image/tasks/snapshot", s.requireUIAuth(http.HandlerFunc(s.handleImageTaskSnapshot)))
-	mux.Handle("GET /api/image/tasks/stream", s.requireUIAuth(http.HandlerFunc(s.handleImageTaskStream)))
-	mux.Handle("GET /api/image/tasks/{id}", s.requireUIAuth(http.HandlerFunc(s.handleGetImageTask)))
-	mux.Handle("DELETE /api/image/tasks/{id}", s.requireUIAuth(http.HandlerFunc(s.handleCancelImageTask)))
+	mux.Handle("GET /api/accounts", s.requireAdminAuth(http.HandlerFunc(s.handleListAccounts)))
+	mux.Handle("GET /api/accounts/{id}/quota", s.requireAdminAuth(http.HandlerFunc(s.handleAccountQuota)))
+	mux.Handle("POST /api/accounts", s.requireAdminAuth(http.HandlerFunc(s.handleCreateAccounts)))
+	mux.Handle("POST /api/accounts/import", s.requireAdminAuth(http.HandlerFunc(s.handleImportAccounts)))
+	mux.Handle("DELETE /api/accounts", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteAccounts)))
+	mux.Handle("POST /api/accounts/refresh", s.requireAdminAuth(http.HandlerFunc(s.handleRefreshAccounts)))
+	mux.Handle("POST /api/accounts/refresh-all", s.requireAdminAuth(http.HandlerFunc(s.handleRefreshAllAccounts)))
+	mux.Handle("GET /api/accounts/refresh-progress", s.requireAdminAuth(http.HandlerFunc(s.handleAccountRefreshProgress)))
+	mux.Handle("POST /api/accounts/update", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateAccount)))
+	mux.Handle("GET /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
+	mux.Handle("PUT /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
+	mux.Handle("GET /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleGetConfig)))
+	mux.Handle("GET /api/config/defaults", s.requireAdminAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
+	mux.Handle("PUT /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateConfig)))
+	mux.Handle("POST /api/proxy/test", s.requireAdminAuth(http.HandlerFunc(s.handleProxyTest)))
+	mux.Handle("POST /api/integration/test", s.requireAdminAuth(http.HandlerFunc(s.handleIntegrationTest)))
+	mux.Handle("POST /api/integration/newapi/token", s.requireAdminAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
+	mux.Handle("POST /api/integration/sub2api/groups", s.requireAdminAuth(http.HandlerFunc(s.handleSub2APIGroups)))
+	mux.Handle("GET /api/requests", s.requireAdminAuth(http.HandlerFunc(s.handleListRequestLogs)))
+	mux.Handle("GET /api/startup/check", s.requireAdminAuth(http.HandlerFunc(s.handleStartupCheck)))
+	mux.Handle("GET /api/runtime/status", s.requireAdminAuth(http.HandlerFunc(s.handleRuntimeStatus)))
+	mux.Handle("GET /api/diagnostics/export", s.requireAdminAuth(http.HandlerFunc(s.handleExportDiagnostics)))
+	mux.Handle("POST /api/tools/admission-stress", s.requireAdminAuth(http.HandlerFunc(s.handleAdmissionStress)))
+	mux.Handle("GET /api/sync/status", s.requireAdminAuth(http.HandlerFunc(s.handleSyncStatus)))
+	mux.Handle("POST /api/sync/run", s.requireAdminAuth(http.HandlerFunc(s.handleRunSync)))
+	mux.Handle("GET /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageConversations)))
+	mux.Handle("DELETE /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleClearImageConversations)))
+	mux.Handle("POST /api/image/conversations/import", s.requireWorkspaceAuth(http.HandlerFunc(s.handleImportImageConversations)))
+	mux.Handle("GET /api/image/conversations/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleGetImageConversation)))
+	mux.Handle("PUT /api/image/conversations/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleSaveImageConversation)))
+	mux.Handle("DELETE /api/image/conversations/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageConversation)))
+	mux.Handle("POST /api/image/tasks", s.requireWorkspaceAuth(http.HandlerFunc(s.handleCreateImageTask)))
+	mux.Handle("GET /api/image/tasks", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageTasks)))
+	mux.Handle("GET /api/image/tasks/snapshot", s.requireWorkspaceAuth(http.HandlerFunc(s.handleImageTaskSnapshot)))
+	mux.Handle("GET /api/image/tasks/stream", s.requireWorkspaceAuth(http.HandlerFunc(s.handleImageTaskStream)))
+	mux.Handle("GET /api/image/tasks/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleGetImageTask)))
+	mux.Handle("DELETE /api/image/tasks/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleCancelImageTask)))
 
 	mux.Handle("POST /v1/images/generations", s.requireImageAuth(http.HandlerFunc(s.handleImageGenerations)))
 	mux.Handle("POST /v1/images/edits", s.requireImageAuth(http.HandlerFunc(s.handleImageEdits)))
@@ -432,13 +445,80 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
-	if !s.hasExactBearer(r, s.cfg.App.AuthKey) {
-		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "authorization is invalid"})
+	if s.hasExactBearer(r, s.cfg.App.AuthKey) {
+		identity := authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: strings.TrimSpace(s.cfg.App.AuthKey)}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":      true,
+			"version": buildinfo.ResolveVersion(s.cfg.App.Version),
+			"token":   identity.Token,
+			"user":    identity,
+		})
+		return
+	}
+
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	user, err := store.Authenticate(r.Context(), body.Email, body.Password)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": err.Error()})
+		return
+	}
+	token, err := store.CreateSession(r.Context(), user.ID, userSessionTTL)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"ok":      true,
 		"version": buildinfo.ResolveVersion(s.cfg.App.Version),
+		"token":   token,
+		"user":    user,
+	})
+}
+
+func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Name     string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	user, err := store.Register(r.Context(), body.Email, body.Password, body.Name)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	token, err := store.CreateSession(r.Context(), user.ID, userSessionTTL)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":      true,
+		"version": buildinfo.ResolveVersion(s.cfg.App.Version),
+		"token":   token,
+		"user":    user,
 	})
 }
 
@@ -1574,23 +1654,91 @@ func (s *Server) handleWebApp(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) requireUIAuth(next http.Handler) http.Handler {
+	return s.requireWorkspaceAuth(next)
+}
+
+func (s *Server) requireWorkspaceAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !s.hasExactBearer(r, s.cfg.App.AuthKey) {
+		identity, ok := s.identityFromRequest(r)
+		if !ok {
 			writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "authorization is invalid"})
 			return
 		}
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authIdentityContextKey{}, identity)))
 	})
+}
+
+func (s *Server) requireAdminAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		identity, ok := s.identityFromRequest(r)
+		if !ok || identity.Role != users.RoleAdmin {
+			writeJSON(w, http.StatusForbidden, map[string]any{"error": "admin authorization is required"})
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authIdentityContextKey{}, identity)))
+	})
+}
+
+func (s *Server) identityFromRequest(r *http.Request) (authIdentity, bool) {
+	token := bearerFromRequest(r)
+	if token == "" {
+		return authIdentity{}, false
+	}
+	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
+		return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		return authIdentity{}, false
+	}
+	defer store.Close()
+	user, err := store.UserBySession(r.Context(), token)
+	if err != nil || user == nil {
+		return authIdentity{}, false
+	}
+	return authIdentity{UserID: user.ID, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
+}
+
+func identityFromContext(ctx context.Context) authIdentity {
+	if identity, ok := ctx.Value(authIdentityContextKey{}).(authIdentity); ok && strings.TrimSpace(identity.UserID) != "" {
+		return identity
+	}
+	return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin}
 }
 
 func (s *Server) requireImageAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.hasAnyBearer(r, append([]string{s.cfg.App.AuthKey}, parseKeys(s.cfg.App.APIKey)...)...) {
-			next.ServeHTTP(w, r)
+		if identity, ok := s.imageIdentityFromRequest(r); ok {
+			next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), authIdentityContextKey{}, identity)))
 			return
 		}
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": "authorization is invalid"})
 	})
+}
+
+func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) {
+	token := bearerFromRequest(r)
+	if token == "" {
+		return authIdentity{}, false
+	}
+	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
+		return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+	}
+	for _, key := range parseKeys(s.cfg.App.APIKey) {
+		if token == key {
+			return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+		}
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		return authIdentity{}, false
+	}
+	defer store.Close()
+	user, err := store.UserByImageAPIKey(r.Context(), token)
+	if err != nil || user == nil {
+		return authIdentity{}, false
+	}
+	return authIdentity{UserID: user.ID, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
 }
 
 func (s *Server) hasAnyBearer(r *http.Request, keys ...string) bool {
