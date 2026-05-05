@@ -214,7 +214,6 @@ func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byt
 	}
 	if index := strings.Index(rawURL, "/v1/files/image/"); index >= 0 {
 		name := rawURL[index+len("/v1/files/image/"):]
-		name = strings.ReplaceAll(name, "/", "-")
 		path := s.resolveImageFilePath(name)
 		if path == "" {
 			return nil, fmt.Errorf("image not found")

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Activity, ChevronLeft, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield } from "lucide-react";
 
+import webConfig from "@/constants/common-env";
 import { fetchVersionInfo } from "@/lib/api";
 import { clearStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
 import { cn } from "@/lib/utils";
@@ -63,8 +64,9 @@ type DesktopTopNavProps = {
 function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogout }: DesktopTopNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const visibleNavItems = user?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"));
+  const apiBaseUrl = webConfig.apiUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
   const requestExample = user?.imageApiKey
-    ? `curl ${typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"}/v1/images/generations \\\n  -H "Authorization: Bearer ${user.imageApiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
+    ? `curl ${apiBaseUrl.replace(/\/$/, "")}/v1/images/generations \\\n  -H "Authorization: Bearer ${user.imageApiKey}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
     : "";
 
   return (

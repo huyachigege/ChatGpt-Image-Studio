@@ -3,7 +3,16 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+
+	"chatgpt2api/internal/users"
 )
+
+func imageTaskScopeUserID(identity authIdentity) string {
+	if identity.Role == users.RoleAdmin {
+		return ""
+	}
+	return identity.UserID
+}
 
 func (s *Server) handleCreateImageTask(w http.ResponseWriter, r *http.Request) {
 	if s.imageTasks == nil {
@@ -22,7 +31,7 @@ func (s *Server) handleCreateImageTask(w http.ResponseWriter, r *http.Request) {
 		writeImageRequestError(w, err)
 		return
 	}
-	_, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+	_, snapshot := s.imageTasks.listTasksForUser(imageTaskScopeUserID(identity))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"task":     task,
 		"snapshot": snapshot,
@@ -35,7 +44,7 @@ func (s *Server) handleListImageTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
-	items, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+	items, snapshot := s.imageTasks.listTasksForUser(imageTaskScopeUserID(identity))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items":    items,
 		"snapshot": snapshot,
@@ -48,7 +57,7 @@ func (s *Server) handleGetImageTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
-	task, snapshot, err := s.imageTasks.getTaskForUser(r.PathValue("id"), identity.UserID)
+	task, snapshot, err := s.imageTasks.getTaskForUser(r.PathValue("id"), imageTaskScopeUserID(identity))
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
 		return
@@ -65,12 +74,12 @@ func (s *Server) handleCancelImageTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
-	task, err := s.imageTasks.cancelTaskForUser(r.PathValue("id"), identity.UserID)
+	task, err := s.imageTasks.cancelTaskForUser(r.PathValue("id"), imageTaskScopeUserID(identity))
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
 		return
 	}
-	_, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+	_, snapshot := s.imageTasks.listTasksForUser(imageTaskScopeUserID(identity))
 	writeJSON(w, http.StatusOK, map[string]any{
 		"task":     task,
 		"snapshot": snapshot,
@@ -83,7 +92,7 @@ func (s *Server) handleImageTaskSnapshot(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	identity := identityFromContext(r.Context())
-	_, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+	_, snapshot := s.imageTasks.listTasksForUser(imageTaskScopeUserID(identity))
 	writeJSON(w, http.StatusOK, map[string]any{"snapshot": snapshot})
 }
 
@@ -93,6 +102,7 @@ func (s *Server) handleImageTaskStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
+	scopeUserID := imageTaskScopeUserID(identity)
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
@@ -100,7 +110,7 @@ func (s *Server) handleImageTaskStream(w http.ResponseWriter, r *http.Request) {
 	subID, ch := s.imageTasks.subscribe()
 	defer s.imageTasks.unsubscribe(subID)
 
-	items, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+	items, snapshot := s.imageTasks.listTasksForUser(scopeUserID)
 	initialPayload := map[string]any{
 		"items":    items,
 		"snapshot": snapshot,
@@ -122,11 +132,11 @@ func (s *Server) handleImageTaskStream(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				return
 			}
-			if event.Task != nil && event.Task.UserID != identity.UserID {
+			if identity.Role != users.RoleAdmin && event.Task != nil && event.Task.UserID != identity.UserID {
 				continue
 			}
 			if event.Task == nil && event.Snapshot != nil {
-				_, snapshot := s.imageTasks.listTasksForUser(identity.UserID)
+				_, snapshot := s.imageTasks.listTasksForUser(scopeUserID)
 				event.Snapshot = snapshot
 			}
 			if err := writeSSEEvent(w, event); err != nil {
