@@ -62,6 +62,7 @@ type ChatGPTConfig struct {
 	PaidImageRoute                   string `toml:"paid_image_route"`
 	PaidImageModel                   string `toml:"paid_image_model"`
 	StudioAllowDisabledImageAccounts bool   `toml:"studio_allow_disabled_image_accounts"`
+	ImageAccountRetryTimes           int    `toml:"image_account_retry_times"`
 }
 
 type AccountsConfig struct {
@@ -531,6 +532,20 @@ func (c *Config) ImageQuotaRefreshTTL() time.Duration {
 	return time.Duration(ttlSeconds) * time.Second
 }
 
+func (c *Config) ImageAccountRetryTimes() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	retries := c.ChatGPT.ImageAccountRetryTimes
+	if retries < 0 {
+		retries = 0
+	}
+	if retries > 10 {
+		retries = 10
+	}
+	return retries
+}
+
 func (c *Config) proxyURLLocked(forSync bool) string {
 	if !c.Proxy.Enabled {
 		return ""
@@ -559,6 +574,12 @@ func (c *Config) validate() error {
 	}
 	if c.Accounts.ImageQuotaRefreshTTLSeconds <= 0 {
 		c.Accounts.ImageQuotaRefreshTTLSeconds = 120
+	}
+	if c.ChatGPT.ImageAccountRetryTimes < 0 {
+		c.ChatGPT.ImageAccountRetryTimes = 0
+	}
+	if c.ChatGPT.ImageAccountRetryTimes > 10 {
+		c.ChatGPT.ImageAccountRetryTimes = 10
 	}
 
 	if normalized, ok := normalizeImageMode(c.ChatGPT.ImageMode); !ok {

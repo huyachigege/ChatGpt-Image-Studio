@@ -101,6 +101,7 @@ function defaultConfigPayload(): ConfigPayload {
       paidImageRoute: "responses",
       paidImageModel: "gpt-5.4-mini",
       studioAllowDisabledImageAccounts: false,
+      imageAccountRetryTimes: 3,
     },
     accounts: {
       defaultQuota: 5,

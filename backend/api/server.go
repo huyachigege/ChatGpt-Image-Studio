@@ -1193,6 +1193,10 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 	}
 
 	attempted := map[string]struct{}{}
+	maxAttempts := 1 + s.cfg.ImageAccountRetryTimes()
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
 	var lastRetryableErr error
 	for {
 		var (
@@ -1213,7 +1217,7 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 		attempted[authFile.AccessToken] = struct{}{}
 
 		data, retryable, err := s.runImageRequest(ctx, authFile, account, releaseLease, decision, operation, responseFormat, false, requestedModel, responsesEligible, metadata, run, r)
-		if retryable && len(attempted) < 64 {
+		if err != nil && len(attempted) < maxAttempts && len(attempted) < 64 && (retryable || shouldRetryImageRequestWithNextAccount(err)) {
 			lastRetryableErr = err
 			continue
 		}
@@ -2245,6 +2249,16 @@ func writeImageRequestError(w http.ResponseWriter, err error) {
 		return
 	}
 	writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+}
+
+func shouldRetryImageRequestWithNextAccount(err error) bool {
+	if err == nil {
+		return false
+	}
+	if requestErrorCode(err) != "" {
+		return false
+	}
+	return true
 }
 
 func isInvalidImageTokenError(err error) bool {

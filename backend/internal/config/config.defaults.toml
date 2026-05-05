@@ -48,6 +48,10 @@ paid_image_model = "gpt-5.4-mini"
 # 仅对 Studio 模式生效；CPA 不受影响。
 studio_allow_disabled_image_accounts = false
 
+# 官方图片接口出错后，自动换下一个可用账号重试的次数。
+# 0 表示不额外重试；最大 10。
+image_account_retry_times = 3
+
 [accounts]
 default_quota = 5
 prefer_remote_refresh = true

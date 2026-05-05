@@ -27,11 +27,11 @@ function formatVersionLabel(value: string) {
 }
 
 const navItems = [
-  { href: "/image/history", matchPrefix: "/image/history", label: "图片工作台", description: "生成与编辑", icon: ImageIcon },
-  { href: "/image/gallery", matchPrefix: "/image/gallery", label: "历史图库", description: "查看、下载和删除出图", icon: Images },
-  { href: "/accounts", matchPrefix: "/accounts", label: "账号管理", description: "号池、额度与同步", icon: Shield },
-  { href: "/settings", matchPrefix: "/settings", label: "配置管理", description: "模式、接口与后端配置", icon: Settings2 },
-  { href: "/requests", matchPrefix: "/requests", label: "调用请求", description: "查看官方与 CPA 请求方向", icon: Activity },
+  { group: "工作区", href: "/image/history", matchPrefix: "/image/history", label: "图片工作台", description: "生成与编辑", icon: ImageIcon },
+  { group: "工作区", href: "/image/gallery", matchPrefix: "/image/gallery", label: "历史图库", description: "按用户目录管理出图", icon: Images },
+  { group: "后台", href: "/accounts", matchPrefix: "/accounts", label: "账号管理", description: "号池、额度与同步", icon: Shield },
+  { group: "后台", href: "/settings", matchPrefix: "/settings", label: "配置管理", description: "模式、接口与后端配置", icon: Settings2 },
+  { group: "后台", href: "/requests", matchPrefix: "/requests", label: "调用请求", description: "官方与 CPA 请求日志", icon: Activity },
 ] as const;
 
 function BrandCopy({ subtitle }: { subtitle: string }) {
@@ -107,12 +107,18 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogou
         </div>
 
         <nav className="mt-4 space-y-1">
-          {visibleNavItems.map((item) => {
+          {visibleNavItems.map((item, index) => {
             const active = isNavItemActive(pathname, item.href, item.matchPrefix);
             const Icon = item.icon;
+            const showGroupLabel = !collapsed && (index === 0 || visibleNavItems[index - 1]?.group !== item.group);
             return (
+              <div key={item.href} className="space-y-1">
+                {showGroupLabel ? (
+                  <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-stone-400 dark:text-[var(--studio-text-muted)]">
+                    {item.group}
+                  </div>
+                ) : null}
               <Link
-                key={item.href}
                 to={item.href}
                 className={cn(
                   "flex rounded-2xl transition",
@@ -141,16 +147,21 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogou
                   </span>
                 ) : null}
               </Link>
+              </div>
             );
           })}
         </nav>
 
         <div className="mt-auto space-y-3">
           {requestExample && !collapsed ? (
-            <div className="rounded-2xl bg-white/70 px-4 py-3 text-[11px] leading-5 text-stone-600 shadow-sm dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">
-              <div className="font-medium text-stone-700 dark:text-[var(--studio-text)]">图片 API 请求示例</div>
-              <pre className="mt-2 overflow-x-auto whitespace-pre-wrap break-all font-mono text-[10px] leading-5">{requestExample}</pre>
-            </div>
+            <details className="group rounded-2xl bg-white/70 px-4 py-3 text-[11px] leading-5 text-stone-600 shadow-sm dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">
+              <summary className="cursor-pointer list-none font-medium text-stone-700 outline-none transition hover:text-stone-950 dark:text-[var(--studio-text)] dark:hover:text-[var(--studio-text-strong)]">
+                图片 API 请求示例
+                <span className="ml-2 text-stone-400 group-open:hidden">展开</span>
+                <span className="ml-2 hidden text-stone-400 group-open:inline">收起</span>
+              </summary>
+              <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-stone-50 p-2 font-mono text-[10px] leading-5 dark:bg-[var(--studio-panel)]">{requestExample}</pre>
+            </details>
           ) : null}
           <a
             href={repositoryUrl}

@@ -408,6 +408,43 @@ export function ImageModeSection({
         ) : null}
         {isStudioMode ? (
           <Field
+            label="出错换号重试次数"
+            hint="官方图片生成/编辑接口出错后，自动切换其他可用账号重试。0 表示不额外重试，最大 10。"
+            tooltip={
+              <TooltipDetails
+                items={[
+                  {
+                    title: "什么时候重试",
+                    body: <>普通生成和编辑请求在上游账号报错、断流、限流或 token 异常时，会换下一个可用账号继续尝试。</>,
+                  },
+                  {
+                    title: "不会重试的情况",
+                    body: <>用户额度耗尽、配置缺失、指定原图账号上下文失效这类明确业务错误不会换号重试。</>,
+                  },
+                  {
+                    title: "建议值",
+                    body: <>默认 3 次，账号池较多可以调大，但不建议超过 5；值太大会拉长失败等待时间。</>,
+                  },
+                ]}
+              />
+            }
+          >
+            <Input
+              type="number"
+              min={0}
+              max={10}
+              step={1}
+              value={config.chatgpt.imageAccountRetryTimes}
+              onChange={(event) => {
+                const next = Math.max(0, Math.min(10, Number(event.target.value) || 0));
+                setSection("chatgpt", { ...config.chatgpt, imageAccountRetryTimes: next });
+              }}
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0"
+            />
+          </Field>
+        ) : null}
+        {isStudioMode ? (
+          <Field
             label="Paid 账号路由"
             hint="Studio 模式下 Plus / Pro / Team 账号走 legacy（网页 API 接口）还是 responses。"
             tooltip={

@@ -41,6 +41,7 @@ type configPayload struct {
 		PaidImageRoute                   string `json:"paidImageRoute"`
 		PaidImageModel                   string `json:"paidImageModel"`
 		StudioAllowDisabledImageAccounts bool   `json:"studioAllowDisabledImageAccounts"`
+		ImageAccountRetryTimes           int    `json:"imageAccountRetryTimes"`
 	} `json:"chatgpt"`
 	Accounts struct {
 		DefaultQuota                int  `json:"defaultQuota"`
@@ -166,6 +167,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"paid_image_route":                     payload.ChatGPT.PaidImageRoute,
 			"paid_image_model":                     payload.ChatGPT.PaidImageModel,
 			"studio_allow_disabled_image_accounts": payload.ChatGPT.StudioAllowDisabledImageAccounts,
+			"image_account_retry_times":            payload.ChatGPT.ImageAccountRetryTimes,
 		},
 		"accounts": {
 			"default_quota":                   payload.Accounts.DefaultQuota,
@@ -290,6 +292,7 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ChatGPT.PaidImageRoute = cfg.ChatGPT.PaidImageRoute
 	payload.ChatGPT.PaidImageModel = cfg.ChatGPT.PaidImageModel
 	payload.ChatGPT.StudioAllowDisabledImageAccounts = cfg.ChatGPT.StudioAllowDisabledImageAccounts
+	payload.ChatGPT.ImageAccountRetryTimes = cfg.ChatGPT.ImageAccountRetryTimes
 
 	payload.Accounts.DefaultQuota = cfg.Accounts.DefaultQuota
 	payload.Accounts.PreferRemoteRefresh = cfg.Accounts.PreferRemoteRefresh

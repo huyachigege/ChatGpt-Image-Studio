@@ -88,6 +88,7 @@ export function PromptComposer({
   onSubmit,
 }: PromptComposerProps) {
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
+  const currentModeDescription = modeOptions.find((item) => item.value === mode)?.description ?? "";
   const showImageOutputControls = mode === "edit" || mode === "generate";
   const sizeHintAriaLabel = mode === "edit" ? "查看编辑输出说明" : "查看分辨率说明";
   const imageQualityPrefix = mode === "edit" ? "输出质量" : "质量";
@@ -145,8 +146,8 @@ export function PromptComposer({
             showMobileExpandedSections ? "flex" : "hidden lg:flex",
           )}
         >
-          <div className="flex items-center gap-2">
-            <div className="hide-scrollbar min-w-0 flex-1 -mx-1 overflow-x-auto px-1 xl:mx-0 xl:px-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="hide-scrollbar min-w-0 -mx-1 overflow-x-auto px-1 xl:mx-0 xl:px-0">
               <div className="inline-flex min-w-max rounded-full bg-stone-100 p-1">
                 {modeOptions.map((item) => (
                   <button
@@ -165,6 +166,11 @@ export function PromptComposer({
                 ))}
               </div>
             </div>
+            {currentModeDescription ? (
+              <span className="hidden truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)] md:inline">
+                {currentModeDescription}
+              </span>
+            ) : null}
             {isMobileComposerExpanded ? (
               <button
                 type="button"
@@ -259,8 +265,8 @@ export function PromptComposer({
               </div>
             ) : null}
 
-            <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1.5 text-[11px] font-medium text-stone-600 sm:px-3 sm:py-2 sm:text-xs">
-              剩余额度 {availableQuota}
+            <span className="shrink-0 rounded-full bg-stone-100 px-2.5 py-1.5 text-[11px] font-medium text-stone-600 dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-muted)] sm:px-3 sm:py-2 sm:text-xs">
+              今日剩余 {availableQuota}
             </span>
           </div>
         </div>
@@ -395,6 +401,9 @@ export function PromptComposer({
           <div className={cn("px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
             <div className="flex items-end justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <span className="hidden text-xs text-stone-400 dark:text-[var(--studio-text-muted)] sm:inline">
+                  Enter 发送 · Shift+Enter 换行
+                </span>
                 <Button
                   type="button"
                   variant="outline"

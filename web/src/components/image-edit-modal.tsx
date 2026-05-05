@@ -541,7 +541,12 @@ export function ImageEditModal({
               <X className="size-5" />
             </button>
 
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+            <div className="hidden min-w-0 flex-1 flex-col sm:flex">
+              <div className="truncate text-sm font-semibold text-stone-900">选区编辑</div>
+              <div className="truncate text-xs text-stone-500">{imageName}</div>
+            </div>
+
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:flex-none">
               <div className="flex min-w-0 items-center gap-2.5">
                 <span className="hidden text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400 sm:inline sm:text-xs">
                   笔刷
@@ -687,7 +692,7 @@ export function ImageEditModal({
           </div>
         </div>
 
-        <footer className="border-t border-stone-200 px-4 py-2.5 sm:px-6 sm:py-4">
+        <footer className="border-t border-stone-200 bg-white/92 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-4">
           <div className="relative mx-auto flex w-full max-w-[920px] items-end gap-3 rounded-[28px] border border-stone-200 bg-white px-3 py-2.5 shadow-[0_18px_48px_rgba(28,25,23,0.08)] sm:gap-4 sm:rounded-[32px] sm:px-5 sm:py-4">
             <div className="min-w-0 flex-1">
               {allowOutputOptions ? (
