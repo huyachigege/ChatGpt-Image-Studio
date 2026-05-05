@@ -387,6 +387,9 @@ export type RequestLogItem = {
   requestedModel?: string;
   upstreamModel?: string;
   imageToolModel?: string;
+  userId?: string;
+  username?: string;
+  userRole?: string;
   size?: string;
   quality?: string;
   promptLength?: number;
@@ -579,6 +582,14 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+export type ImageGalleryItem = {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  createdAt: string;
+};
+
 export type InviteItem = {
   code: string;
   createdBy?: string;
@@ -625,6 +636,16 @@ export async function fetchInvites() {
 export async function createInvite() {
   return httpRequest<{ item: InviteItem }>("/api/invites", {
     method: "POST",
+  });
+}
+
+export async function listImageGallery() {
+  return httpRequest<{ items: ImageGalleryItem[] }>("/api/image/gallery");
+}
+
+export async function deleteImageGalleryItem(name: string) {
+  return httpRequest<{ ok: boolean; name: string }>(`/api/image/gallery/${encodeURIComponent(name)}`, {
+    method: "DELETE",
   });
 }
 

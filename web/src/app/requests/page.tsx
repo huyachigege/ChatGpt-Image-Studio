@@ -196,6 +196,20 @@ export default function RequestsPage() {
                         </div>
                         <div className="rounded-xl bg-white px-3 py-2">
                           <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
+                            用户
+                          </div>
+                          <div
+                            className="mt-1 truncate text-stone-700"
+                            title={item.username || item.userId || ""}
+                          >
+                            {item.username || item.userId || "—"}
+                          </div>
+                          <div className="mt-1 truncate text-xs text-stone-400">
+                            {item.userRole || "—"}
+                          </div>
+                        </div>
+                        <div className="rounded-xl bg-white px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
                             账号
                           </div>
                           <div
@@ -258,6 +272,7 @@ export default function RequestsPage() {
                             </th>
                             <th className="px-4 py-3 whitespace-nowrap">接口</th>
                             <th className="px-4 py-3 whitespace-nowrap">参数</th>
+                            <th className="px-4 py-3 whitespace-nowrap">用户</th>
                             <th className="px-4 py-3 whitespace-nowrap">账号</th>
                             <th className="px-4 py-3 whitespace-nowrap">模型</th>
                             <th className="px-4 py-3 whitespace-nowrap">结果</th>
@@ -324,6 +339,17 @@ export default function RequestsPage() {
                                   item.promptLength > 0
                                     ? `prompt: ${item.promptLength} 字`
                                     : "prompt: —"}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <div
+                                  className="truncate text-stone-700"
+                                  title={item.username || item.userId || ""}
+                                >
+                                  {item.username || item.userId || "—"}
+                                </div>
+                                <div className="truncate text-xs text-stone-400">
+                                  {item.userRole || "—"}
                                 </div>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">

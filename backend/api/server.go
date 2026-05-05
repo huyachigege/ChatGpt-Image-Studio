@@ -77,11 +77,12 @@ const maxBulkAccountRefreshWorkers = 4
 const userSessionTTL = 30 * 24 * time.Hour
 
 type authIdentity struct {
-	UserID string
-	Email  string
-	Name   string
-	Role   string
-	Token  string
+	UserID   string `json:"id,omitempty"`
+	Username string `json:"username,omitempty"`
+	Email    string `json:"email,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Role     string `json:"role,omitempty"`
+	Token    string `json:"token,omitempty"`
 }
 
 type authIdentityContextKey struct{}
@@ -420,6 +421,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/tools/admission-stress", s.requireAdminAuth(http.HandlerFunc(s.handleAdmissionStress)))
 	mux.Handle("GET /api/sync/status", s.requireAdminAuth(http.HandlerFunc(s.handleSyncStatus)))
 	mux.Handle("POST /api/sync/run", s.requireAdminAuth(http.HandlerFunc(s.handleRunSync)))
+	mux.Handle("GET /api/image/gallery", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageGallery)))
+	mux.Handle("DELETE /api/image/gallery/{name}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageGalleryItem)))
 	mux.Handle("GET /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageConversations)))
 	mux.Handle("DELETE /api/image/conversations", s.requireWorkspaceAuth(http.HandlerFunc(s.handleClearImageConversations)))
 	mux.Handle("POST /api/image/conversations/import", s.requireWorkspaceAuth(http.HandlerFunc(s.handleImportImageConversations)))
@@ -448,7 +451,7 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if s.hasExactBearer(r, s.cfg.App.AuthKey) {
-		identity := authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: strings.TrimSpace(s.cfg.App.AuthKey)}
+		identity := authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: strings.TrimSpace(s.cfg.App.AuthKey)}
 		writeJSON(w, http.StatusOK, map[string]any{
 			"ok":      true,
 			"version": buildinfo.ResolveVersion(s.cfg.App.Version),
@@ -548,7 +551,7 @@ func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	defer store.Close()
 	identity := identityFromContext(r.Context())
-	item, err := store.CreateInvite(r.Context(), firstNonEmpty(identity.UserID, identity.Name, "admin"))
+	item, err := store.CreateInvite(r.Context(), firstNonEmpty(identity.Username, identity.UserID, identity.Name, "admin"))
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -1230,7 +1233,7 @@ func (s *Server) runPureCPAImageRequest(
 			Error:          err.Error(),
 		}
 		metadata.applyTo(&entry)
-		s.logImageRequest(entry)
+		s.logImageRequestWithContext(ctx, entry)
 		return nil, err
 	}
 
@@ -1262,11 +1265,35 @@ func (s *Server) runPureCPAImageRequest(
 			entry.ErrorCode = requestErr.code
 		}
 		metadata.applyTo(&entry)
-		s.logImageRequest(entry)
+		s.logImageRequestWithContext(ctx, entry)
 		return nil, err
 	}
 	defer releaseAdmission()
 	ctx = withImageAdmissionInfo(ctx, admissionInfo)
+	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind("", "cpa", "cpa")); quotaErr != nil {
+		entry := imageRequestLogEntry{
+			StartedAt:            startedAt.Format(time.RFC3339Nano),
+			FinishedAt:           time.Now().Format(time.RFC3339Nano),
+			Endpoint:             r.URL.Path,
+			Operation:            operation,
+			ImageMode:            "cpa",
+			Direction:            "cpa",
+			Route:                "cpa",
+			CPASubroute:          s.cfg.CPAImageRouteStrategy(),
+			RequestedModel:       requestedModel,
+			Preferred:            preferredAccount,
+			Success:              false,
+			Error:                quotaErr.Error(),
+			QueueWaitMS:          admissionInfo.QueueWaitMS,
+			InflightCountAtStart: admissionInfo.InflightCountAtStart,
+		}
+		if requestErr, ok := quotaErr.(*requestError); ok {
+			entry.ErrorCode = requestErr.code
+		}
+		metadata.applyTo(&entry)
+		s.logImageRequestWithContext(ctx, entry)
+		return nil, quotaErr
+	}
 
 	client := s.newCPAWorkflowClient()
 	upstreamModel := cpaFixedImageModel
@@ -1298,8 +1325,35 @@ func (s *Server) runPureCPAImageRequest(
 			entry.ErrorCode = requestErr.code
 		}
 		metadata.applyTo(&entry)
-		s.logImageRequest(entry)
+		s.logImageRequestWithContext(ctx, entry)
 		return nil, err
+	}
+
+	if quotaErr := s.consumeUserImageQuota(ctx, imageQuotaKind("", "cpa", "cpa")); quotaErr != nil {
+		admissionInfo := imageAdmissionFromContext(ctx)
+		entry := imageRequestLogEntry{
+			StartedAt:            startedAt.Format(time.RFC3339Nano),
+			FinishedAt:           time.Now().Format(time.RFC3339Nano),
+			Endpoint:             r.URL.Path,
+			Operation:            operation,
+			ImageMode:            "cpa",
+			Direction:            "cpa",
+			Route:                "cpa",
+			CPASubroute:          cpaSubroute,
+			RequestedModel:       requestedModel,
+			UpstreamModel:        upstreamModel,
+			Preferred:            preferredAccount,
+			Success:              false,
+			Error:                quotaErr.Error(),
+			QueueWaitMS:          admissionInfo.QueueWaitMS,
+			InflightCountAtStart: admissionInfo.InflightCountAtStart,
+		}
+		if requestErr, ok := quotaErr.(*requestError); ok {
+			entry.ErrorCode = requestErr.code
+		}
+		metadata.applyTo(&entry)
+		s.logImageRequestWithContext(ctx, entry)
+		return nil, quotaErr
 	}
 
 	admissionInfo = imageAdmissionFromContext(ctx)
@@ -1320,7 +1374,7 @@ func (s *Server) runPureCPAImageRequest(
 		InflightCountAtStart: admissionInfo.InflightCountAtStart,
 	}
 	metadata.applyTo(&entry)
-	s.logImageRequest(entry)
+	s.logImageRequestWithContext(ctx, entry)
 	return buildImageResponse(r, client, results, responseFormat, "", s.cfg.ResolvePath(s.cfg.Storage.ImageDir)), nil
 }
 
@@ -1421,7 +1475,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			}
 			applyImageRoutingLogFields(routingDecision, &entry)
 			metadata.applyTo(&entry)
-			s.logImageRequest(entry)
+			s.logImageRequestWithContext(ctx, entry)
 			return nil, false, err
 		}
 	}
@@ -1462,7 +1516,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			}
 			applyImageRoutingLogFields(routingDecision, &entry)
 			metadata.applyTo(&entry)
-			s.logImageRequest(entry)
+			s.logImageRequestWithContext(ctx, entry)
 			return nil, false, err
 		}
 		client = s.newCPAWorkflowClient()
@@ -1478,6 +1532,34 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		} else {
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
+	}
+	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind(account.Type, direction, route)); quotaErr != nil {
+		entry := imageRequestLogEntry{
+			StartedAt:            startedAt.Format(time.RFC3339Nano),
+			FinishedAt:           time.Now().Format(time.RFC3339Nano),
+			Endpoint:             r.URL.Path,
+			Operation:            operation,
+			ImageMode:            mode,
+			Direction:            direction,
+			Route:                route,
+			AccountType:          account.Type,
+			AccountEmail:         account.Email,
+			AccountFile:          authFile.Name,
+			RequestedModel:       requestedModel,
+			Preferred:            preferredAccount,
+			Success:              false,
+			Error:                quotaErr.Error(),
+			LeaseAcquired:        releaseLease != nil,
+			QueueWaitMS:          admissionInfo.QueueWaitMS,
+			InflightCountAtStart: admissionInfo.InflightCountAtStart,
+		}
+		if requestErr, ok := quotaErr.(*requestError); ok {
+			entry.ErrorCode = requestErr.code
+		}
+		applyImageRoutingLogFields(routingDecision, &entry)
+		metadata.applyTo(&entry)
+		s.logImageRequestWithContext(ctx, entry)
+		return nil, false, quotaErr
 	}
 	if setter, ok := client.(interface{ SetRequestedImageModel(string) }); ok {
 		setter.SetRequestedImageModel(requestedModel)
@@ -1537,7 +1619,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		}
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
-		s.logImageRequest(entry)
+		s.logImageRequestWithContext(ctx, entry)
 		if isImageRateLimitError(err) {
 			store.MarkImageAccountLimited(authFile.AccessToken)
 			if preferredAccount {
@@ -1559,6 +1641,39 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			return nil, false, newRequestError("source_context_missing", "原始图片对应会话已失效，请使用普通编辑重试")
 		}
 		return nil, false, err
+	}
+
+	if quotaErr := s.consumeUserImageQuota(ctx, imageQuotaKind(account.Type, direction, route)); quotaErr != nil {
+		store.RecordImageResult(authFile.AccessToken, false)
+		entry := imageRequestLogEntry{
+			StartedAt:            startedAt.Format(time.RFC3339Nano),
+			FinishedAt:           time.Now().Format(time.RFC3339Nano),
+			Endpoint:             r.URL.Path,
+			Operation:            operation,
+			ImageMode:            mode,
+			Direction:            direction,
+			Route:                route,
+			CPASubroute:          cpaSubroute,
+			AccountType:          account.Type,
+			AccountEmail:         account.Email,
+			AccountFile:          authFile.Name,
+			RequestedModel:       requestedModel,
+			UpstreamModel:        upstreamModel,
+			ImageToolModel:       imageToolModel,
+			Preferred:            preferredAccount,
+			Success:              false,
+			Error:                quotaErr.Error(),
+			LeaseAcquired:        releaseLease != nil,
+			QueueWaitMS:          admissionInfo.QueueWaitMS,
+			InflightCountAtStart: admissionInfo.InflightCountAtStart,
+		}
+		if requestErr, ok := quotaErr.(*requestError); ok {
+			entry.ErrorCode = requestErr.code
+		}
+		applyImageRoutingLogFields(routingDecision, &entry)
+		metadata.applyTo(&entry)
+		s.logImageRequestWithContext(ctx, entry)
+		return nil, false, quotaErr
 	}
 
 	store.RecordImageResult(authFile.AccessToken, true)
@@ -1585,7 +1700,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 	applyImageRoutingLogFields(routingDecision, &entry)
 	metadata.applyTo(&entry)
-	s.logImageRequest(entry)
+	s.logImageRequestWithContext(ctx, entry)
 	return buildImageResponse(r, client, results, responseFormat, account.ID, s.cfg.ResolvePath(s.cfg.Storage.ImageDir)), false, nil
 }
 
@@ -1719,7 +1834,7 @@ func (s *Server) identityFromRequest(r *http.Request) (authIdentity, bool) {
 		return authIdentity{}, false
 	}
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
-		return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
 	}
 	store, err := users.NewStore(s.cfg)
 	if err != nil {
@@ -1730,14 +1845,14 @@ func (s *Server) identityFromRequest(r *http.Request) (authIdentity, bool) {
 	if err != nil || user == nil {
 		return authIdentity{}, false
 	}
-	return authIdentity{UserID: user.ID, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
+	return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
 }
 
 func identityFromContext(ctx context.Context) authIdentity {
 	if identity, ok := ctx.Value(authIdentityContextKey{}).(authIdentity); ok && strings.TrimSpace(identity.UserID) != "" {
 		return identity
 	}
-	return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin}
+	return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin}
 }
 
 func (s *Server) requireImageAuth(next http.Handler) http.Handler {
@@ -1756,11 +1871,11 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 		return authIdentity{}, false
 	}
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
-		return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
 	}
 	for _, key := range parseKeys(s.cfg.App.APIKey) {
 		if token == key {
-			return authIdentity{UserID: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
+			return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token}, true
 		}
 	}
 	store, err := users.NewStore(s.cfg)
@@ -1772,7 +1887,7 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 	if err != nil || user == nil {
 		return authIdentity{}, false
 	}
-	return authIdentity{UserID: user.ID, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
+	return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
 }
 
 func (s *Server) hasAnyBearer(r *http.Request, keys ...string) bool {
@@ -2236,6 +2351,14 @@ func (s *Server) logImageRequest(entry imageRequestLogEntry) {
 		return
 	}
 	s.reqLogs.add(entry)
+}
+
+func (s *Server) logImageRequestWithContext(ctx context.Context, entry imageRequestLogEntry) {
+	identity := identityFromContext(ctx)
+	entry.UserID = strings.TrimSpace(identity.UserID)
+	entry.Username = firstNonEmpty(strings.TrimSpace(identity.Username), strings.TrimSpace(identity.Name))
+	entry.UserRole = strings.TrimSpace(identity.Role)
+	s.logImageRequest(entry)
 }
 
 func isStaticAssetRequest(path string) bool {

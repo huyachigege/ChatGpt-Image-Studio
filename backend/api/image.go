@@ -99,16 +99,20 @@ func buildImageResponseItems(
 		if sourceAccountID != "" {
 			item["source_account_id"] = sourceAccountID
 		}
+		filename, cacheErr := downloadAndCache(client, img.URL, cacheDir)
 		if responseFormat == "b64_json" {
 			b64, err := client.DownloadAsBase64(ctx, img.URL)
 			if err != nil {
-				item["url"] = img.URL
+				if cacheErr != nil {
+					item["url"] = img.URL
+				} else {
+					item["url"] = urlBuilder(filename)
+				}
 			} else {
 				item["b64_json"] = b64
 			}
 		} else {
-			filename, err := downloadAndCache(client, img.URL, cacheDir)
-			if err != nil {
+			if cacheErr != nil {
 				item["url"] = img.URL
 			} else {
 				item["url"] = urlBuilder(filename)

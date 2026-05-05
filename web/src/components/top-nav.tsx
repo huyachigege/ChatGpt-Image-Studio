@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, ChevronLeft, ImageIcon, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield } from "lucide-react";
+import { Activity, ChevronLeft, ImageIcon, Images, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield } from "lucide-react";
 
 import webConfig from "@/constants/common-env";
 import { fetchVersionInfo } from "@/lib/api";
@@ -10,7 +10,7 @@ import { clearStoredAuthKey, getStoredAuthKey, getStoredAuthUser, type AuthUser 
 import { cn } from "@/lib/utils";
 import { ThemeToggleButton } from "@/components/theme-toggle-button";
 
-const repositoryUrl = "https://github.com/peiyizhi0724/ChatGpt-Image-Studio";
+const repositoryUrl = "https://github.com/huyachigege/ChatGpt-Image-Studio";
 
 function formatVersionLabel(value: string) {
   const normalized = String(value || "").trim();
@@ -27,7 +27,8 @@ function formatVersionLabel(value: string) {
 }
 
 const navItems = [
-  { href: "/image/history", matchPrefix: "/image", label: "图片工作台", description: "生成与编辑", icon: ImageIcon },
+  { href: "/image/history", matchPrefix: "/image/history", label: "图片工作台", description: "生成与编辑", icon: ImageIcon },
+  { href: "/image/gallery", matchPrefix: "/image/gallery", label: "历史图库", description: "查看、下载和删除出图", icon: Images },
   { href: "/accounts", matchPrefix: "/accounts", label: "账号管理", description: "号池、额度与同步", icon: Shield },
   { href: "/settings", matchPrefix: "/settings", label: "配置管理", description: "模式、接口与后端配置", icon: Settings2 },
   { href: "/requests", matchPrefix: "/requests", label: "调用请求", description: "查看官方与 CPA 请求方向", icon: Activity },
@@ -47,6 +48,9 @@ function BrandCopy({ subtitle }: { subtitle: string }) {
 }
 
 function isNavItemActive(pathname: string, href: string, matchPrefix?: string) {
+  if (href === "/image/history") {
+    return pathname === "/image/history" || pathname === "/image/workspace";
+  }
   if (matchPrefix) {
     return pathname === matchPrefix || pathname.startsWith(`${matchPrefix}/`);
   }

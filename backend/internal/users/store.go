@@ -22,6 +22,9 @@ import (
 const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
+
+	DailyFreeImageLimit = 200
+	DailyPaidImageLimit = 50
 )
 
 type User struct {
@@ -42,6 +45,16 @@ type Invite struct {
 	UsedByUsername    string `json:"usedByUsername,omitempty"`
 	UsedByDisplayName string `json:"usedByDisplayName,omitempty"`
 	UsedAt            string `json:"usedAt,omitempty"`
+}
+
+type DailyImageQuota struct {
+	DateKey       string `json:"dateKey"`
+	FreeLimit     int    `json:"freeLimit"`
+	FreeUsed      int    `json:"freeUsed"`
+	FreeRemaining int    `json:"freeRemaining"`
+	PaidLimit     int    `json:"paidLimit"`
+	PaidUsed      int    `json:"paidUsed"`
+	PaidRemaining int    `json:"paidRemaining"`
 }
 
 type Store struct {
@@ -100,6 +113,14 @@ func (s *Store) Init(ctx context.Context) error {
 			created_at TEXT NOT NULL,
 			used_by_user_id TEXT NOT NULL DEFAULT '',
 			used_at TEXT NOT NULL DEFAULT ''
+		)`,
+		`CREATE TABLE IF NOT EXISTS app_user_daily_image_quotas (
+			user_id TEXT NOT NULL,
+			quota_date TEXT NOT NULL,
+			free_used INTEGER NOT NULL DEFAULT 0,
+			paid_used INTEGER NOT NULL DEFAULT 0,
+			updated_at TEXT NOT NULL,
+			PRIMARY KEY(user_id, quota_date)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_app_user_sessions_user_id ON app_user_sessions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_app_invites_created_at ON app_invites(created_at DESC)`,
@@ -359,6 +380,92 @@ func (s *Store) ensureUsernames(ctx context.Context) error {
 	return nil
 }
 
+func (s *Store) GetDailyImageQuota(ctx context.Context, userID string) (DailyImageQuota, error) {
+	status := DailyImageQuota{
+		DateKey:       currentQuotaDateKey(),
+		FreeLimit:     DailyFreeImageLimit,
+		PaidLimit:     DailyPaidImageLimit,
+		FreeRemaining: DailyFreeImageLimit,
+		PaidRemaining: DailyPaidImageLimit,
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" || userID == "admin" {
+		return status, nil
+	}
+	var freeUsed, paidUsed int
+	err := s.db.QueryRowContext(ctx, `SELECT free_used, paid_used FROM app_user_daily_image_quotas WHERE user_id = ? AND quota_date = ?`, userID, status.DateKey).Scan(&freeUsed, &paidUsed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return status, nil
+	}
+	if err != nil {
+		return status, err
+	}
+	status.FreeUsed = freeUsed
+	status.PaidUsed = paidUsed
+	status.FreeRemaining = maxInt(0, status.FreeLimit-freeUsed)
+	status.PaidRemaining = maxInt(0, status.PaidLimit-paidUsed)
+	return status, nil
+}
+
+func (s *Store) ConsumeDailyImageQuota(ctx context.Context, userID, quotaKind string) (DailyImageQuota, error) {
+	status := DailyImageQuota{
+		DateKey:       currentQuotaDateKey(),
+		FreeLimit:     DailyFreeImageLimit,
+		PaidLimit:     DailyPaidImageLimit,
+		FreeRemaining: DailyFreeImageLimit,
+		PaidRemaining: DailyPaidImageLimit,
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" || userID == "admin" {
+		return status, nil
+	}
+	quotaKind = strings.ToLower(strings.TrimSpace(quotaKind))
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return status, err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+	if _, err = tx.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, updated_at) VALUES (?, ?, 0, 0, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, status.DateKey, now); err != nil {
+		return status, err
+	}
+	var result sql.Result
+	switch quotaKind {
+	case "paid":
+		result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_used = paid_used + 1, updated_at = ? WHERE user_id = ? AND quota_date = ? AND paid_used < ?`, now, userID, status.DateKey, DailyPaidImageLimit)
+	default:
+		result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_used = free_used + 1, updated_at = ? WHERE user_id = ? AND quota_date = ? AND free_used < ?`, now, userID, status.DateKey, DailyFreeImageLimit)
+	}
+	if err != nil {
+		return status, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return status, err
+	}
+	if rowsAffected == 0 {
+		if quotaKind == "paid" {
+			return status, fmt.Errorf("今日 paid 图片额度已用完")
+		}
+		return status, fmt.Errorf("今日 free 图片额度已用完")
+	}
+	if err := tx.Commit(); err != nil {
+		return status, err
+	}
+	committed = true
+	return s.GetDailyImageQuota(ctx, userID)
+}
+
+func currentQuotaDateKey() string {
+	shanghai := time.FixedZone("CST", 8*3600)
+	return time.Now().In(shanghai).Format("2006-01-02")
+}
+
 func normalizeUsername(value string) string {
 	value = strings.ToLower(strings.TrimSpace(value))
 	builder := strings.Builder{}
@@ -422,4 +529,11 @@ func newInviteCode() string {
 func hashToken(token string) string {
 	sum := sha256.Sum256([]byte(strings.TrimSpace(token)))
 	return hex.EncodeToString(sum[:])
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }

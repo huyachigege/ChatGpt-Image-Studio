@@ -33,6 +33,9 @@ type imageRequestLogEntry struct {
 	RequestedModel        string `json:"requestedModel,omitempty"`
 	UpstreamModel         string `json:"upstreamModel,omitempty"`
 	ImageToolModel        string `json:"imageToolModel,omitempty"`
+	UserID                string `json:"userId,omitempty"`
+	Username              string `json:"username,omitempty"`
+	UserRole              string `json:"userRole,omitempty"`
 	Size                  string `json:"size,omitempty"`
 	Quality               string `json:"quality,omitempty"`
 	PromptLength          int    `json:"promptLength,omitempty"`
