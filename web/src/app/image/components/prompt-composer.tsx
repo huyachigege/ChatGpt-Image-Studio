@@ -132,9 +132,16 @@ export function PromptComposer({
     onMobileCollapsedChange?.(isMobileComposerCollapsed);
   }, [isMobileComposerCollapsed, onMobileCollapsedChange]);
 
+  const [sizeHintOpen, setSizeHintOpen] = useState(false);
   const sizeHintTooltip =
     showImageOutputControls ? (
-      <span className="group relative hidden shrink-0 items-center align-middle sm:inline-flex">
+      <span
+        className="relative hidden shrink-0 items-center align-middle sm:inline-flex"
+        onMouseEnter={() => setSizeHintOpen(true)}
+        onMouseLeave={() => setSizeHintOpen(false)}
+        onFocus={() => setSizeHintOpen(true)}
+        onBlur={() => setSizeHintOpen(false)}
+      >
         <span
           tabIndex={0}
           className="inline-flex size-9 cursor-help items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:text-stone-700 focus-visible:text-stone-700 focus-visible:outline-none"
@@ -142,9 +149,11 @@ export function PromptComposer({
         >
           <CircleHelp className="size-4" />
         </span>
-        <span className="pointer-events-none absolute right-0 bottom-full z-30 mb-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-xs font-normal leading-6 text-stone-600 opacity-0 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)] transition-all duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:translate-y-0 group-focus-within:opacity-100">
-          {imageSizeHint}
-        </span>
+        {sizeHintOpen ? (
+          <span className="pointer-events-auto absolute right-0 bottom-full z-50 mb-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-xs font-normal leading-6 text-stone-600 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)]">
+            {imageSizeHint}
+          </span>
+        ) : null}
       </span>
     ) : null;
 
