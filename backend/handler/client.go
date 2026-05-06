@@ -70,6 +70,7 @@ type ChatGPTClient struct {
 	accessToken    string
 	cookies        string
 	oaiDeviceID    string
+	authData       map[string]any
 	httpClient     *http.Client
 	streamClient   *http.Client
 	proxyURL       string
@@ -92,6 +93,32 @@ func NewChatGPTClientWithProxyAndConfig(accessToken, cookies, proxyURL string, r
 		accessToken: accessToken,
 		cookies:     cookies,
 		oaiDeviceID: uuid.NewString(),
+		proxyURL:    strings.TrimSpace(proxyURL),
+		httpClient: &http.Client{
+			Timeout:   requestConfig.RequestTimeout,
+			Transport: newChromeTransport(proxyURL),
+		},
+		streamClient: &http.Client{
+			Timeout:   requestConfig.SSETimeout + 30*time.Second,
+			Transport: newChromeTransport(proxyURL),
+		},
+		pollInterval: requestConfig.PollInterval,
+		pollMaxWait:  requestConfig.PollMaxWait,
+	}
+}
+
+func NewChatGPTClientWithAuthData(accessToken, proxyURL string, authData map[string]any, requestConfig ImageRequestConfig) *ChatGPTClient {
+	requestConfig = normalizeImageRequestConfig(requestConfig)
+	cookies := firstString(authData, "cookies", "cookie")
+	deviceID := firstString(authData, "oai-device-id", "oai_device_id", "device_id")
+	if deviceID == "" {
+		deviceID = uuid.NewString()
+	}
+	return &ChatGPTClient{
+		accessToken: accessToken,
+		cookies:     cookies,
+		oaiDeviceID: deviceID,
+		authData:    authData,
 		proxyURL:    strings.TrimSpace(proxyURL),
 		httpClient: &http.Client{
 			Timeout:   requestConfig.RequestTimeout,
@@ -628,8 +655,8 @@ func (c *ChatGPTClient) buildMultimodalBody(prompt, model string, uploads []*Upl
 		"messages":                 []any{msg},
 		"parent_message_id":        "client-created-root",
 		"model":                    model,
-		"timezone_offset_min":      420,
-		"timezone":                 "America/Los_Angeles",
+		"timezone_offset_min":      c.timezoneOffsetMin(),
+		"timezone":                 c.timezoneName(),
 		"conversation_mode":        map[string]any{"kind": "primary_assistant"},
 		"enable_message_followups": true,
 		"system_hints":             []string{"picture_v2"},
@@ -689,8 +716,8 @@ func (c *ChatGPTClient) buildConversationBody(prompt, model, conversationID, par
 		"messages":                 []any{msg},
 		"parent_message_id":        parentMsgID,
 		"model":                    model,
-		"timezone_offset_min":      420,
-		"timezone":                 "America/Los_Angeles",
+		"timezone_offset_min":      c.timezoneOffsetMin(),
+		"timezone":                 c.timezoneName(),
 		"conversation_mode":        map[string]any{"kind": "primary_assistant"},
 		"enable_message_followups": true,
 		"system_hints":             []string{"picture_v2"},
@@ -1085,24 +1112,45 @@ func (c *ChatGPTClient) getDownloadURL(ctx context.Context, fileID, conversation
 
 func (c *ChatGPTClient) setHeaders(req *http.Request) {
 	req.Header.Set("Accept", "*/*")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Accept-Language", stringOrDefault(c.authData, "accept-language", "en-US,en;q=0.9"))
 	req.Header.Set("Authorization", "Bearer "+c.accessToken)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("OAI-Device-Id", c.oaiDeviceID)
-	req.Header.Set("OAI-Language", "en-US")
+	req.Header.Set("OAI-Language", stringOrDefault(c.authData, "oai-language", "en-US"))
 	req.Header.Set("Origin", "https://chatgpt.com")
 	req.Header.Set("Priority", "u=1, i")
 	req.Header.Set("Referer", "https://chatgpt.com/")
-	req.Header.Set("Sec-CH-UA", `"Chromium";v="146", "Google Chrome";v="146", "Not?A_Brand";v="99"`)
-	req.Header.Set("Sec-CH-UA-Mobile", "?0")
-	req.Header.Set("Sec-CH-UA-Platform", `"macOS"`)
+	req.Header.Set("Sec-CH-UA", stringOrDefault(c.authData, "sec-ch-ua", `"Chromium";v="146", "Google Chrome";v="146", "Not?A_Brand";v="99"`))
+	req.Header.Set("Sec-CH-UA-Mobile", stringOrDefault(c.authData, "sec-ch-ua-mobile", "?0"))
+	req.Header.Set("Sec-CH-UA-Platform", stringOrDefault(c.authData, "sec-ch-ua-platform", `"macOS"`))
 	req.Header.Set("Sec-Fetch-Dest", "empty")
 	req.Header.Set("Sec-Fetch-Mode", "cors")
 	req.Header.Set("Sec-Fetch-Site", "same-origin")
-	req.Header.Set("User-Agent", defaultUserAgent)
+	req.Header.Set("User-Agent", stringOrDefault(c.authData, "user-agent", defaultUserAgent))
 	if c.cookies != "" {
 		req.Header.Set("Cookie", c.cookies)
 	}
+}
+
+func (c *ChatGPTClient) timezoneOffsetMin() int {
+	if c.authData != nil {
+		if v := intValue(c.authData["timezone_offset_min"]); v != 0 {
+			return v
+		}
+		if v := intValue(c.authData["timezone-offset-min"]); v != 0 {
+			return v
+		}
+	}
+	return -480
+}
+
+func (c *ChatGPTClient) timezoneName() string {
+	if c.authData != nil {
+		if v := firstString(c.authData, "timezone", "time_zone"); v != "" {
+			return v
+		}
+	}
+	return "Asia/Shanghai"
 }
 
 func (c *ChatGPTClient) LastRoute() string {
