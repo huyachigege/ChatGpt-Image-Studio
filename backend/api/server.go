@@ -1964,10 +1964,14 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 	}
 	defer store.Close()
 	user, err := store.UserByImageAPIKey(r.Context(), token)
+	if err == nil && user != nil {
+		return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token, ImageAPIKey: user.ImageAPIKey}, true
+	}
+	user, err = store.UserBySession(r.Context(), token)
 	if err != nil || user == nil {
 		return authIdentity{}, false
 	}
-	return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token}, true
+	return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token, ImageAPIKey: user.ImageAPIKey}, true
 }
 
 func (s *Server) hasAnyBearer(r *http.Request, keys ...string) bool {

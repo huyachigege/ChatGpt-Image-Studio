@@ -1,6 +1,6 @@
 import { httpRequest } from "@/lib/request";
 import webConfig from "@/constants/common-env";
-import { getStoredAuthKey, type AuthUser } from "@/store/auth";
+import { getStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
 import {
   buildImageAccountPolicyHeader,
   normalizeImageAccountPolicy,
@@ -522,6 +522,10 @@ async function getImageAccountPolicyForRequest() {
   if (cachedImageAccountPolicy) {
     return cachedImageAccountPolicy;
   }
+  const user = await getStoredAuthUser();
+  if (user && user.role !== "admin") {
+    return normalizeImageAccountPolicy(null);
+  }
   try {
     return await fetchImageAccountPolicy();
   } catch {
@@ -536,6 +540,10 @@ function resolveImageResponseFormat(config: ConfigPayload | null) {
 async function getImageResponseFormatForRequest() {
   if (cachedConfig) {
     return resolveImageResponseFormat(cachedConfig);
+  }
+  const user = await getStoredAuthUser();
+  if (user && user.role !== "admin") {
+    return "url";
   }
   try {
     return resolveImageResponseFormat(await fetchConfig());

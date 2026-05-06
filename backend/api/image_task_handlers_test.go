@@ -13,7 +13,76 @@ import (
 	"time"
 
 	"chatgpt2api/handler"
+	"chatgpt2api/internal/users"
 )
+
+func TestCreateImageTaskRunsToSuccessForWorkspaceUser(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+
+	userStore, err := users.NewStore(server.cfg)
+	if err != nil {
+		t.Fatalf("new user store: %v", err)
+	}
+	defer userStore.Close()
+	invite, err := userStore.CreateInvite(context.Background(), "admin")
+	if err != nil {
+		t.Fatalf("create invite: %v", err)
+	}
+	user, err := userStore.RegisterWithInvite(context.Background(), "alice", "secret123", "Alice", invite.Code)
+	if err != nil {
+		t.Fatalf("register user: %v", err)
+	}
+	token, err := userStore.CreateSession(context.Background(), user.ID, time.Hour)
+	if err != nil {
+		t.Fatalf("create session: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/image/tasks", strings.NewReader(`{
+		"conversationId":"conv-user-task-1",
+		"turnId":"turn-user-task-1",
+		"mode":"generate",
+		"prompt":"draw a cat for user",
+		"model":"gpt-image-2",
+		"count":1,
+		"size":"1248x1248",
+		"quality":"high"
+	}`))
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Content-Type", "application/json")
+
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+
+	var payload struct {
+		Task struct {
+			ID     string `json:"id"`
+			UserID string `json:"userId"`
+			Status string `json:"status"`
+		} `json:"task"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Task.UserID != user.ID {
+		t.Fatalf("task user id = %q, want %q", payload.Task.UserID, user.ID)
+	}
+
+	waitForTaskStatus(t, server, payload.Task.ID, imageTaskStatusSucceeded)
+	if recorder.officialCalls != 1 {
+		t.Fatalf("officialCalls = %d, want 1", recorder.officialCalls)
+	}
+}
 
 func TestCreateImageTaskRunsToSuccess(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
