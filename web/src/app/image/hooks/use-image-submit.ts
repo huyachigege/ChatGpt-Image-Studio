@@ -161,10 +161,8 @@ export function useImageSubmit({
       const targetConversationId =
         editorTarget.conversationId ?? selectedConversationId;
       const conversationId = targetConversationId ?? makeId();
-      const supportsEditableOutputOptions = true;
-      const nextQuality = supportsEditableOutputOptions
-        ? normalizeImageQuality(overrideQuality, imageQuality)
-        : imageQuality;
+      const supportsEditableOutputOptions = false;
+      const nextQuality = normalizeImageQuality(overrideQuality, imageQuality);
       const turnId = makeId();
       const now = new Date().toISOString();
       const draftTurn = createConversationTurn({
@@ -178,7 +176,7 @@ export function useImageSubmit({
         resolutionAccess: supportsEditableOutputOptions
           ? imageResolutionAccess
           : undefined,
-        quality: supportsEditableOutputOptions ? nextQuality : undefined,
+        quality: nextQuality,
         sourceImages: [
           buildSourceReference({
             id: makeId(),
@@ -233,7 +231,7 @@ export function useImageSubmit({
           resolutionAccess: supportsEditableOutputOptions
             ? imageResolutionAccess
             : undefined,
-          quality: supportsEditableOutputOptions ? nextQuality : undefined,
+          quality: nextQuality,
           sourceImages: draftTurn.sourceImages,
           sourceReference,
         });
@@ -484,8 +482,8 @@ export function useImageSubmit({
       prompt,
       model: imageModel,
       count: expectedCount,
-      size: imageSize,
-      resolutionAccess: imageResolutionAccess,
+      size: mode === "generate" ? imageSize : undefined,
+      resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
       quality: imageQuality,
       sourceImages,
       images: createLoadingImages(expectedCount, turnId),
@@ -517,8 +515,8 @@ export function useImageSubmit({
         prompt,
         model: imageModel,
         count: expectedCount,
-        size: imageSize,
-        resolutionAccess: imageResolutionAccess,
+        size: mode === "generate" ? imageSize : undefined,
+        resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
         quality: imageQuality,
         sourceImages,
       });

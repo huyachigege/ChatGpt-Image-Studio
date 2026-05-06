@@ -27,6 +27,10 @@ func (s *Server) handleCreateImageTask(w http.ResponseWriter, r *http.Request) {
 	}
 	body.UserID = identity.UserID
 	body.Username = identity.Username
+	if quotaErr := s.ensureUserImageQuotaAvailable(r.Context(), imageTaskQuotaKind(body.Mode, body.ResolutionAccess, body.Size), imageTaskQuotaCount(body.Count)); quotaErr != nil {
+		writeImageRequestError(w, quotaErr)
+		return
+	}
 	task, err := s.imageTasks.createTask(body)
 	if err != nil {
 		writeImageRequestError(w, err)

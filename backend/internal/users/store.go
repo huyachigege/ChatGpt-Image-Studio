@@ -23,8 +23,8 @@ const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
 
-	DailyFreeImageLimit = 200
-	DailyPaidImageLimit = 50
+	DailyFreeImageLimit = 120
+	DailyPaidImageLimit = 30
 )
 
 type User struct {

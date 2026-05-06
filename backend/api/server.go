@@ -425,6 +425,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/tools/admission-stress", s.requireAdminAuth(http.HandlerFunc(s.handleAdmissionStress)))
 	mux.Handle("GET /api/sync/status", s.requireAdminAuth(http.HandlerFunc(s.handleSyncStatus)))
 	mux.Handle("POST /api/sync/run", s.requireAdminAuth(http.HandlerFunc(s.handleRunSync)))
+	mux.Handle("GET /api/image/quota", s.requireWorkspaceAuth(http.HandlerFunc(s.handleGetUserImageQuota)))
 	mux.Handle("GET /api/image/gallery", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageGallery)))
 	mux.Handle("POST /api/image/gallery/delete", s.requireWorkspaceAuth(http.HandlerFunc(s.handleBatchDeleteImageGallery)))
 	mux.Handle("DELETE /api/image/gallery/{name}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageGalleryItem)))
@@ -1348,7 +1349,7 @@ func (s *Server) runPureCPAImageRequest(
 	}
 	defer releaseAdmission()
 	ctx = withImageAdmissionInfo(ctx, admissionInfo)
-	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind("", "cpa", "cpa")); quotaErr != nil {
+	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind("", "cpa", "cpa"), 1); quotaErr != nil {
 		entry := imageRequestLogEntry{
 			StartedAt:            startedAt.Format(time.RFC3339Nano),
 			FinishedAt:           time.Now().Format(time.RFC3339Nano),
@@ -1611,7 +1612,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
 	}
-	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind(account.Type, direction, route)); quotaErr != nil {
+	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind(account.Type, direction, route), 1); quotaErr != nil {
 		entry := imageRequestLogEntry{
 			StartedAt:            startedAt.Format(time.RFC3339Nano),
 			FinishedAt:           time.Now().Format(time.RFC3339Nano),

@@ -506,7 +506,7 @@ export function ImageEditModal({
         mask,
         aspectRatio: allowOutputOptions ? imageAspectRatio : undefined,
         resolutionTier: allowOutputOptions ? imageResolutionTier : undefined,
-        quality: allowOutputOptions ? imageQuality : undefined,
+        quality: imageQuality,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "提交编辑失败";
@@ -695,48 +695,51 @@ export function ImageEditModal({
         <footer className="border-t border-stone-200 bg-white/92 px-4 py-2.5 backdrop-blur sm:px-6 sm:py-4">
           <div className="relative mx-auto flex w-full max-w-[920px] items-end gap-3 rounded-[28px] border border-stone-200 bg-white px-3 py-2.5 shadow-[0_18px_48px_rgba(28,25,23,0.08)] sm:gap-4 sm:rounded-[32px] sm:px-5 sm:py-4">
             <div className="min-w-0 flex-1">
-              {allowOutputOptions ? (
-                <div className="hide-scrollbar -mx-1 mb-2 flex items-center gap-2 overflow-x-auto px-1 pb-1">
-                  <Select
-                    value={imageAspectRatio}
-                    onValueChange={(value) => onImageAspectRatioChange?.(value)}
-                  >
-                    <SelectTrigger className="h-9 w-[88px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:w-[108px] sm:text-sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {imageAspectRatioOptions.map((item) => (
-                        <SelectItem key={item.value} value={item.value}>
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  <Select
-                    value={imageResolutionTier}
-                    onValueChange={(value) =>
-                      onImageResolutionTierChange?.(value)
-                    }
-                  >
-                    <SelectTrigger
-                      className="h-9 w-[168px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:w-[238px] sm:text-sm"
-                      title={currentResolutionTierLabel}
+              <div className="hide-scrollbar -mx-1 mb-2 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+                {allowOutputOptions ? (
+                  <>
+                    <Select
+                      value={imageAspectRatio}
+                      onValueChange={(value) => onImageAspectRatioChange?.(value)}
                     >
-                      <SelectValue>{currentResolutionTierLabel}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {imageResolutionTierOptions.map((item) => (
-                        <SelectItem
-                          key={item.value}
-                          value={item.value}
-                          disabled={item.disabled}
-                        >
-                          {item.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                      <SelectTrigger className="h-9 w-[88px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:w-[108px] sm:text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {imageAspectRatioOptions.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={imageResolutionTier}
+                      onValueChange={(value) =>
+                        onImageResolutionTierChange?.(value)
+                      }
+                    >
+                      <SelectTrigger
+                        className="h-9 w-[168px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:w-[238px] sm:text-sm"
+                        title={currentResolutionTierLabel}
+                      >
+                        <SelectValue>{currentResolutionTierLabel}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {imageResolutionTierOptions.map((item) => (
+                          <SelectItem
+                            key={item.value}
+                            value={item.value}
+                            disabled={item.disabled}
+                          >
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                ) : null}
 
                   <Select
                     value={imageQuality}
@@ -774,7 +777,6 @@ export function ImageEditModal({
                     </SelectContent>
                   </Select>
                 </div>
-              ) : null}
             <div className="relative">
               {isPromptExpanded ? (
                 <>

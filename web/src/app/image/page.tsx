@@ -10,10 +10,8 @@ import { ImageEditModal } from "@/components/image-edit-modal";
 import {
   cancelImageTask,
   consumeImageTaskStream,
-  fetchAccounts,
-  fetchConfig,
+  fetchImageQuota,
   listImageTasks,
-  type Account,
   type ImageTaskSnapshot,
   type ImageTaskView,
   type ImageQuality,
@@ -212,69 +210,6 @@ function formatConversationTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-}
-
-function formatAvailableQuota(accounts: Account[], allowDisabled: boolean) {
-  const availableAccounts = accounts.filter((account) =>
-    isImageAccountUsable(account, allowDisabled),
-  );
-  return String(
-    availableAccounts.reduce(
-      (sum, account) => sum + getImageRemaining(account),
-      0,
-    ),
-  );
-}
-
-function getImageRemaining(account: Account) {
-  const limit = account.limits_progress?.find(
-    (item) => item.feature_name === "image_gen",
-  );
-  if (typeof limit?.remaining === "number") {
-    return Math.max(0, limit.remaining);
-  }
-  return Math.max(0, account.quota);
-}
-
-function isImageAccountUsable(account: Account, allowDisabled: boolean) {
-  const disabled = Boolean(account.disabled) || account.status === "禁用";
-  return (
-    (!disabled || allowDisabled) &&
-    account.status !== "异常" &&
-    account.status !== "限流" &&
-    getImageRemaining(account) > 0
-  );
-}
-
-function hasAvailablePaidImageAccount(
-  accounts: Account[],
-  allowDisabled: boolean,
-) {
-  return accounts.some(
-    (account) =>
-      isImageAccountUsable(account, allowDisabled) &&
-      (account.type === "Plus" ||
-        account.type === "Pro" ||
-        account.type === "Team"),
-  );
-}
-
-function hasUsableFreeLegacyAccount(
-  accounts: Account[],
-  allowDisabled: boolean,
-  imageMode: "studio" | "cpa",
-  freeImageRoute: string,
-) {
-  if (imageMode !== "studio" || freeImageRoute !== "legacy") {
-    return false;
-  }
-  return accounts.some(
-    (account) =>
-      isImageAccountUsable(account, allowDisabled) &&
-      account.type !== "Plus" &&
-      account.type !== "Pro" &&
-      account.type !== "Team",
-  );
 }
 
 async function normalizeConversationHistory(items: ImageConversation[]) {
@@ -528,6 +463,7 @@ export default function ImagePage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const didLoadQuotaRef = useRef(false);
+  const quotaRefreshTaskStatesRef = useRef<Record<string, string>>({});
   const mountedRef = useRef(true);
   const draftSelectionRef = useRef(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -553,15 +489,7 @@ export default function ImagePage() {
       ? window.matchMedia("(min-width: 1024px)").matches
       : false,
   );
-  const [availableQuota, setAvailableQuota] = useState("加载中");
-  const [availableAccounts, setAvailableAccounts] = useState<Account[]>([]);
-  const [allowDisabledStudioAccounts, setAllowDisabledStudioAccounts] =
-    useState(false);
-  const [configuredImageMode, setConfiguredImageMode] = useState<
-    "studio" | "cpa"
-  >("studio");
-  const [configuredFreeImageRoute, setConfiguredFreeImageRoute] =
-    useState("legacy");
+  const [availableQuota, setAvailableQuota] = useState("Free 120/120 · Paid 30/30");
   const [submitElapsedSeconds, setSubmitElapsedSeconds] = useState(0);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isMobileComposerCollapsed, setIsMobileComposerCollapsed] =
@@ -731,29 +659,6 @@ export default function ImagePage() {
     () => Math.max(1, Math.min(8, Number(imageCount) || 1)),
     [imageCount],
   );
-  const hasAvailablePaidAccount = useMemo(
-    () =>
-      hasAvailablePaidImageAccount(
-        availableAccounts,
-        allowDisabledStudioAccounts,
-      ),
-    [allowDisabledStudioAccounts, availableAccounts],
-  );
-  const hasLegacyFreeAccountInPool = useMemo(
-    () =>
-      hasUsableFreeLegacyAccount(
-        availableAccounts,
-        allowDisabledStudioAccounts,
-        configuredImageMode,
-        configuredFreeImageRoute,
-      ),
-    [
-      allowDisabledStudioAccounts,
-      availableAccounts,
-      configuredFreeImageRoute,
-      configuredImageMode,
-    ],
-  );
   const currentResolutionPresets = useMemo(
     () =>
       imageAspectRatio === "auto"
@@ -768,23 +673,8 @@ export default function ImagePage() {
       ) ?? currentResolutionPresets[0],
     [currentResolutionPresets, imageResolutionTier],
   );
-  const currentRequestRequiresPaidAccount =
-    selectedResolutionPreset?.access === "paid";
-  const imageQualityDisabledReason = currentRequestRequiresPaidAccount
-    ? "当前输出档位会固定走 Paid 账号，质量参数应可正常生效。"
-    : "当前可用号池里仍有 Free legacy 链路账号，标准分辨率请求可能落到该链路，质量参数无法稳定作为正式参数传给上游，暂时置灰。";
-  const isImageQualityEnabled = useMemo(
-    () =>
-      configuredImageMode === "cpa" ||
-      !hasLegacyFreeAccountInPool ||
-      (currentRequestRequiresPaidAccount && hasAvailablePaidAccount),
-    [
-      configuredImageMode,
-      currentRequestRequiresPaidAccount,
-      hasAvailablePaidAccount,
-      hasLegacyFreeAccountInPool,
-    ],
-  );
+  const imageQualityDisabledReason = "当前模式支持自由选择清晰度。";
+  const isImageQualityEnabled = true;
   const imageResolutionTierOptions = useMemo(
     () =>
       currentResolutionPresets.map((item) => ({
@@ -793,9 +683,9 @@ export default function ImagePage() {
             ? item.label
             : `${item.access === "paid" ? "Paid" : "Free"} ${formatResolutionLabel(item.value)}${item.access === "paid" ? `（${item.label.replace("Paid ", "")}）` : ""}`,
         value: item.tier,
-        disabled: item.access === "paid" && !hasAvailablePaidAccount,
+        disabled: false,
       })),
-    [currentResolutionPresets, hasAvailablePaidAccount, imageAspectRatio],
+    [currentResolutionPresets, imageAspectRatio],
   );
   const imageResolutionTierLabel = useMemo(
     () =>
@@ -810,59 +700,28 @@ export default function ImagePage() {
     () =>
       imageAspectRatio === "auto"
         ? ""
-        :
-      currentResolutionPresets.find(
-        (item) =>
-          item.tier === imageResolutionTier &&
-          (hasAvailablePaidAccount || item.access === "free"),
-      )?.value ??
-      currentResolutionPresets.find(
-        (item) => hasAvailablePaidAccount || item.access === "free",
-      )?.value ??
-      currentResolutionPresets[0].value,
-    [
-      currentResolutionPresets,
-      hasAvailablePaidAccount,
-      imageAspectRatio,
-      imageResolutionTier,
-    ],
+        : currentResolutionPresets.find((item) => item.tier === imageResolutionTier)
+            ?.value ?? currentResolutionPresets[0].value,
+    [currentResolutionPresets, imageAspectRatio, imageResolutionTier],
   );
   const imageResolutionAccess = useMemo<ImageResolutionAccess>(
     () => selectedResolutionPreset?.access ?? "free",
     [selectedResolutionPreset],
   );
   const imageSizeHint = useMemo(
-    () =>
-      mode === "edit" ? (
-        <>
-          <div>
-            <span className="font-semibold text-stone-800">编辑输出尺寸：</span>
-            编辑模式会尽量按所选比例和分辨率输出结果，但最终尺寸仍可能受源图比例、遮罩范围和上游模型能力影响。
-          </div>
-          <div className="mt-2">
-            <span className="font-semibold text-stone-800">质量说明：</span>
-            输出质量会跟随当前质量档位；如果请求落到 Free legacy
-            链路，质量参数可能不会作为正式参数生效。
-          </div>
-        </>
-      ) : (
-        <>
-          <div>
-            <span className="font-semibold text-stone-800">分辨率限制：</span>
-            Free 账号当前按约 1.57M 像素总量控制；Paid 账号的图片最长边最高支持
-            3840。
-          </div>
-          <div className="mt-2">
-            <span className="font-semibold text-stone-800">账号要求：</span>
-            2K 及以上像素档仅 Paid 账号可用，包括 Team / Plus / Pro。
-          </div>
-          <div className="mt-2">
-            <span className="font-semibold text-stone-800">Auto 模式补充：</span>
-            当比例切到 Auto 时，当前项目不会强制指定比例和分辨率，请直接在提示词里写明横竖版、画幅比例和目标输出尺寸。`Free / Paid` 只决定调度时优先使用哪类图片账号，不会把固定尺寸写进上游请求。
-          </div>
-        </>
-      ),
-    [mode],
+    () => (
+      <>
+        <div>
+          <span className="font-semibold text-stone-800">分辨率限制：</span>
+          Free 档每天 120 张；Paid 档每天 30 张。普通用户可以自由切换分辨率，提交后按所选档位扣除对应额度。
+        </div>
+        <div className="mt-2">
+          <span className="font-semibold text-stone-800">Auto 模式补充：</span>
+          当比例切到 Auto 时，当前项目不会强制指定比例和分辨率，请直接在提示词里写明横竖版、画幅比例和目标输出尺寸。`Free / Paid` 只决定额度类型和调度倾向。
+        </div>
+      </>
+    ),
+    [],
   );
   const imageSources = useMemo(
     () => sourceImages.filter((item) => item.role === "image"),
@@ -1010,62 +869,53 @@ export default function ImagePage() {
     };
   }, []);
 
-  useEffect(() => {
-    const loadQuota = async () => {
-      try {
-        const [accountsData, configData] = await Promise.all([
-          fetchAccounts(),
-          fetchConfig(),
-        ]);
-        const allowDisabled =
-          configData.chatgpt.imageMode === "studio" &&
-          configData.chatgpt.studioAllowDisabledImageAccounts;
-        setAllowDisabledStudioAccounts(allowDisabled);
-        setConfiguredImageMode(configData.chatgpt.imageMode);
-        setConfiguredFreeImageRoute(configData.chatgpt.freeImageRoute);
-        setAvailableAccounts(accountsData.items);
-        setAvailableQuota(
-          formatAvailableQuota(accountsData.items, allowDisabled),
-        );
-      } catch {
-        setAvailableAccounts([]);
-        setAllowDisabledStudioAccounts(false);
-        setConfiguredImageMode("studio");
-        setConfiguredFreeImageRoute("legacy");
-        setAvailableQuota((prev) => (prev === "加载中" ? "—" : prev));
-      }
-    };
+  const refreshUserQuota = useCallback(async () => {
+    try {
+      const payload = await fetchImageQuota();
+      const quota = payload.item;
+      setAvailableQuota(`Free ${quota.freeRemaining}/${quota.freeLimit} · Paid ${quota.paidRemaining}/${quota.paidLimit}`);
+    } catch {
+      setAvailableQuota((prev) => (prev === "加载中" || !prev ? "Free 120/120 · Paid 30/30" : prev));
+    }
+  }, []);
 
+  useEffect(() => {
     if (didLoadQuotaRef.current) {
       return;
     }
     didLoadQuotaRef.current = true;
-    void loadQuota();
-  }, []);
+    void refreshUserQuota();
+  }, [refreshUserQuota]);
 
   useEffect(() => {
     const selectedPreset = currentResolutionPresets.find(
       (item) => item.tier === imageResolutionTier,
     );
-    if (
-      selectedPreset &&
-      (hasAvailablePaidAccount || selectedPreset.access === "free")
-    ) {
+    if (selectedPreset) {
       return;
     }
-    const nextPreset = currentResolutionPresets.find(
-      (item) => hasAvailablePaidAccount || item.access === "free",
-    );
+    const nextPreset = currentResolutionPresets[0];
     if (nextPreset && nextPreset.tier !== imageResolutionTier) {
       setImageResolutionTier(nextPreset.tier);
     }
-  }, [currentResolutionPresets, hasAvailablePaidAccount, imageResolutionTier]);
+  }, [currentResolutionPresets, imageResolutionTier]);
 
   useEffect(() => {
-    if (!isImageQualityEnabled && imageQuality !== "high") {
-      setImageQuality("high");
+    let shouldRefresh = false;
+    for (const task of taskItems) {
+      if (!["succeeded", "failed", "cancelled", "expired"].includes(task.status)) {
+        continue;
+      }
+      if (quotaRefreshTaskStatesRef.current[task.id] === task.status) {
+        continue;
+      }
+      quotaRefreshTaskStatesRef.current[task.id] = task.status;
+      shouldRefresh = true;
     }
-  }, [imageQuality, isImageQualityEnabled]);
+    if (shouldRefresh) {
+      void refreshUserQuota();
+    }
+  }, [refreshUserQuota, taskItems]);
 
   const scrollToBottom = useCallback(
     (behavior: ScrollBehavior = "smooth") => {
@@ -1621,7 +1471,7 @@ export default function ImagePage() {
         imageName={editorTarget?.imageName || "image.png"}
         imageSrc={editorTarget?.sourceDataUrl || ""}
         isSubmitting={false}
-        allowOutputOptions={Boolean(editorTarget)}
+        allowOutputOptions={false}
         imageAspectRatio={imageAspectRatio}
         imageAspectRatioOptions={imageAspectRatioOptions}
         imageResolutionTier={imageResolutionTier}

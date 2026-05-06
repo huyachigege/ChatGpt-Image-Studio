@@ -42,8 +42,13 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		return nil, fmt.Errorf("task not found")
 	}
 
-	fakeIdentity := authIdentity{UserID: task.UserID, Username: firstNonEmpty(task.Username, task.UserID), Role: "user"}
+	fakeRole := "user"
+	if strings.TrimSpace(task.UserID) == "admin" {
+		fakeRole = "admin"
+	}
+	fakeIdentity := authIdentity{UserID: task.UserID, Username: firstNonEmpty(task.Username, task.UserID), Role: fakeRole}
 	taskCtx := context.WithValue(ctx, authIdentityContextKey{}, fakeIdentity)
+	taskCtx = withUserImageQuotaKind(taskCtx, imageTaskQuotaKind(task.Mode, task.ResolutionAccess, task.Size))
 	fakeReq := httptest.NewRequest("POST", "http://"+imageTaskFakeHost+"/api/image/tasks", nil).WithContext(taskCtx)
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)

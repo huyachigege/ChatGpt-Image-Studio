@@ -89,8 +89,9 @@ export function PromptComposer({
 }: PromptComposerProps) {
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
   const currentModeDescription = modeOptions.find((item) => item.value === mode)?.description ?? "";
-  const showImageOutputControls = mode === "edit" || mode === "generate";
-  const sizeHintAriaLabel = mode === "edit" ? "查看编辑输出说明" : "查看分辨率说明";
+  const showImageOutputControls = mode === "generate";
+  const showImageQualityControl = mode === "edit" || mode === "generate";
+  const sizeHintAriaLabel = "查看分辨率说明";
   const imageQualityPrefix = mode === "edit" ? "输出质量" : "质量";
   const hasComposerContent = imagePrompt.trim().length > 0 || sourceImages.length > 0;
   const previousHasComposerContentRef = useRef(hasComposerContent);
@@ -224,7 +225,7 @@ export function PromptComposer({
 
             {sizeHintTooltip}
 
-            {showImageOutputControls ? (
+            {showImageQualityControl ? (
               <Select value={imageQuality} onValueChange={onImageQualityChange} disabled={imageQualityDisabled}>
                 <SelectTrigger
                   className={cn(

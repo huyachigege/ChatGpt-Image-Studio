@@ -72,6 +72,16 @@ export type ImageTaskView = {
   cancelRequested?: boolean;
 };
 
+export type DailyImageQuota = {
+  dateKey: string;
+  freeLimit: number;
+  freeUsed: number;
+  freeRemaining: number;
+  paidLimit: number;
+  paidUsed: number;
+  paidRemaining: number;
+};
+
 export type ImageTaskSnapshot = {
   running: number;
   maxRunning: number;
@@ -650,6 +660,10 @@ export async function createInvite() {
   return httpRequest<{ item: InviteItem }>("/api/invites", {
     method: "POST",
   });
+}
+
+export async function fetchImageQuota() {
+  return httpRequest<{ item: DailyImageQuota }>("/api/image/quota");
 }
 
 export async function listImageGallery() {

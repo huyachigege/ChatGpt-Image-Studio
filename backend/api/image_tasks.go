@@ -168,8 +168,9 @@ type imageTask struct {
 	Model           string
 	Count           int
 	RetryImageIndex *int
-	Size            string
-	Quality         string
+	Size             string
+	ResolutionAccess string
+	Quality          string
 	Background      string
 	ResponseFormat  string
 	SourceImages    []imageTaskSourceImage
