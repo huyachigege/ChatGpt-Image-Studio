@@ -323,6 +323,72 @@ func TestAcquireImageAuthFilteredAcceptsPaidAccountInferredFromAccessToken(t *te
 	}
 }
 
+func TestAcquireImageAuthLeaseForUserPrefersAccountNotUsedByOtherUser(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := os.MkdirAll(syncDir, 0o755); err != nil {
+		t.Fatalf("mkdir sync dir: %v", err)
+	}
+
+	store := &Store{
+		authDir:      authDir,
+		syncStateDir: syncDir,
+		stateFile:    filepath.Join(rootDir, "state.json"),
+		defaultQuota: 5,
+		providerType: "codex",
+		states: map[string]RuntimeState{
+			"first.json":  {Type: "Free", Status: "正常", Quota: 5, QuotaKnown: true},
+			"second.json": {Type: "Free", Status: "正常", Quota: 5, QuotaKnown: true},
+		},
+	}
+
+	if err := writeJSONFile(filepath.Join(authDir, "first.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-first",
+		"email":        "first@example.com",
+	}); err != nil {
+		t.Fatalf("seed first auth file: %v", err)
+	}
+	if err := writeJSONFile(filepath.Join(authDir, "second.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-second",
+		"email":        "second@example.com",
+	}); err != nil {
+		t.Fatalf("seed second auth file: %v", err)
+	}
+
+	authA, _, releaseA, err := store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(nil, nil, false, "user-a")
+	if err != nil {
+		t.Fatalf("AcquireImageAuthLeaseForUserFilteredWithDisabledOption(user-a) error = %v", err)
+	}
+	if authA.AccessToken != "token-first" {
+		t.Fatalf("user-a token = %q, want token-first", authA.AccessToken)
+	}
+	releaseA()
+
+	authB, _, releaseB, err := store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(nil, nil, false, "user-b")
+	if err != nil {
+		t.Fatalf("AcquireImageAuthLeaseForUserFilteredWithDisabledOption(user-b) error = %v", err)
+	}
+	if authB.AccessToken != "token-second" {
+		t.Fatalf("user-b token = %q, want token-second", authB.AccessToken)
+	}
+	releaseB()
+
+	authAAgain, _, releaseAAgain, err := store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(nil, nil, false, "user-a")
+	if err != nil {
+		t.Fatalf("AcquireImageAuthLeaseForUserFilteredWithDisabledOption(user-a again) error = %v", err)
+	}
+	defer releaseAAgain()
+	if authAAgain.AccessToken != "token-first" {
+		t.Fatalf("user-a again token = %q, want token-first", authAAgain.AccessToken)
+	}
+}
+
 func TestAcquireImageAuthFilteredWithDisabledOptionAllowsDisabledAccount(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")

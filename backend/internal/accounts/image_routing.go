@@ -86,7 +86,17 @@ func (s *Store) AcquireImageAuthLeaseWithPolicyFilteredWithDisabledOption(
 	allowDisabled bool,
 	policy *ImageAccountRoutingPolicy,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy)
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, "")
+}
+
+func (s *Store) AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(
+	excluded map[string]struct{},
+	allow func(PublicAccount) bool,
+	allowDisabled bool,
+	policy *ImageAccountRoutingPolicy,
+	userID string,
+) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID)
 }
 
 func (s *Store) ImageAccountAllowedForPolicy(accessToken string, account PublicAccount, policy *ImageAccountRoutingPolicy) bool {
@@ -288,9 +298,10 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 	allow func(PublicAccount) bool,
 	allowDisabled bool,
 	policy *ImageAccountRoutingPolicy,
+	userID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
 	if policy == nil || !policy.Enabled {
-		auth, account, release, err := s.AcquireImageAuthLeaseFilteredWithDisabledOption(excluded, allow, allowDisabled)
+		auth, account, release, err := s.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(excluded, allow, allowDisabled, userID)
 		return auth, account, ImageAccountRoutingDecision{}, release, err
 	}
 
@@ -350,6 +361,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 		allow,
 		allowDisabled,
 		now,
+		userID,
 	)
 	if ok {
 		return auth, account, decision, release, nil
@@ -368,6 +380,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 			allow,
 			allowDisabled,
 			now,
+			userID,
 		)
 		if ok {
 			return auth, account, ImageAccountRoutingDecision{}, release, nil
@@ -388,6 +401,7 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 	allow func(PublicAccount) bool,
 	allowDisabled bool,
 	now time.Time,
+	userID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), bool) {
 	sawSelectedGroup := false
 	for _, groupIndex := range groupIndexes {
@@ -436,6 +450,11 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if groupCandidates[i].ready != groupCandidates[j].ready {
 				return groupCandidates[i].ready
 			}
+			leftOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[i].auth.AccessToken, userID)
+			rightOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[j].auth.AccessToken, userID)
+			if leftOtherUser != rightOtherUser {
+				return !leftOtherUser
+			}
 			if groupCandidates[i].account.Priority != groupCandidates[j].account.Priority {
 				return groupCandidates[i].account.Priority > groupCandidates[j].account.Priority
 			}
@@ -450,6 +469,7 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 		if leaseErr != nil {
 			continue
 		}
+		s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID)
 		return &selected.auth, selected.account, ImageAccountRoutingDecision{
 			PolicyApplied:  true,
 			GroupIndex:     groupIndex,

@@ -601,8 +601,22 @@ func (b *sqliteBackend) Init() error {
 	if err != nil {
 		return err
 	}
+	if err := configureSQLiteDB(db); err != nil {
+		_ = db.Close()
+		return err
+	}
 	b.db = db
 	_, err = b.db.Exec(`CREATE TABLE IF NOT EXISTS image_conversations (id TEXT PRIMARY KEY, raw_json BLOB NOT NULL, updated_at TEXT NOT NULL);`)
+	return err
+}
+
+func configureSQLiteDB(db *sql.DB) error {
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if _, err := db.Exec(`PRAGMA busy_timeout = 10000`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`PRAGMA journal_mode = WAL`)
 	return err
 }
 

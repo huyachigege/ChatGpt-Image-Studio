@@ -74,12 +74,26 @@ func NewStore(cfg *config.Config) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := configureSQLiteDB(db); err != nil {
+		_ = db.Close()
+		return nil, err
+	}
 	store := &Store{db: db}
 	if err := store.Init(context.Background()); err != nil {
 		_ = db.Close()
 		return nil, err
 	}
 	return store, nil
+}
+
+func configureSQLiteDB(db *sql.DB) error {
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if _, err := db.Exec(`PRAGMA busy_timeout = 10000`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`PRAGMA journal_mode = WAL`)
+	return err
 }
 
 func (s *Store) Close() error {

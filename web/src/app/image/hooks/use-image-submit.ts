@@ -22,6 +22,7 @@ import {
   buildInpaintSourceReference,
   createConversationTurn,
   createLoadingImages,
+  formatImageError,
 } from "../submit-utils";
 import { buildSourceImageUrl } from "../view-utils";
 
@@ -253,7 +254,7 @@ export function useImageSubmit({
         toast.success("图片编辑任务已加入队列");
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "提交编辑失败";
+          error instanceof Error ? formatImageError(error) : "提交编辑失败";
         await updateConversation(conversationId, (current) => ({
           ...(current ?? buildConversationBase(conversationId, draftTurn)),
           turns: (current?.turns ?? [draftTurn]).map((turn) =>
@@ -408,7 +409,7 @@ export function useImageSubmit({
         );
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "提交任务失败";
+          error instanceof Error ? formatImageError(error) : "提交任务失败";
         await updateConversation(conversationId, (current) => ({
           ...(current ?? buildConversationBase(conversationId, draftTurn)),
           turns: (current?.turns ?? [draftTurn]).map((item) =>
@@ -539,7 +540,7 @@ export function useImageSubmit({
       toast.success("图片任务已加入队列");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "提交任务失败";
+        error instanceof Error ? formatImageError(error) : "提交任务失败";
       await updateConversation(conversationId, (current) => ({
         ...(current ?? buildConversationBase(conversationId, draftTurn)),
         turns: (current?.turns ?? [draftTurn]).map((turn) =>

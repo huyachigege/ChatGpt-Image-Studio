@@ -1208,10 +1208,11 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			decision     accounts.ImageAccountRoutingDecision
 			err          error
 		)
+		userID := identityFromContext(ctx).UserID
 		if policy != nil {
-			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseWithPolicyFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy)
+			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID)
 		} else {
-			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts())
+			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID)
 		}
 		if err != nil {
 			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
@@ -2291,6 +2292,9 @@ func isImageRateLimitError(err error) bool {
 		"http 429:",
 		"http 429 ",
 		"status 429",
+		"returned 429",
+		" 429:",
+		" 429 ",
 		"too many requests",
 		"rate limit",
 		"rate_limit",

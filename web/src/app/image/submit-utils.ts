@@ -132,6 +132,17 @@ export function formatImageErrorMessage(message: string) {
   }
 
   const normalized = trimmed.toLowerCase();
+  if (
+    normalized.includes("429") ||
+    normalized.includes("too many requests") ||
+    normalized.includes("usage limit") ||
+    normalized.includes("rate limit") ||
+    normalized.includes("rate_limit") ||
+    normalized.includes("quota exceeded")
+  ) {
+    return "当前图片账号已达到上游用量限制，系统会优先换其他账号重试；如果所有可用账号都限流，请稍后再试。";
+  }
+
   if (normalized.includes("an error occurred while processing your request")) {
     const requestId = trimmed.match(/request id\s+([a-z0-9-]+)/i)?.[1];
     return [

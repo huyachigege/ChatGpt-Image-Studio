@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -42,6 +43,7 @@ type imageModeCompatScenario struct {
 }
 
 type compatFactoryRecorder struct {
+	mu             sync.Mutex
 	officialCalls  int
 	responsesCalls int
 	cpaCalls       int
@@ -51,20 +53,24 @@ type compatFactoryRecorder struct {
 }
 
 type compatStubWorkflowClient struct {
-	factory     string
-	token       string
-	cpaRoute    string
-	model       string
-	recorder    *compatFactoryRecorder
-	generateErr error
-	editErr     error
-	inpaintErr  error
+	factory         string
+	token           string
+	cpaRoute        string
+	model           string
+	recorder        *compatFactoryRecorder
+	generateErr     error
+	editErr         error
+	inpaintErr      error
+	generateStarted chan string
+	generateRelease <-chan struct{}
 }
 
 func (c *compatStubWorkflowClient) record(operation, model string) {
 	if c == nil || c.recorder == nil {
 		return
 	}
+	c.recorder.mu.Lock()
+	defer c.recorder.mu.Unlock()
 	c.recorder.lastFactory = c.factory
 	c.recorder.lastModel = model
 	c.recorder.callSequence = append(c.recorder.callSequence, fmt.Sprintf("%s:%s:%s", c.factory, c.token, operation))
@@ -89,6 +95,16 @@ func (c *compatStubWorkflowClient) GenerateImage(ctx context.Context, prompt, mo
 	c.record("generate", model)
 	if c.generateErr != nil {
 		return nil, c.generateErr
+	}
+	if c.generateStarted != nil {
+		c.generateStarted <- c.token
+	}
+	if c.generateRelease != nil {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-c.generateRelease:
+		}
 	}
 	return []handler.ImageResult{
 		{
@@ -778,6 +794,8 @@ type compatClientBehavior struct {
 	cpaGenerateErrors       map[string]error
 	cpaEditErrors           map[string]error
 	cpaInpaintErr           error
+	generateStarted         chan string
+	generateRelease         <-chan struct{}
 }
 
 type compatTestServerOptions struct {
@@ -828,14 +846,18 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 		_ = proxyURL
 		_ = authData
 		_ = requestConfig
+		recorder.mu.Lock()
 		recorder.officialCalls++
+		recorder.mu.Unlock()
 		return &compatStubWorkflowClient{
-			factory:     "official",
-			token:       accessToken,
-			recorder:    recorder,
-			generateErr: options.behavior.officialGenerateErrors[accessToken],
-			editErr:     options.behavior.officialEditErrors[accessToken],
-			inpaintErr:  options.behavior.officialInpaintErrors[accessToken],
+			factory:         "official",
+			token:           accessToken,
+			recorder:        recorder,
+			generateErr:     options.behavior.officialGenerateErrors[accessToken],
+			editErr:         options.behavior.officialEditErrors[accessToken],
+			inpaintErr:      options.behavior.officialInpaintErrors[accessToken],
+			generateStarted: options.behavior.generateStarted,
+			generateRelease: options.behavior.generateRelease,
 		}
 	}
 	server.responsesClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
@@ -843,30 +865,38 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 		_ = proxyURL
 		_ = authData
 		_ = requestConfig
+		recorder.mu.Lock()
 		recorder.responsesCalls++
+		recorder.mu.Unlock()
 		return &compatStubWorkflowClient{
-			factory:     "responses",
-			token:       accessToken,
-			recorder:    recorder,
-			generateErr: options.behavior.responsesGenerateErrors[accessToken],
-			editErr:     options.behavior.responsesEditErrors[accessToken],
-			inpaintErr:  options.behavior.responsesInpaintErrors[accessToken],
+			factory:         "responses",
+			token:           accessToken,
+			recorder:        recorder,
+			generateErr:     options.behavior.responsesGenerateErrors[accessToken],
+			editErr:         options.behavior.responsesEditErrors[accessToken],
+			inpaintErr:      options.behavior.responsesInpaintErrors[accessToken],
+			generateStarted: options.behavior.generateStarted,
+			generateRelease: options.behavior.generateRelease,
 		}
 	}
 	server.cpaClientFactory = func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient {
 		_ = baseURL
 		_ = apiKey
 		_ = timeout
+		recorder.mu.Lock()
 		recorder.cpaCalls++
+		recorder.mu.Unlock()
 		return &compatStubWorkflowClient{
-			factory:     "cpa",
-			token:       "cpa",
-			cpaRoute:    firstNonEmpty(scenario.wantCPASubroute, routeStrategy, "images_api"),
-			model:       scenario.wantUpstream,
-			recorder:    recorder,
-			generateErr: options.behavior.cpaGenerateErrors["cpa"],
-			editErr:     options.behavior.cpaEditErrors["cpa"],
-			inpaintErr:  options.behavior.cpaInpaintErr,
+			factory:         "cpa",
+			token:           "cpa",
+			cpaRoute:        firstNonEmpty(scenario.wantCPASubroute, routeStrategy, "images_api"),
+			model:           scenario.wantUpstream,
+			recorder:        recorder,
+			generateErr:     options.behavior.cpaGenerateErrors["cpa"],
+			editErr:         options.behavior.cpaEditErrors["cpa"],
+			inpaintErr:      options.behavior.cpaInpaintErr,
+			generateStarted: options.behavior.generateStarted,
+			generateRelease: options.behavior.generateRelease,
 		}
 	}
 	return server, recorder

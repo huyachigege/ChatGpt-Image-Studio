@@ -24,8 +24,21 @@ func newSQLiteAccountStorage(path string) (accountStorageBackend, error) {
 	return &sqliteAccountStorage{path: path, db: db}, nil
 }
 
+func configureSQLiteDB(db *sql.DB) error {
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if _, err := db.Exec(`PRAGMA busy_timeout = 10000`); err != nil {
+		return err
+	}
+	_, err := db.Exec(`PRAGMA journal_mode = WAL`)
+	return err
+}
+
 func (s *sqliteAccountStorage) Init() error {
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
+		return err
+	}
+	if err := configureSQLiteDB(s.db); err != nil {
 		return err
 	}
 	stmts := []string{

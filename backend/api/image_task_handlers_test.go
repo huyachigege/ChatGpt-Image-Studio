@@ -84,6 +84,73 @@ func TestCreateImageTaskRunsToSuccessForWorkspaceUser(t *testing.T) {
 	}
 }
 
+func TestCreateImageTaskRunsMultipleImagesInParallelWithDifferentAccounts(t *testing.T) {
+	started := make(chan string, 4)
+	release := make(chan struct{})
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "parallel-1.json", accessToken: "token-parallel-1", accountType: "Free", priority: 0},
+			{fileName: "parallel-2.json", accessToken: "token-parallel-2", accountType: "Free", priority: 0},
+			{fileName: "parallel-3.json", accessToken: "token-parallel-3", accountType: "Free", priority: 0},
+			{fileName: "parallel-4.json", accessToken: "token-parallel-4", accountType: "Free", priority: 0},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-parallel-1",
+		TurnID:         "turn-parallel-1",
+		Mode:           "generate",
+		Prompt:         "draw four cats",
+		Model:          "gpt-image-2",
+		Count:          4,
+		Size:           "1248x1248",
+		Quality:        "high",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	received := make([]string, 0, 4)
+	deadline := time.After(2 * time.Second)
+	for len(received) < 4 {
+		select {
+		case token := <-started:
+			received = append(received, token)
+		case <-deadline:
+			t.Fatalf("started tokens = %v, want 4 parallel starts", received)
+		}
+	}
+
+	seen := map[string]struct{}{}
+	for _, token := range received {
+		seen[token] = struct{}{}
+	}
+	if len(seen) != 4 {
+		t.Fatalf("started tokens = %v, want 4 different accounts", received)
+	}
+
+	close(release)
+	released = true
+	waitForTaskStatus(t, server, "turn-parallel-1", imageTaskStatusSucceeded)
+}
+
 func TestCreateImageTaskRunsToSuccess(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
@@ -586,7 +653,7 @@ func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
 		},
 		behavior: compatClientBehavior{
 			officialGenerateErrors: map[string]error{
-				"token-limited": errors.New("backend-api failed: HTTP 429 too many requests"),
+				"token-limited": errors.New("cpa returned 429: quota reached"),
 			},
 		},
 	})

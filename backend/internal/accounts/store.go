@@ -184,18 +184,19 @@ type importedAuthCandidate struct {
 }
 
 type Store struct {
-	cfg            *config.Config
-	authDir        string
-	stateFile      string
-	syncStateDir   string
-	backend        accountStorageBackend
-	defaultQuota   int
-	refreshWorkers int
-	providerType   string
-	mu             sync.Mutex
-	states         map[string]RuntimeState
-	imageLeases    map[string]int
-	lastSyncRun    *SyncRunResult
+	cfg               *config.Config
+	authDir           string
+	stateFile         string
+	syncStateDir      string
+	backend           accountStorageBackend
+	defaultQuota      int
+	refreshWorkers    int
+	providerType      string
+	mu                sync.Mutex
+	states            map[string]RuntimeState
+	imageLeases       map[string]int
+	imageAccountUsers map[string]string
+	lastSyncRun       *SyncRunResult
 }
 
 type Snapshot struct {
@@ -215,15 +216,16 @@ type stateEnvelope struct {
 
 func NewStore(cfg *config.Config) (*Store, error) {
 	store := &Store{
-		cfg:            cfg,
-		authDir:        cfg.ResolvePath(cfg.Storage.AuthDir),
-		stateFile:      cfg.ResolvePath(cfg.Storage.StateFile),
-		syncStateDir:   cfg.ResolvePath(cfg.Storage.SyncStateDir),
-		defaultQuota:   max(1, cfg.Accounts.DefaultQuota),
-		refreshWorkers: max(1, cfg.Accounts.RefreshWorkers),
-		providerType:   strings.TrimSpace(cfg.Sync.ProviderType),
-		states:         map[string]RuntimeState{},
-		imageLeases:    map[string]int{},
+		cfg:               cfg,
+		authDir:           cfg.ResolvePath(cfg.Storage.AuthDir),
+		stateFile:         cfg.ResolvePath(cfg.Storage.StateFile),
+		syncStateDir:      cfg.ResolvePath(cfg.Storage.SyncStateDir),
+		defaultQuota:      max(1, cfg.Accounts.DefaultQuota),
+		refreshWorkers:    max(1, cfg.Accounts.RefreshWorkers),
+		providerType:      strings.TrimSpace(cfg.Sync.ProviderType),
+		states:            map[string]RuntimeState{},
+		imageLeases:       map[string]int{},
+		imageAccountUsers: map[string]string{},
 	}
 
 	backend, err := newAccountStorageBackend(cfg, store.authDir, store.stateFile, store.syncStateDir, store.providerType)
@@ -903,7 +905,11 @@ func (s *Store) AcquireImageAuthFilteredWithDisabledOption(excluded map[string]s
 }
 
 func (s *Store) AcquireImageAuthLeaseFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled)
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, "")
+}
+
+func (s *Store) AcquireImageAuthLeaseForUserFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID string) (*LocalAuth, PublicAccount, func(), error) {
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID)
 }
 
 func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, error) {
@@ -969,7 +975,7 @@ func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(Public
 	return &selected.auth, selected.account, nil
 }
 
-func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, func(), error) {
+func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID string) (*LocalAuth, PublicAccount, func(), error) {
 	localAuths, err := s.loadAuths()
 	if err != nil {
 		return nil, PublicAccount{}, nil, err
@@ -1020,6 +1026,11 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		if candidates[i].ready != candidates[j].ready {
 			return candidates[i].ready
 		}
+		leftOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[i].auth.AccessToken, userID)
+		rightOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[j].auth.AccessToken, userID)
+		if leftOtherUser != rightOtherUser {
+			return !leftOtherUser
+		}
 		if candidates[i].account.Priority != candidates[j].account.Priority {
 			return candidates[i].account.Priority > candidates[j].account.Priority
 		}
@@ -1034,6 +1045,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 	if leaseErr != nil {
 		return nil, PublicAccount{}, nil, leaseErr
 	}
+	s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID)
 	return &selected.auth, selected.account, release, nil
 }
 
@@ -1071,6 +1083,28 @@ func (s *Store) isImageLeasedLocked(accessToken string) bool {
 		return false
 	}
 	return s.imageLeases[token] > 0
+}
+
+func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID string) bool {
+	token := strings.TrimSpace(accessToken)
+	user := strings.TrimSpace(userID)
+	if token == "" || user == "" || s.imageAccountUsers == nil {
+		return false
+	}
+	lastUser := strings.TrimSpace(s.imageAccountUsers[token])
+	return lastUser != "" && lastUser != user
+}
+
+func (s *Store) rememberImageAccountUserLocked(accessToken, userID string) {
+	token := strings.TrimSpace(accessToken)
+	user := strings.TrimSpace(userID)
+	if token == "" || user == "" {
+		return
+	}
+	if s.imageAccountUsers == nil {
+		s.imageAccountUsers = map[string]string{}
+	}
+	s.imageAccountUsers[token] = user
 }
 
 func (s *Store) RecordImageResult(accessToken string, success bool) {

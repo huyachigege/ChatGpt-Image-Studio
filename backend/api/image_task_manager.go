@@ -14,7 +14,6 @@ import (
 	"chatgpt2api/internal/imagehistory"
 )
 
-const maxImageTaskParallelUnitsPerTask = 2
 const maxImageTaskDeferredAttempts = 5
 const imageTaskRetentionAfterFinish = 30 * time.Minute
 
@@ -352,7 +351,7 @@ func (m *imageTaskManager) tryScheduleOne() bool {
 		if task.CancelRequested {
 			continue
 		}
-		if task.ActiveUnits >= maxImageTaskParallelUnitsPerTask {
+		if task.ActiveUnits >= m.maxParallelUnitsForTaskLocked(task) {
 			continue
 		}
 		unitIndex, _ := m.nextReadyQueuedUnitIndexLocked(task, now)
@@ -399,7 +398,7 @@ func (m *imageTaskManager) tryScheduleOne() bool {
 			}
 			continue
 		}
-		if m.runningUnits >= m.maxRunningLocked() || current.ActiveUnits >= maxImageTaskParallelUnitsPerTask {
+		if m.runningUnits >= m.maxRunningLocked() || current.ActiveUnits >= m.maxParallelUnitsForTaskLocked(current) {
 			m.mu.Unlock()
 			if lease.release != nil {
 				lease.release()
@@ -693,11 +692,12 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask) (*imageTaskLease
 
 	allowAccount := m.allowAccountFn(task)
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
-		auth, account, decision, release, err := store.AcquireImageAuthLeaseWithPolicyFilteredWithDisabledOption(
+		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(
 			nil,
 			allowAccount,
 			allowDisabled,
 			task.Requirement.PolicySnapshot,
+			task.UserID,
 		)
 		if err == nil {
 			return &imageTaskLease{
@@ -713,10 +713,11 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask) (*imageTaskLease
 		return nil, imageTaskBlocker{}, err
 	}
 
-	auth, account, release, err := store.AcquireImageAuthLeaseFilteredWithDisabledOption(
+	auth, account, release, err := store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(
 		nil,
 		allowAccount,
 		allowDisabled,
+		task.UserID,
 	)
 	if err == nil {
 		return &imageTaskLease{
@@ -845,29 +846,29 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	}
 
 	return &imageTask{
-		ID:              id,
-		UserID:          strings.TrimSpace(req.UserID),
-		Username:        strings.TrimSpace(req.Username),
-		ConversationID:  strings.TrimSpace(req.ConversationID),
-		TurnID:          strings.TrimSpace(req.TurnID),
-		Source:          firstNonEmpty(strings.TrimSpace(req.Source), "workspace"),
-		Mode:            mode,
-		Prompt:          prompt,
-		Model:           normalizeRequestedImageModel(req.Model, m.server.cfg.ChatGPT.Model),
-		Count:           count,
-		RetryImageIndex: req.RetryImageIndex,
+		ID:               id,
+		UserID:           strings.TrimSpace(req.UserID),
+		Username:         strings.TrimSpace(req.Username),
+		ConversationID:   strings.TrimSpace(req.ConversationID),
+		TurnID:           strings.TrimSpace(req.TurnID),
+		Source:           firstNonEmpty(strings.TrimSpace(req.Source), "workspace"),
+		Mode:             mode,
+		Prompt:           prompt,
+		Model:            normalizeRequestedImageModel(req.Model, m.server.cfg.ChatGPT.Model),
+		Count:            count,
+		RetryImageIndex:  req.RetryImageIndex,
 		Size:             strings.TrimSpace(req.Size),
 		ResolutionAccess: resolutionAccess,
 		Quality:          strings.TrimSpace(req.Quality),
-		Background:      strings.TrimSpace(req.Background),
-		ResponseFormat:  firstNonEmpty(strings.TrimSpace(req.ResponseFormat), "url"),
-		SourceImages:    sourceImages,
-		SourceReference: sourceReference,
-		Requirement:     requirement,
-		CreatedAt:       createdAt,
-		Status:          imageTaskStatusQueued,
-		Images:          images,
-		Units:           units,
+		Background:       strings.TrimSpace(req.Background),
+		ResponseFormat:   firstNonEmpty(strings.TrimSpace(req.ResponseFormat), "url"),
+		SourceImages:     sourceImages,
+		SourceReference:  sourceReference,
+		Requirement:      requirement,
+		CreatedAt:        createdAt,
+		Status:           imageTaskStatusQueued,
+		Images:           images,
+		Units:            units,
 	}, nil
 }
 
@@ -1039,6 +1040,17 @@ func (m *imageTaskManager) maxRunningLocked() int {
 	maxRunning, _, _ := m.server.cfg.ImageQueueConfig()
 	if maxRunning <= 0 {
 		maxRunning = 1
+	}
+	return maxRunning
+}
+
+func (m *imageTaskManager) maxParallelUnitsForTaskLocked(task *imageTask) int {
+	maxRunning := m.maxRunningLocked()
+	if maxRunning <= 1 || task == nil || task.Count <= 1 {
+		return 1
+	}
+	if task.Count < maxRunning {
+		return task.Count
 	}
 	return maxRunning
 }

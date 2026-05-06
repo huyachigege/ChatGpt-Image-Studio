@@ -427,6 +427,7 @@ func TestIsImageRateLimitError(t *testing.T) {
 	}{
 		{name: "nil", err: nil, want: false},
 		{name: "http 429", err: errors.New("backend-api failed: HTTP 429"), want: true},
+		{name: "returned 429", err: errors.New("cpa returned 429: quota reached"), want: true},
 		{name: "too many requests", err: errors.New("Too Many Requests"), want: true},
 		{name: "rate limit", err: errors.New("rate limit exceeded"), want: true},
 		{name: "quota exceeded", err: errors.New("image generation quota exceeded"), want: true},
