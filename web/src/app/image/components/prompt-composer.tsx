@@ -104,7 +104,6 @@ export function PromptComposer({
       return `${preset.title} ${preset.description} ${preset.prompt} ${preset.author}`.toLowerCase().includes(query);
     })
     .slice(0, 18);
-  const currentModeDescription = modeOptions.find((item) => item.value === mode)?.description ?? "";
   const showImageOutputControls = mode === "generate";
   const showImageQualityControl = mode === "edit" || mode === "generate";
   const sizeHintAriaLabel = "查看分辨率说明";
@@ -184,11 +183,6 @@ export function PromptComposer({
                 ))}
               </div>
             </div>
-            {currentModeDescription ? (
-              <span className="hidden truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)] md:inline">
-                {currentModeDescription}
-              </span>
-            ) : null}
             {isMobileComposerExpanded ? (
               <button
                 type="button"
@@ -417,7 +411,7 @@ export function PromptComposer({
           <div className={cn("relative px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
             {isPresetPanelOpen ? (
               <div
-                className="absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-40 overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-[0_22px_70px_-28px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:left-4 sm:right-4"
+                className="absolute bottom-full left-3 right-3 z-40 mb-2 overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-[0_22px_70px_-28px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:left-4 sm:right-4"
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="border-b border-stone-100 p-3 dark:border-[var(--studio-border)]">
@@ -469,10 +463,7 @@ export function PromptComposer({
               </div>
             ) : null}
             <div className="flex items-end justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="hidden text-xs text-stone-400 dark:text-[var(--studio-text-muted)] sm:inline">
-                  Enter 发送 · Shift+Enter 换行 · 可直接粘贴图片
-                </span>
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -499,7 +490,9 @@ export function PromptComposer({
                   <ImagePlus className="size-3.5" />
                   {mode === "generate" ? "上传参考图" : "上传源图"}
                 </Button>
-
+                <span className="hidden truncate text-xs text-stone-400 dark:text-[var(--studio-text-muted)] lg:inline">
+                  Enter 发送 · Shift+Enter 换行 · 可直接粘贴图片
+                </span>
               </div>
 
               <button
