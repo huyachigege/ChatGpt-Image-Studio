@@ -16,8 +16,9 @@ import (
 )
 
 const (
-	defaultImageDir      = "data/tmp/image"
-	imageThumbnailMaxDim = 360
+	defaultImageDir        = "data/tmp/image"
+	imageThumbnailMaxDim   = 720
+	imageThumbnailJPEGQuality = 88
 )
 
 // downloadAndCache downloads an upstream image using the image client's transport
@@ -214,7 +215,7 @@ func (s *Server) ensureImageThumbnail(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	encodeErr := jpeg.Encode(out, thumb, &jpeg.Options{Quality: 72})
+	encodeErr := jpeg.Encode(out, thumb, &jpeg.Options{Quality: imageThumbnailJPEGQuality})
 	closeErr := out.Close()
 	if encodeErr != nil {
 		_ = os.Remove(tmpFile)
@@ -233,7 +234,7 @@ func (s *Server) ensureImageThumbnail(path string) (string, error) {
 
 func (s *Server) imageThumbnailCachePath(path string, info os.FileInfo) string {
 	cacheRoot := filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), ".thumbs")
-	fingerprint := fmt.Sprintf("%s:%d:%d", filepath.Clean(path), info.ModTime().UnixNano(), info.Size())
+	fingerprint := fmt.Sprintf("%s:%d:%d:%d:%d", filepath.Clean(path), info.ModTime().UnixNano(), info.Size(), imageThumbnailMaxDim, imageThumbnailJPEGQuality)
 	hash := sha256.Sum256([]byte(fingerprint))
 	return filepath.Join(cacheRoot, fmt.Sprintf("%x.jpg", hash[:12]))
 }

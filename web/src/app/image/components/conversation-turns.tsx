@@ -225,7 +225,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                         <div className="border-b border-stone-100 px-3 py-2 text-left text-[11px] font-medium text-stone-500">
                           {buildConversationSourceLabel(source)}
                         </div>
-                        <a href={buildSourceImageUrl(source)} target="_blank" rel="noreferrer" className="block">
+                        <a href={buildSourceImageUrl(source)} target="_blank" rel="noreferrer" className="group relative block">
                           <Image
                             src={buildSourceImageThumbnailUrl(source)}
                             alt={source.name}
@@ -234,6 +234,9 @@ export const ConversationTurns = memo(function ConversationTurns({
                             unoptimized
                             className="block h-24 w-full cursor-zoom-in bg-stone-50 object-contain"
                           />
+                          <span className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-medium text-white opacity-90 shadow-sm transition group-hover:bg-black/70">
+                            缩略图 · 点击看原图
+                          </span>
                         </a>
                       </div>
                     ))}
@@ -352,7 +355,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                       >
                         {image.status === "success" && imageDataUrl ? (
                           <div>
-                            <a href={imageDataUrl} target="_blank" rel="noreferrer" className="block">
+                            <a href={imageDataUrl} target="_blank" rel="noreferrer" className="group relative block">
                               <Image
                                 src={imageThumbUrl}
                                 alt={`Generated result ${index + 1}`}
@@ -361,6 +364,9 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 unoptimized
                                 className="block h-auto max-h-[270px] w-auto max-w-full cursor-zoom-in"
                               />
+                              <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white opacity-90 shadow-sm transition group-hover:bg-black/70">
+                                缩略图 · 点击看原图
+                              </span>
                             </a>
                             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-4 py-3">
                               <button
