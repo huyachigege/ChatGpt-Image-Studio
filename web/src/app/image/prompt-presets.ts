@@ -23,11 +23,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\n  \"类型\": \"日本数字广告横幅的 2x2 网格\",\n  \"布局\": {\n    \"结构\": \"4 个等分象限\",\n    \"象限\": [\n      {\n        \"位置\": \"左上\",\n        \"主题\": \"旅行\",\n        \"主体\": \"一对情侣手牵手站在白色沙滩上，望向明亮蓝天下的绿松石色海水。\",\n        \"元素\": [\"左下角的红色扶桑花\"],\n        \"文字标签\": [\n          \"今年こそ、解き放て。\",\n          \"{argument name=\\\"旅行目的地\\\" default=\\\"沖縄旅行\\\"}\",\n          \"3日間の癒やし旅\",\n          \"航空券+ホテル\",\n          \"39,800円〜\",\n          \"絶景、グルメ、体験 ぜんぶ叶う!\"\n        ],\n        \"图标\": {\n          \"数量\": 3,\n          \"描述\": [\"飞机\", \"酒店建筑\", \"汽车\"]\n        }\n      },\n      {\n        \"位置\": \"右上\",\n        \"主题\": \"护肤\",\n        \"主体\": \"一位年轻女性的近景肖像，肌肤透亮水润，闭着眼睛，轻轻触碰脸颊。\",\n        \"元素\": [\n          \"柔和粉色渐变背景\",\n          \"动态水花效果\",\n          \"粉色化妆品罐，标签为 '{argument name=\\\"护肤产品名\\\" default=\\\"LUMIÈRE\\\"} Brightening Gel'\"\n        ],\n        \"文字标签\": [\n          \"毛穴・くすみ卒業!\",\n          \"透明感あふれる\",\n          \"水光肌へ\",\n          \"新感覚スキンケア\",\n          \"初回限定 78%OFF\",\n          \"{argument name=\\\"折扣价\\\" default=\\\"1,980円\\\"}\"\n        ],\n        \"徽章\": {\n          \"数量\": 3,\n          \"样式\": \"金色圆形\",\n          \"标签\": [\"毛穴ケア\", \"高保湿\", \"ハリ・ツヤ\"]\n        }\n      },\n      {\n        \"位置\": \"左下\",\n        \"主题\": \"美食\",\n        \"主体\": \"厚切五分熟牛排在深色烤盘上滋滋作响。\",\n        \"元素\": [\n          \"蒜片\",\n          \"迷迭香枝\",\n          \"带烟雾和发光余烬的深色背景\"\n        ],\n        \"文字标签\": [\n          \"とろける旨さ!\",\n          \"{argument name=\\\"食物名称\\\" default=\\\"黒毛和牛\\\"}\",\n          \"贅沢ステーキ\",\n          \"期間限定\",\n          \"特別価格\",\n          \"通常価格 8,980円\",\n          \"4,980円\"\n        ],\n        \"徽章\": {\n          \"数量\": 1,\n          \"样式\": \"红色圆形\",\n          \"标签\": [\"A4 A5等級\"]\n        }\n      },\n      {\n        \"位置\": \"右下\",\n        \"主题\": \"在线教育\",\n        \"主体\": \"一位穿蓝色衬衫的年轻男子在书桌前学习，在打开的笔记本电脑旁写笔记。\",\n        \"元素\": [\"明亮的室内照明\", \"书桌环境\"],\n        \"文字标签\": [\n          \"スキマ時間で\",\n          \"{argument name=\\\"教育目标\\\" default=\\\"最短合格!\\\"}\",\n          \"オンライン資格講座\",\n          \"スマホで完結\",\n          \"効率学習で差がつく!\",\n          \"今だけ! 受講料 20%OFF\"\n        ],\n        \"徽章\": {\n          \"数量\": 1,\n          \"样式\": \"蓝色圆形\",\n          \"标签\": [\"受講者数 10万人 突破!\"]\n        },\n        \"图标\": {\n          \"数量\": 2,\n          \"描述\": [\"智能手机\", \"打开的书\"]\n        }\n      }\n    ]\n  }\n}",
     "author": "@makaneko_AI",
-    "authorUrl": "https://x.com/makaneko_AI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/makaneko_AI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/makaneko_AI/status/2045764016858087720",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/makaneko_AI/status/2045764016858087720",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case90/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case90/output.jpg"
   },
   {
     "id": "ad-creative-112-anime-character-brand-identity-and-merch-board",
@@ -36,11 +36,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\n  \"类型\": \"品牌识别与周边商品设计板\",\n  \"主题\": {\n    \"配色\": \"{argument name=\\\"主题色\\\" default=\\\"淡粉色\\\"} 和白色\",\n    \"母题\": \"{argument name=\\\"母题\\\" default=\\\"樱花\\\"} 和粉色爱心\"\n  },\n  \"角色\": {\n    \"描述\": \"短棕色波波头、粉色眼睛、穿白色连帽衫、温柔微笑的动漫女孩\"\n  },\n  \"品牌\": {\n    \"主标志\": \"{argument name=\\\"角色名\\\" default=\\\"癒音ちー\\\"}\",\n    \"副标志\": \"{argument name=\\\"角色副文本\\\" default=\\\"ゆおんちー\\\"}\"\n  },\n  \"布局\": {\n    \"版块\": [\n      {\"类型\": \"页眉横幅\", \"位置\": \"顶部\", \"元素\": [\"大型主标志\", \"副标志\", \"樱花图形\", \"右侧角色肖像\"]},\n      {\"类型\": \"产品包装\", \"位置\": \"中部左侧\", \"元素\": [\"1 个方盒，带心形透明窗口，展示粉色心形糖果\", \"盒子上的角色插画\", \"2 个独立糖纸包装\", \"5 颗散落的心形糖果\"]},\n      {\"类型\": \"宣传海报\", \"位置\": \"中部右侧\", \"元素\": [\"角色肖像\", \"心形糖果碗\", \"主标志\", \"文字 '4.26 NEW OPEN'\", \"文字 '{argument name=\\\"社交账号\\\" default=\\\"@yuonchii\\\"}'\"]},\n      {\"类型\": \"横向网页横幅\", \"位置\": \"下方中部\", \"元素\": [\"主标志\", \"樱花\", \"右侧角色肖像\"]},\n      {\"类型\": \"社交媒体资料页样机\", \"位置\": \"左下\", \"元素\": [\"带标志的头图\", \"1 张圆形头像\", \"账号 '{argument name=\\\"社交账号\\\" default=\\\"@yuonchii\\\"}'\", \"1 个关注按钮\", \"模拟简介文本\"]},\n      {\"类型\": \"周边商品合集\", \"位置\": \"右下\", \"数量\": 9, \"物品\": [\"1 件带标志的白色 T 恤\", \"1 个带角色的白色马克杯\", \"4 个圆形徽章\", \"1 个亚克力钥匙扣\", \"2 包糖果\"]}\n    ]\n  }\n}",
     "author": "@chi_vc_",
-    "authorUrl": "https://x.com/chi_vc_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chi_vc_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chi_vc_/status/2046061073720369228",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chi_vc_/status/2046061073720369228",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case112/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case112/output.jpg"
   },
   {
     "id": "ad-creative-108-dark-mode-marketing-case-study-ui",
@@ -49,11 +49,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\n  \"类型\": \"UI/UX 落地页样机\",\n  \"主题\": \"暗色模式、流畅现代美学、玻璃拟态、{argument name=\\\"主强调色\\\" default=\\\"霓虹紫和蓝\\\"} 发光强调色\",\n  \"页眉\": {\n    \"标志\": \"{argument name=\\\"品牌名\\\" default=\\\"goViralX\\\"}\",\n    \"右上标签\": \"VIRAL CAMPAIGN CASE STUDY\"\n  },\n  \"布局\": {\n    \"版块\": [\n      {\n        \"名称\": \"主视觉\",\n        \"标题\": \"{argument name=\\\"主视觉标题\\\" default=\\\"How We Created 10M+ Viral Impact\\\"}\",\n        \"副标题\": \"3天引爆全网, 助力品牌实现指数级增长\",\n        \"数据行\": {\"数量\": 4, \"标签\": [\"总播放量\", \"互动率\", \"转化咨询\", \"执行周期\"], \"数值\": [\"{argument name=\\\"主数据\\\" default=\\\"10,240,000+\\\"}\", \"18.7%\", \"3,200+\", \"72小时\"]},\n        \"视觉\": \"电影感镜头：一个穿连帽衫的人看着发光的数字屏幕和图表，上面叠加大型播放按钮\"\n      },\n      {\"名称\": \"策略\", \"标题\": \"Our 3-Day Execution Strategy\", \"布局类型\": \"垂直时间线\", \"步骤数量\": 3, \"每步元素\": [\"时间线节点\", \"标题\", \"项目符号要点\", \"带播放按钮的视频缩略图\", \"描述框\"]},\n      {\"名称\": \"表现\", \"标题\": \"Data-Driven Performance\", \"左栏\": {\"数据卡数量\": 4, \"数值\": [\"10M+\", \"43%\", \"28,000+\", \"3,200+\"]}, \"右栏\": {\"图表数量\": 2, \"图表_1\": \"显示 7 天增长并在第 3 天达到峰值的折线图\", \"图表_2\": \"显示平台分布的水平分段条形图（TikTok 52%、Instagram 24%、X 15%、YouTube 9%）\"}},\n      {\"名称\": \"成功关键\", \"标题\": \"The 3 Keys to Viral Success\", \"卡片数量\": 3, \"卡片元素\": [\"发光图标（火焰、靶心、天线）\", \"标题\", \"描述\", \"VIEW DETAIL 链接\"]},\n      {\"名称\": \"社会证明\", \"标题\": \"TRUSTED BY CREATORS & BRANDS\", \"左栏\": {\"标志数量\": 8, \"网格\": \"2x4\", \"品牌\": [\"SHEIN\", \"SHOPLINE\", \"Blueglass\", \"instacart\", \"lemon8\", \"mi\", \"CIDER\", \"bellroy\"]}, \"右栏\": {\"推荐语卡片数量\": 2, \"元素\": [\"引言\", \"作者头衔（SaaS Founder, Growth Manager）\"]}},\n      {\"名称\": \"行动号召\", \"标题\": \"READY TO GO VIRAL?\", \"交互元素\": [\"文本输入框\", \"发光按钮，文字为 '{argument name=\\\"行动号召文字\\\" default=\\\"获取专属增长方案 ->\\\"}'\"], \"视觉\": \"一艘火箭飞船起飞的 3D 渲染，喷出紫色和蓝色火焰\"}\n    ]\n  }\n}",
     "author": "@IndieDevHailey",
-    "authorUrl": "https://x.com/IndieDevHailey",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/IndieDevHailey",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/IndieDevHailey/status/2044974254769463312",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/IndieDevHailey/status/2044974254769463312",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case108/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case108/output.jpg"
   },
   {
     "id": "ad-creative-107-18-panel-mascot-brand-identity-document",
@@ -62,11 +62,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\n  \"类型\": \"18 面板品牌识别与角色设计文档\",\n  \"品牌\": {\n    \"名称\": \"{argument name=\\\"品牌名\\\" default=\\\"沐阳 MUYANG TEA\\\"}\",\n    \"行业\": \"{argument name=\\\"行业\\\" default=\\\"茶饮店\\\"}\",\n    \"颜色\": [\"{argument name=\\\"主色\\\" default=\\\"黄色\\\"}\", \"{argument name=\\\"辅助色\\\" default=\\\"绿色\\\"}\", \"白色\", \"棕色\", \"深绿色\"]\n  },\n  \"主体\": \"{argument name=\\\"角色描述\\\" default=\\\"穿绿色围裙的 3D 渲染可爱柴犬吉祥物\\\"}\",\n  \"布局\": {\n    \"网格\": \"3 列 x 6 行\",\n    \"版块\": [\n      {\"标题\": \"01 品牌DNA分析 / BRAND DNA ANALYSIS\", \"元素\": [\"标志\", \"5 个色板\", \"6 个图标\", \"目标受众图表\"]},\n      {\"标题\": \"02 概念构思 / CONCEPT MOODBOARD\", \"元素\": [\"5 张照片参考\", \"4 个情绪图标\", \"设计公式\"]},\n      {\"标题\": \"03 形态研究 / FORM STUDY\", \"元素\": [\"4 个标志结构图标\", \"4 个演化步骤\", \"4 个剪影\"]},\n      {\"标题\": \"04 概念探索 / CONCEPT EXPLORATION\", \"元素\": [\"12 张线稿角色草图\"]},\n      {\"标题\": \"05 精细线稿 / REFINED LINE ART\", \"元素\": [\"3 行带比例辅助线的正面和侧面线稿\"]},\n      {\"标题\": \"06 细节精修 / DETAIL REFINEMENT\", \"元素\": [\"2 个带标签的全身渲染\", \"4 个圆形细节特写\"]},\n      {\"标题\": \"07 表情设定 / EXPRESSION SHEET\", \"元素\": [\"11 个 3D 渲染头部表情\"]},\n      {\"标题\": \"08 姿势库 / POSE LIBRARY\", \"元素\": [\"9 个全身 3D 渲染姿势\"]},\n      {\"标题\": \"09 转身视图 / TURNAROUND VIEW\", \"元素\": [\"5 个全身 3D 渲染\", \"5 个对应线稿视图\"]},\n      {\"标题\": \"10 色彩开发 / COLOR DEVELOPMENT\", \"元素\": [\"5 行五色调色板\", \"色彩心理学文本\"]},\n      {\"标题\": \"11 材质规格 / MATERIAL SPECIFICATION\", \"元素\": [\"5 个纹理样本\", \"属性滑块\", \"4 个制造图标\"]},\n      {\"标题\": \"12 色彩应用 / COLOR APPLICATION\", \"元素\": [\"4 个色彩变体渲染\", \"2 个明暗渲染\", \"4 个对比度评级圆\"]},\n      {\"标题\": \"13 构造指南 / CONSTRUCTION GUIDE\", \"元素\": [\"2 张几何和网格线稿图\"]},\n      {\"标题\": \"14 设计系统规则 / DESIGN SYSTEM RULES\", \"元素\": [\"最小尺寸图标\", \"安全空间图\", \"4 个使用示例\"]},\n      {\"标题\": \"15 资产变体 / ASSET VARIANTS\", \"元素\": [\"3 个尺寸变体\", \"3 个线稿变体\", \"3 个简化扁平头像\"]},\n      {\"标题\": \"16 数字应用 / DIGITAL APPLICATIONS\", \"元素\": [\"1 个应用图标\", \"2 个社交头像\", \"UI 元素\", \"3 步动画循环\"]},\n      {\"标题\": \"17 实物应用 / PHYSICAL APPLICATIONS\", \"元素\": [\"毛绒玩具样机\", \"包装样机\", \"周边商品样机\", \"店面样机\"]},\n      {\"标题\": \"18 最终主视觉 / FINAL RENDERING\", \"元素\": [\"吉祥物手持茶饮的大型高分辨率 3D 渲染\", \"标志\", \"文件格式列表\"]}\n    ]\n  }\n}",
     "author": "@Colin_Leeee",
-    "authorUrl": "https://x.com/Colin_Leeee",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Colin_Leeee",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Colin_Leeee/status/2044802802149650631",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Colin_Leeee/status/2044802802149650631",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case107/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case107/output.jpg"
   },
   {
     "id": "ad-creative-166-japanese-chinese-food-delivery-flyer",
@@ -75,11 +75,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "用于投递邮箱的日本街区中餐馆外卖传单（3:4 纵横比）。设计成双面 B5 印刷品的感觉。\n\n传单特征（遵循真实外卖传单的语法）：\n- 醒目的红黄配色。\n- 顶部大字：\"Delivery Available! {argument name=\"店名\" default=\"Mona-Hanten\"}\"（带阴影的 哥特体）。\n- 一幅 {argument name=\"角色\" default=\"穿红色旗袍、棕色短波波头的中国女孩\"} 插画，手持拉面，并在对话气泡中说 \"Welcome!\"。\n- 菜单照片网格（4x3），包含各种菜品：不同种类的拉面、炒饭、饺子、糖醋里脊、干烧虾仁、麻婆豆腐、韭菜炒猪肝、天津饭、回锅肉、春卷、杏仁豆腐和炒饭套餐。\n- 每道菜的名称和价格。\n- 大型黄色横幅写着 \"Free delivery on all menu items over ¥1,000!\"。\n- \"Order by phone! ☎ 072-XX-XXXX\" 用红色圆圈强调。\n- 营业时间 \"11:00-22:00 (Closed on Tuesdays)\"。\n- 配送区域地图（简单示意图）。\n- 优惠券（带可撕虚线）：\"One free plate of gyoza with this flyer!\"。\n\n廉价纸张印刷质感。包含折痕。精确到可能被误认为真实日本外卖传单。",
     "author": "@xc5_",
-    "authorUrl": "https://x.com/xc5_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/xc5_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/xc5_/status/2048310696686014935",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/xc5_/status/2048310696686014935",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case166/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case166/output.jpg"
   },
   {
     "id": "ad-creative-167-pastel-jellyfish-room-goods-poster",
@@ -88,11 +88,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\"类型\":\"粉彩生活方式海报 / 角色房间好物专题页\",\"主题\":\"柔和梦幻的薰衣草色水母美学\",\"风格\":\"日系可爱编辑图形，通透白色背景，粉彩丁香紫调色板，精致手写笔记，闪光和小涂鸦，柔和产品摄影与杂志版式混合\",\"主体\":{\"角色\":{\"名字\":\"{argument name=\\\"角色名\\\" default=\\\"くらげちゃん\\\"}\",\"外观\":\"年轻女性，铂金金色短波波头，穿蓬松浅薰衣草紫拉链连帽衫，内搭白色上衣，胸部以上出现在右下方，脸部故意用素色米色矩形遮挡\"}},\"布局\":{\"方向\":\"竖版海报\",\"背景\":\"干净白色，带星星、气泡、小水母和音符的淡粉彩涂鸦\",\"版块\":[{\"标题\":\"页眉\",\"位置\":\"顶部\",\"数量\":5,\"标签\":[\"对话气泡介绍\",\"主标题\",\"小副标题 GOODS\",\"横向薰衣草紫缎带标语\",\"右上圆形徽章\"]},{\"标题\":\"精选好物网格\",\"位置\":\"上部和中部左侧\",\"数量\":6,\"标签\":[\"ゆらゆらくらげランプ\",\"くらげと夢見るベッドリネン\",\"くらげシェルミラー\",\"くらげグラデマグ\",\"くらげのときめき収納ボックス\",\"くらげふわもこマット\"]},{\"标题\":\"侧边手写笔记\",\"位置\":\"右上\",\"数量\":1,\"标签\":[\"みんなも くらげちゃんRoomで いっしょに まったりしよー♡♡\"]},{\"标题\":\"房间概念框\",\"位置\":\"左下\",\"数量\":1,\"标签\":[\"くらげちゃんの お部屋作りのこだわり\"]},{\"标题\":\"精选圆形区\",\"位置\":\"中下偏左\",\"数量\":1,\"标签\":[\"Pick up!\"]}],\"产品图片\":{\"数量\":6,\"物品\":[{\"名称\":\"ゆらゆらくらげランプ\",\"描述\":\"白色底座上的小型半透明水母形灯，以浅蓝紫色柔和发光\"},{\"名称\":\"くらげと夢見るベッドリネン\",\"描述\":\"毛绒粉彩薰衣草紫床，配蓬松被子和枕头，梦幻舒适卧室造型\"},{\"名称\":\"くらげシェルミラー\",\"描述\":\"小型桌面镜，带蓬松贝壳状粉彩丁香紫边框和圆润底座\"},{\"名称\":\"くらげグラデマグ\",\"描述\":\"陶瓷马克杯，薰衣草紫到粉色渐变，并有简洁水母插画\"},{\"名称\":\"くらげのときめき収納ボックス\",\"描述\":\"装有化妆品和小瓶子的粉彩收纳盒，饰有水母徽记\"},{\"名称\":\"くらげふわもこマット\",\"描述\":\"浅薰衣草紫和白色的小型蓬松云朵状或水母状地垫\"}]}},\"文字元素\":{\"主标题\":\"{argument name=\\\"标题文字\\\" default=\\\"くらげちゃんの お部屋アイテム\\\"}\",\"徽章文字\":\"くらげちゃんの Room お部屋作りの こだわりポイントも 教えちゃうよ。\",\"标语\":\"ふわふわで甘くて、ちょっぴり夢みたいな私のお部屋へようこそ♡\",\"对话气泡\":\"くらげちゃんの お気に入りだけ集めた お部屋アイテムを紹介するよ♪\",\"概念要点\":{\"数量\":3,\"条目\":[\"色は白とラベンダーで統一!\",\"光が集まるふわっとした空間に\",\"お友達入りのアイテムに囲まれて 自分らしくいられる空間を大切にしてるよ♪\"]},\"产品短文\":\"每个产品旁边或下方都有一段可爱随性字体的简短手写日文描述\"},\"构图\":\"海报左侧较重，包含产品卡片和文字；角色肖像占据右下三分之一，并略微叠压版式\",\"调色板\":{\"数量\":5,\"颜色\":[\"白色\",\"粉彩薰衣草紫\",\"柔和丁香紫\",\"浅灰紫\",\"少量粉彩蓝粉渐变\"]},\"渲染说明\":\"保持整体非常柔软、女性化且舒适；所有产品照片使用圆角；混合醒目的日文标题排版和轻盈手写注释；微妙阴影；干净高调照明；适合社交媒体的编辑拼贴美学\"}",
     "author": "@Ayu_AI_0912",
-    "authorUrl": "https://x.com/Ayu_AI_0912",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Ayu_AI_0912",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Ayu_AI_0912/status/2048309565817766139",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Ayu_AI_0912/status/2048309565817766139",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case167/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case167/output.jpg"
   },
   {
     "id": "ad-creative-143-magical-seed-packet-diorama",
@@ -101,11 +101,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "史诗级 3D 场景：一个风化的种子袋打开躺在园艺工作台上，它承诺的景象从中喷涌成所描述的花园。正面的插画变成真实景物。{argument name=\"植物类型\" default=\"[植物 / 花朵]\"} 从纸张中按真实比例生长出来，根系透过种子袋底部可见，并向下扎进土壤。\n{argument name=\"左侧细节\" default=\"[细节 1]\"} 在一角盛放。{argument name=\"右侧细节\" default=\"[细节 2]\"} 在另一侧处于生长中，还未成为最终形态。\n属于这种植物的微小昆虫，{argument name=\"昆虫类型\" default=\"[蜜蜂 / 蝴蝶 / 甲虫]\"}，以正确比例盘旋。\n背面的书面说明变成花园日历，\"sow in spring\" 显化为真实春光。\"full sun\" 显化为一束阳光，完美照在最高的花朵上。\n种子袋与土壤之间散落的种子，每一颗都展示不同发芽阶段：裂开的种皮、第一条根、第一株芽、第一片叶。\n种子袋撕裂的上边缘变成树线。\n园艺工作台表面有散落泥土和水滴。\n移轴景深、温室晨光，种子袋成为它一直想成为的花园。",
     "author": "@AllaAisling",
-    "authorUrl": "https://x.com/AllaAisling",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AllaAisling",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AllaAisling/status/2048156345518768190",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AllaAisling/status/2048156345518768190",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case143/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case143/output.jpg"
   },
   {
     "id": "ad-creative-144-luxury-chronograph-watch-ad",
@@ -114,11 +114,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "在深色影棚中为一枚受赛车运动启发的计时腕表创作戏剧化豪华产品广告图。画面左中前景展示一只不锈钢计时腕表，以轻微三分之四角度直立，黑色表盘、两个红色强调小表盘、纤细银色时标、测速仪表圈，右侧可见表冠和按钮。腕表配黑色皮表带，两侧有醒目的红色缝线，并呈现运动化高级质感。在腕表右侧放置一个黑色方形展示盒，略微位于其后方，纹理像皮革，盒盖四周有红色缝线，银色压印眼形标志位于文字 “NESS STUDIO” 上方，下方有较小红字 “TRACK SURFACE”。构图顶部中央加入同样的银色眼形标志，配文字 “NESS STUDIO” 和较小的 “BY NICOLAS”。背景横跨一个超大模糊单词 {argument name=\"标题文字\" default=\"PRECISION\"}，使用大号灰色大写字母，几乎铺满整个宽度。场景置于深黑背景中，电影感红白水平光带从左到右穿过产品后方，暗示速度和赛道能量。使用有反光纹理的光泽湿地面，在腕表和盒子下方捕捉红色高光和镜面反射。底部中央添加文字 “CHRONOGRAPH SERIES”，使用干净的白色宽间距大写字母，两侧延伸细红色水平线；其下用较小红色大写字写 {argument name=\"标语文字\" default=\"ALSACE MADE\"}。调色板：黑色、炭灰、银钢色、鲜明赛车红和少量白色。照明应高对比且高级，在金属表壳上有锐利镜面高光，盒子上有微妙柔和补光，并带有氛围阴影。整体风格：极致精修的商业产品摄影、豪华腕表广告、产品清晰对焦、流畅品牌化、高端汽车美学。",
     "author": "@AlwaveNazca",
-    "authorUrl": "https://x.com/AlwaveNazca",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AlwaveNazca/status/2048147643809865950",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca/status/2048147643809865950",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case144/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case144/output.jpg"
   },
   {
     "id": "ad-creative-145-neon-nike-lumina-ad-poster",
@@ -127,11 +127,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高能量竖版 Nike 时尚广告海报，主体是一位运动型年轻女性，在未来感霓虹影棚背景前腾空跳跃。她被捕捉在动态腾空姿势中：一条膝盖上抬，另一条腿向后折起，一只手臂向外伸展，另一只弯在胸前，传达运动感和力量。她的脸部用居中的干净矩形模糊块遮挡。她穿一件短款虹彩白色连帽防风夹克，黑色拉链，胸前有小 Nike 标志；搭配带细微 Nike swoosh 的全息金属薰衣草蓝紧身裤，紧身裤上方露出黑色品牌腰带，以及白色厚底 Nike 运动鞋。她的棕色头发扎成高马尾，随跳跃向外飞扬。她身后，巨大的发光白色衬线字母在上半部分拼出 “NIKE”，单词上方居中有一个小白色 Nike swoosh。中部背景中，短语 “LUMINA” 出现一次，使用宽体粗重发光字母，并带水平故障和扫描线失真效果，部分被模特遮挡。调色板为饱和洋红、紫罗兰、青色和电蓝，带强烈辉光、光泽高光、镜头光晕和色差。加入环绕模特腿部和身体的扫掠圆形光轨，暗示速度和运动。整体风格是高级运动服广告、极致精修、电影感、高对比、超写实修图、清晰产品细节、戏剧化轮廓光和发光全息美学。底部放置 2 行小文字：左下为 {argument name=\"标语文字\" default=\"LIGHT. MOTION. ENERGY.\"}，右下为 {argument name=\"系列名称\" default=\"NIKE LUMINA COLLECTION\"}，后跟一个小 Nike swoosh。总共精确包含 3 个可见 Nike swoosh：1 个在大型 NIKE 标题上方，1 个在夹克胸前，1 个在紧身裤上。",
     "author": "@AlwaveNazca",
-    "authorUrl": "https://x.com/AlwaveNazca",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AlwaveNazca/status/2048147643809865950",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca/status/2048147643809865950",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case145/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case145/output.jpg"
   },
   {
     "id": "ad-creative-146-streetwear-sneaker-poster-ad",
@@ -140,11 +140,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 {argument name=\"品牌名\" default=\"NESS STUDIO\"} 创作一张大胆的街头服饰海报广告，呈现一位年轻成年模特随性坐在地上，以低角度时尚姿势摆拍，一只膝盖抬起，一条腿向镜头伸展，让前方运动鞋显得巨大而占主导。模特穿深棕色超大皮革飞行员夹克、黑色衬衫、浅蓝宽松牛仔裤、白色袜子，以及黑白灰厚底运动鞋，鞋底有红色强调色，鞋侧和鞋舌可见 {argument name=\"品牌名\" default=\"NESS STUDIO\"} 标志。脸部故意用居中的柔和矩形模糊块遮挡。使用米白色纹理纸背景，带做旧 粗粝复古 设计元素和拼贴层次。模特身后放置一大片粗糙红色油漆笔触，斜向横跨画面中心。加入黑色墨点、手绘圆圈、撕纸碎片和手绘涂鸦强调。包含 4 个主要图形涂鸦：右上大型黑色 X、左下手绘向上箭头、右下粗糙皇冠草图、顶部中央附近的圆形乱线。左上放置风格化眼形标志，位于文字 \"{argument name=\"品牌名\" default=\"NESS STUDIO\"}\" 上方，下面较小标语为 \"A MOMENT OF YOUR STYLE\"。左侧中部加入手写口号 \"INNOVATE CREATE INSPIRE\"，以堆叠黑色笔刷字呈现。右侧中部放置撕裂黑纸贴片，上面以白色手写口号写 \"BUILT DIFFERENT MOVE DIFFERENT\"，并有红色下划线笔触。左下靠近鞋的位置加入黑色做旧标签贴纸，包含地球乱线、文字 \"{argument name=\"品牌名\" default=\"NESS STUDIO\"}\" 和条形码。沿底部页脚创建干净的水平条，包含 3 个社交媒体图标和账号，中间用细竖线分隔：Instagram、Facebook 和 Twitter，每个后面跟 \"@NESS.STUDIO\"。整体风格应前卫、都市、年轻、高对比、编辑街头时尚，将产品广告摄影与涂鸦海报设计、拼贴纹理和动态品牌化混合。",
     "author": "@AlwaveNazca",
-    "authorUrl": "https://x.com/AlwaveNazca",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AlwaveNazca/status/2048147643809865950",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AlwaveNazca/status/2048147643809865950",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case146/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case146/output.jpg"
   },
   {
     "id": "ad-creative-147-editorial-osaka-six-sweatshirt-ad",
@@ -153,11 +153,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张干净的编辑风时尚广告海报，背景为浅粉蓝色影棚和光泽反射地面。构图为竖版且极简，主导元素是背景中超大、粗重、白色、窄体无衬线字体，上行写 “OSAKA SIX:”，下方写 “006 REMAINS”，填满主体后方上半部分的大部分区域。右上角小号白色品牌文字写 “Designed by ARTTEESHOW.”。画面下方中部居中放置一件超大森林绿圆领卫衣，像雕塑物体一样直立，柔软厚重棉质面料、落肩、超长袖子堆在地面上，并有一个写着 ARTTEESHOW 的小黑色领标。卫衣胸前是一幅大型抽象拼贴印花，由米色、棕褐色、黑色、灰色、白色和鲜红色撕纸碎片组成，像层叠纸片一样垂直排列。一位纤细女性时尚模特靠在巨大卫衣右侧，留长直黑发，穿同款 {argument name=\"卫衣颜色\" default=\"森林绿\"} 卫衣和宽松阔腿运动裤，搭配干净白色低帮运动鞋。她以侧面姿态摆拍，带冷静疏离的编辑风态度，一只手插兜，身体斜靠在巨型服装上，双腿向前伸展；脸部用柔和矩形模糊处理，营造匿名艺术时尚感。较小的穿着版卫衣胸前也有同样的抽象撕纸拼贴图形。底部中央添加 2 行小号白色文案：“Made for comfort, worn for confidence.” 和 “Because life feels better when someone’s carrying the weight of the world.”。图像应像 20 世纪 90 年代初高级概念街头服饰广告，经当代奢华广告重塑，拥有清晰影棚照明、柔和阴影、微妙地面反射、精准产品焦点、超大卫衣与模特之间的超现实尺度对比，以及精修杂志海报美学。",
     "author": "@_LaurentB",
-    "authorUrl": "https://x.com/_LaurentB",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/_LaurentB",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/_LaurentB/status/2048126606313464040",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/_LaurentB/status/2048126606313464040",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case147/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case147/output.jpg"
   },
   {
     "id": "ad-creative-148-editorial-perfume-shot-on-moss",
@@ -166,11 +166,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高端编辑风产品照片，画面中心是一瓶奢华香水，置于温暖泥土色静物场景中。产品是一只透明矩形玻璃瓶，内含金色琥珀液体，顶部是光泽圆润黑色瓶盖，正面干净白色标签写有 \"BYREDO\"、\"BAL D’AFRIQUE\" 和 \"EAU DE PARFUM\"。将瓶子直立放在 1 块弯曲的浅色风化漂流木上，周围是一层浓密的丰绿色苔藓，覆盖前景和下部画框。使用极简影棚构图，让产品与平滑的暖棕到琥珀渐变背景分离，并像日落光一样柔和照亮。从右上方使用戏剧化定向暖光照明，在背景上形成明亮光晕，在瓶盖上形成清晰高光，在玻璃中形成柔和反射，并在木头和苔藓上投下温柔阴影。保持竖版取景，瓶子略低于构图中心，上方留出充足负空间，整体情绪自然、奢华、泥土感、电影感且精致，像高级香氛广告大片。",
     "author": "@Salmaaboukarr",
-    "authorUrl": "https://x.com/Salmaaboukarr",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Salmaaboukarr",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Salmaaboukarr/status/2048103506125463983",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Salmaaboukarr/status/2048103506125463983",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case148/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case148/output.jpg"
   },
   {
     "id": "ad-creative-149-editorial-perfume-bottle-in-golden-fur",
@@ -179,11 +179,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张奢华编辑风产品照片，一只香水瓶嵌在浓密蓬松的人造皮草中，色调为浓郁金色焦糖和蜂蜜棕。构图聚焦于一只透明椭圆玻璃瓶，内含温暖琥珀色液体，配光泽圆润黑色瓶盖和干净白色矩形标签。标签文字顶部应写 {argument name=\"品牌名\" default=\"BYREDO\"}，中间大字写 {argument name=\"产品名\" default=\"BAL D’AFRIQUE\"}，底部附近小字写 {argument name=\"产品类型\" default=\"EAU DE PARFUM\"}。拍成近景静物，使用柔和影棚照明，在玻璃和瓶盖上形成微妙高光，在皮草褶皱中形成温柔阴影，并使用温暖电影感调色板。瓶子应略微嵌入皮草中，让周围纹理从四面框住它，营造高级时尚编辑情绪、极简构图、浅景深、标签清晰对焦和高端美妆广告美学。",
     "author": "@Salmaaboukarr",
-    "authorUrl": "https://x.com/Salmaaboukarr",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Salmaaboukarr",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Salmaaboukarr/status/2048103506125463983",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Salmaaboukarr/status/2048103506125463983",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case149/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case149/output.jpg"
   },
   {
     "id": "ad-creative-150-luxury-miniature-dubai-city-model",
@@ -192,11 +192,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个超细节电影感等距微缩城市模型，{argument name=\"地标塔楼\" default=\"Burj Khalifa\"} 从方形建筑总体规划板中央戏剧性升起，呈现为黑色背景上的豪华城市规划沙盘。构图显示一座占主导地位的超高银色摩天楼位于正中央，周围环绕密集的现代高层塔楼、发光道路、桥梁和温暖城市灯光。弯曲的绿松石蓝水景和人工湖以多个相连水池和运河环绕中央区，塔楼基座附近有一个大型圆形喷泉状特征，水中可见数个小岛形状。右下象限包含一个大型低层综合体，屋顶为圆润几何形，并有微妙绿色发光区域，通过多车道道路和环形立交连接。整座城市坐落在一块方形米色地图板上，板面刻有淡淡街道网格和规划线，板边清晰可见并略微抬高。视角为高位三分之四等距角度，居中且对称，塔楼向上延伸进入大量负空间。照明戏剧化且奢华：建筑和道路上有温暖金色边缘光，水面有冷色反射，中央塔楼上有清脆金属高光，模型周围是深黑虚空。风格应像照片级建筑可视化与高级收藏比例模型的结合，极其复杂、锐利、精修且优雅。",
     "author": "@silentempiredev",
-    "authorUrl": "https://x.com/silentempiredev",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/silentempiredev",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/silentempiredev/status/2048086378383384773",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/silentempiredev/status/2048086378383384773",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case150/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case150/output.jpg"
   },
   {
     "id": "ad-creative-131-parody-luxury-product-advertisement",
@@ -205,11 +205,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 “{argument name=\"产品\" default=\"Four Loko\"}” 麦芽饮料制作高冲击力恶搞电商信息图。前景：一只粗糙、饱经风霜的手极近距离握着一罐高大、色彩鲜艳的 {argument name=\"产品\" default=\"Four Loko\"} 伸向镜头。罐身略冷，可见冷凝水滴，口味设计喧闹混乱。手和罐子带轻微微距镜头模糊以增加深度，但罐子仍作为主角产品清晰可读。中心主体：中景中，一个滑稽、邋遢的 {argument name=\"主体\" default=\"看起来像流浪汉的男人\"} 随意坐在城市小巷里的牛奶箱上。他有凌乱胡须、蓬乱头发、层叠破旧衣物和一个巨大而毫不在意的笑容。他应显得混乱却莫名有魅力，像糟糕决定的意外之王。他摆出自信生活方式广告模特的姿势，骄傲地展示罐子。背景与照明：荒唐精致的广告风背景与肮脏城市小巷环境混合。远处有柔焦城市纹理、垃圾箱形状、涂鸦暗示和散落杂物。加入戏剧化影棚照明、柔和光晕、彩虹棱镜眩光和微妙漏光，让整个画面相对于主题显得过于高级。背景中可以有几罐模糊的 {argument name=\"产品\" default=\"Four Loko\"} 艺术化漂浮，以增强荒诞感。排版与布局（粗体无衬线，白色和霓虹强调风格）：顶部中央（背景）：巨大的粗体文字 “{argument name=\"品牌名\" default=\"FOUR LOKO\"}” 位于主体后方。右上：粗体文字 “The Champagne of Bad Ideas”。中左：“Premium chaos and zero self-control”。中右：大型粗体 “23”，配文字 “ounces of terrible decisions.”。右下：大型粗体 “1”，配文字 “can to ruin tomorrow.”。底部附近可选小号标注文字：“Now with more regret.”。风格：超细节 8k 恶搞商业摄影，罐子清晰对焦，浅景深，鲜艳低俗调色板，干净广告构图，夸张的高级产品广告美学，用精致品牌化与破败主体形成滑稽视觉反差。",
     "author": "@tonysimons_",
-    "authorUrl": "https://x.com/tonysimons_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/tonysimons_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/tonysimons_/status/2048057490940596595",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/tonysimons_/status/2048057490940596595",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case131/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case131/output.jpg"
   },
   {
     "id": "ad-creative-109-vr-headset-exploded-view-poster",
@@ -218,11 +218,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\n  \"类型\": \"爆炸视图产品图解海报\",\n  \"主体\": \"VR 头显\",\n  \"风格\": \"干净高科技 3D 渲染、影棚照明、发光强调\",\n  \"背景\": \"{argument name=\\\"背景颜色\\\" default=\\\"柔和紫蓝渐变\\\"}\",\n  \"页眉\": {\n    \"标志\": \"∞ {argument name=\\\"产品名\\\" default=\\\"Meta Quest 3\\\"}\",\n    \"副标题\": \"{argument name=\\\"主宣传语\\\" default=\\\"まったく新しい現実を、まったく新しい構造から。\\\"}\"\n  },\n  \"布局\": {\n    \"中心主体\": \"VR 头显的垂直堆叠爆炸视图，展示 9 个清晰的内部组件层：外壳、摄像头传感器、带芯片的主板、薄饼镜片、内部框架、电池组、侧绑带、顶部绑带和面部接口软垫。\",\n    \"标注标签\": {\n      \"数量\": 8,\n      \"左侧\": [\n        \"Snapdragon® XR2 Gen 2\\n圧倒的な処理性能でリアルタイムな体験を。\",\n        \"調整可能なIPD機構\\n幅広いユーザーに快適なフィット感を。\",\n        \"精密設計されたヘッドストラップ\\n快適さと安定性を追求したエルゴノミクス。\"\n      ],\n      \"右侧\": [\n        \"フェイスプレート\\n洗練されたデザインと最適な重量バランス。\",\n        \"トラッキングカメラ\\n高精度な位置トラッキングと環境認識を実現。\",\n        \"パンケーキレンズ\\n薄型設計で広い視野角と鮮明な映像を提供。\",\n        \"高性能バッテリー\\n長時間駆動を支える最適化された電源設計。\",\n        \"柔らかなフェイスインターフェース\\n長時間でも快適な装着感を実現。\"\n      ]\n    },\n    \"页脚\": {\n      \"左侧文本块\": {\n        \"标题\": \"{argument name=\\\"底部标题\\\" default=\\\"体験は、構造から進化する。\\\"}\",\n        \"正文\": \"每一个部件都承载支撑沉浸体验的前沿技术与精心设计。Meta Quest 3 从内部创造出令人感到未来的体验。\"\n      },\n      \"右侧标志\": \"∞ Meta\"\n    }\n  }\n}",
     "author": "@wory37303852",
-    "authorUrl": "https://x.com/wory37303852",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/wory37303852",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/wory37303852/status/2045925660401795478",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/wory37303852/status/2045925660401795478",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case109/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case109/output.jpg"
   },
   {
     "id": "ad-creative-168-luxury-poster-for-fictional-ai-ad-printer",
@@ -231,11 +231,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请制作一张竖版 3:4 的高级商业海报。\n\n主题是虚构新商品广告。商品是名为「BRAND PRESS 01（品牌プレス・ゼロワン）」的、搭载 Pollo AI 的虚构广告海报生成打印机。\n\n这款商品是一台未来型打印机：输入尚不存在的品牌名、商品类型、世界观和目标人群后，Pollo AI 会自动生成从文案、视觉到版式都完整成型的商业广告海报，并当场输出为高清印刷品。不要做成单纯的 AI 服务概念广告，而要让它成立为一款仿佛真的在销售的虚构商品广告。\n\n主概念：「まだないブランドに、最初の一目惚れを。」\n\n商品视觉：在画面中央大幅放置实体商品「BRAND PRESS 01」。作为未来型高级专业打印设备，它应具备黑色金属机身、银色边缘、透明盖板、蓝白发光的 AI 核心、精密打印头、滚轴、触控面板、出纸槽和海报承接托盘。构图中，一张虚构高级香水品牌广告海报正作为纸张从出纸槽大幅输出。\n\n构图：略低角度，斜向 45 度。背景为从深海军蓝到黑色的高级广告制作影棚。呈现电影感、戏剧化的高级产品广告。\n\n广告版式：顶部是大型宣传语，中央是打印机本体和正在输出的海报，右侧是功能说明，左下是价格和发布日期，底部是 CTA。\n\n需要放入的文字：「まだないブランドに、最初の一目惚れを。」 / BRAND PRESS 01 / 「Pollo AI搭載・広告ポスター生成プリンター」 / 「名前だけのアイデアを、完成された商業ポスターとして出力。」 / 「構想、コピー、ビジュアル、印刷まで。1台で。」",
     "author": "@nijisora_yuma",
-    "authorUrl": "https://x.com/nijisora_yuma",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/nijisora_yuma",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/nijisora_yuma/status/2049462065639858687",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/nijisora_yuma/status/2049462065639858687",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case168/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case168/output.jpg"
   },
   {
     "id": "ad-creative-169-luxury-chocolate-campaign-system",
@@ -244,11 +244,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为一个名为 Noirvelle Chocolat 的虚构奢华巧克力品牌创作一张高级方形（1:1）产品广告，灵感来自高端巧克力品牌。广告应呈现高端编辑广告大片质感，结合奢华食品摄影、精致包装设计和电影感照明。使用哑光黑色包装纸、微妙金箔、优雅衬线字体和真实产品渲染。生成 Blood Orange Noir、Salted Pistachio Muse 和 Raspberry Ember 等口味变体，每个都有不同的情绪、调色板、配料、标题和辅助文案。让巧克力棒成为主视觉中心，带微妙反射、浅景深、奢华极简主义，以及一个小 CTA：“Shop the drop.”",
     "author": "@SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2049459155086500321",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2049459155086500321",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case169/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case169/output.jpg"
   },
   {
     "id": "ad-creative-170-urban-fruit-juice-ad-poster",
@@ -257,11 +257,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创作一张高级现代饮品广告海报，竖版 3:4 格式，画面中一位时髦年轻女性模特自信地蹲在明亮的都市室内走廊里，一侧是彩色涂鸦墙面艺术，另一侧是干净极简建筑。在前景中，一个巨大的真实果汁瓶以强制透视被举向镜头，带有类似 “VIVAJUICE” 的虚构品牌。加入品牌标志、标语、巨大的粗体重叠排版、四个基于图标的功能徽章，以及右下角三个较小瓶装变体。使用柔和自然光与商业影棚级精修混合、真实阴影、浅景深、光泽地面反射，以及高级、有活力的电商广告大片美学。",
     "author": "@AIwithSarah_",
-    "authorUrl": "https://x.com/AIwithSarah_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithSarah_/status/2049452842931630202",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_/status/2049452842931630202",
     "category": "广告创意",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case170/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case170/output.jpg"
   },
   {
     "id": "character-case-1",
@@ -270,11 +270,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "将附加图片呈现为真实动漫中的一帧截图。",
     "author": "@Thereallo1026",
-    "authorUrl": "https://x.com/Thereallo1026",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Thereallo1026",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Thereallo1026/status/2044241997163311569",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Thereallo1026/status/2044241997163311569",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case1/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case1/output.jpg"
   },
   {
     "id": "character-case-2",
@@ -283,11 +283,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "基于此角色和背景，请制作一份类似官方设定资料的角色资料卡。\n・包含三视图：正面、侧面和背面\n・添加角色面部表情的变化・分解并展示服装和装备的详细部分\n・添加色板・包含世界观设定的简要说明\n・总体上，使用有组织的布局（白色背景，插画风格）高分辨率、专业概念艺术风格",
     "author": "@iamrednightS",
-    "authorUrl": "https://x.com/iamrednightS",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iamrednightS",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iamrednightS/status/2045075682837836265",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iamrednightS/status/2045075682837836265",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case2/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case2/output.jpg"
   },
   {
     "id": "character-case-3",
@@ -296,11 +296,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用最新版图像生成工具，\n用这张 Q 版角色插画和立绘，制作一张像真实网站页面一样的角色介绍页风格插画。（作为介绍页使用也不会显得突兀）\n以 Gal Game 的角色介绍页为意象的高质量作品。包含表情差分等，也存在 CG 插画。包含 Q 版角色。\n\n「在这里填写自我介绍」\n\n姓名：（在这里填写姓名） \n主题色：（在这里填写颜色） \n身高：（在这里填写身高）cm \n体重：（在这里填写体重）kg\n宣传语：\"「在这里填写台词」\"",
     "author": "@09lyco",
-    "authorUrl": "https://x.com/09lyco",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/09lyco",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/09lyco/status/2045281845391323175",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/09lyco/status/2045281845391323175",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case3/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case3/output.jpg"
   },
   {
     "id": "character-case-5",
@@ -309,11 +309,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "基于此角色和背景，请制作一张类似官方设定资料的角色设定表。 \n・包含正面、侧面、背面的三视图 ・添加角色的表情变化 \n・拆解并展示服装和装备的详细部件 ・添加色板 ・加入世界观的简要说明 \n・整体采用整理清晰的布局\n（白色背景，图解风格） \n・宽高比 16:9\n\n高分辨率、专业概念艺术风格",
     "author": "@Toshi_nyaruo_AI",
-    "authorUrl": "https://x.com/Toshi_nyaruo_AI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Toshi_nyaruo_AI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Toshi_nyaruo_AI/status/2045025277538107420",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Toshi_nyaruo_AI/status/2045025277538107420",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case5/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case5/output.jpg"
   },
   {
     "id": "character-case-7",
@@ -322,11 +322,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一名十几岁中期的机甲少女，苍白皮肤上沾着煤灰和海盐飞沫，锐利的琥珀色眼睛中有发光的 HUD 瞄准标线，及腰灰白色长发扎成高马尾，在海风中甩动，哑光炮铜色外骨骼装甲覆盖肩部、前臂和小腿，关节处露出液压活塞，胸挂上有发光的青色冷却液管线，一件过大的、沾满油污的机库夹克半滑下肩头，一门巨大的轨道炮架在她右肩上，狗牌和磨损的红色缎带挂在领口。她站在画面偏左的位置，站在一块倾斜钢平台伸向黑暗海面的锈蚀边缘，重心压在一条腿上，左手抓住炮带，头部微微转向镜头，带着安静而不屈的凝视，蒸汽从背部推进器喷出，马尾和夹克在带盐的海风中横向飘扬。黄昏时分，一座巨大的废弃海上城市，未知用途的庞大巨构以错落剪影从海面升起，骨白色的单体高塔与覆满藤壶的钢铁融合，独眼巨人般的环形结构以破碎角度倾斜，锈蚀的骨架式龙门架缠绕着失效电缆，黑暗浪涌在桥墩之间翻滚，沉船半埋在其脚下，浓重海雾贴附在底部，而上方结构刺入淤青色天空，塔楼高处零散微弱灯光闪烁，像遥远的眼睛。低调情绪化照明，阴天带来的冷青色环境光，画面右侧远处建筑渗出温暖琥珀色钠灯光，低太阳在塔楼背后形成强烈逆光，勾勒出她的剪影，体积光穿过海雾，装甲上有潮湿的镜面高光。35mm 变形宽银幕镜头，轻微低角度，从她肩后向上望向巨构，中远景，浅景深，前景锈迹柔焦，水平镜头光晕，细腻大气雾霭将远处巨构压缩成层叠剪影。电影感动漫主视觉，绘画感数字插画，清晰线稿，以青绿色、骨白色和铁锈色构成的低饱和海洋色调，并由少量暖色重点灯光点亮，胶片颗粒，高对比度编辑海报美学。格式 16:9。",
     "author": "@old_pgmrs_will",
-    "authorUrl": "https://x.com/old_pgmrs_will",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/old_pgmrs_will",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/old_pgmrs_will/status/2046144801071079612",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/old_pgmrs_will/status/2046144801071079612",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case7/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case7/output.jpg"
   },
   {
     "id": "character-case-8",
@@ -335,11 +335,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成圣斗士星矢 12 个黄金圣斗士的 12 宫格卡牌图片，每张卡牌上写上对应的中文名，每行 4 个，宽高比 16:9。",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2046476566537080849",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2046476566537080849",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case8/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case8/output.jpg"
   },
   {
     "id": "character-case-9",
@@ -348,11 +348,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "# 从混沌笔记与符号集合中浮现角色面孔的艺术\n\n--- 风格\n- 在白纸上用黑色墨水绘制大量手写笔记、公式、符号和随机线条。\n- 纸面上布满潦草书写般的混沌。\n- 局部加入红色墨水强调（线条、涂抹、马克笔风格的块面）。\n- 具有模拟笔记本涂鸦般的质感。\n\n--- 构图\n- 随机笔记和符号覆盖整个画面。\n- 黑色墨水线条和文字的密度集中在“角色面孔”的位置。\n- 最终让“给定角色的面部轮廓与表情”从混沌中隐约浮现。\n- 面孔不是写实的，而是由混沌碎片聚合成形。\n\n--- 色彩\n- 以黑白单色为主体构成。\n- 将红色墨水作为点状分布的强调色。\n- 饱和度克制，重视模拟纸张与墨水质感。\n\n--- 表现元素\n- 像能读懂又无法读懂的字符串，日语与英数字混杂。\n- 公式符号、箭头、点、斜线、交叉、滴溅（墨水飞散）。\n- 角色面孔的眼睛和头发轮廓，通过笔记与符号布局中的“留白”和“浓淡”浮现。\n\n--- 禁止事项\n- 直接画出面孔的写实肖像。\n- 带有数字处理感、整齐规整的几何图案。\n- 彩色上色或过饱和表现。\n- 标志、水印、人工 CG 感。\n\n--- Definition of Done (DoD)\n- 整体作为“混沌笔记与符号集合体”成立。  \n- 给定角色的面孔从混沌的浓淡与布局中自然浮现。  \n- 色彩仅限黑白 + 红色强调。  \n- 保持纸张与墨水的手绘质感。",
     "author": "@loglogrog",
-    "authorUrl": "https://x.com/loglogrog",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/loglogrog",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/loglogrog/status/2046448773162033240",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/loglogrog/status/2046448773162033240",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case9/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case9/output.jpg"
   },
   {
     "id": "character-case-10",
@@ -361,11 +361,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张动漫风格插画，描绘两名年轻女格斗家之间的 {argument name=\"动作类型\" default=\"高冲击力武术战斗\"}，场景位于 {argument name=\"场景\" default=\"传统木质武术道场\"}。前景中，一名高盘发黑发女孩穿着 {argument name=\"角色 1 配色主题\" default=\"红色和白色\"} 的中式武术服和宽松长裤。她摆出动态的低身前冲姿势，周围环绕旋转的红色能量和水花。背景右侧，一名浅紫色双丸子头女孩穿着 {argument name=\"角色 2 配色主题\" default=\"绿色和紫色\"} 的中式连衣裙，带金色刺绣和黑色紧身裤。她以飞踢姿势跃在空中，周围环绕旋转的蓝色能量。木地板因强烈冲击而碎裂，碎片和尘土在空中飞散。她们上方悬挂一块风化木牌，文字为 \"{argument name=\"招牌文字\" default=\"武術会\"}\"。场景具有戏剧化照明、低角度动态透视和强烈动作特效。",
     "author": "@Tanemomi_Ver2",
-    "authorUrl": "https://x.com/Tanemomi_Ver2",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Tanemomi_Ver2",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Tanemomi_Ver2/status/2046063806846214265",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Tanemomi_Ver2/status/2046063806846214265",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case10/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case10/output.jpg"
   },
   {
     "id": "character-case-11",
@@ -374,11 +374,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{argument name=\"游戏\" default=\"gta 6\"} 位于印度 {argument name=\"地点\" default=\"Bangalore 的花卉市场\"}",
     "author": "@ismajc",
-    "authorUrl": "https://x.com/ismajc",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ismajc",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ismajc/status/2048174302164394493",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ismajc/status/2048174302164394493",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case11/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case11/output.jpg"
   },
   {
     "id": "character-case-12",
@@ -387,11 +387,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{argument name=\"游戏\" default=\"GTA 6\"} 位于 {argument name=\"酒吧名称\" default=\"La Jetée Bar\"}（向 Chris Marker 致敬），地点在 {argument name=\"地点\" default=\"Shinjuku, Tokyo\"}",
     "author": "@ismajc",
-    "authorUrl": "https://x.com/ismajc",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ismajc",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ismajc/status/2048166630933282995",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ismajc/status/2048166630933282995",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case12/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case12/output.jpg"
   },
   {
     "id": "character-case-13",
@@ -400,11 +400,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{argument name=\"系列\" default=\"White Cat Project\"}\n{argument name=\"角色\" default=\"Eleanor\"}",
     "author": "@yume00112211",
-    "authorUrl": "https://x.com/yume00112211",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yume00112211",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yume00112211/status/2048309139013853421",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yume00112211/status/2048309139013853421",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case13/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case13/output.jpg"
   },
   {
     "id": "character-case-14",
@@ -413,11 +413,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张标题为“INPUT NAME”的角色宣传海报，采用统一的竖版主视觉构图（9:16）。上半部分将角色最具辨识度的元素作为占据主导的大型视觉剪影。中部到下部包含完整角色作为次要主体。在大型剪影内部和角色周围，使用双重曝光和拼贴风格的叙事构图，将场景、象征性图像、辅助元素和环境细节融合进雾气、水墨和负空间中。左右两侧包含互补的次要元素，以营造叙事张力和空间变化。一条连续流动的视觉线从上到下贯穿，连接主角、内部拼贴和上方的大型剪影。保留大面积负空间，并使用受东方美学启发的墨色扩散、柔和模糊和碎片化过渡。整体风格统一、精致、克制，具备海报级质感。",
     "author": "@SimplyAnnisa",
-    "authorUrl": "https://x.com/SimplyAnnisa",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SimplyAnnisa",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SimplyAnnisa/status/2049468867106189319",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SimplyAnnisa/status/2049468867106189319",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case14/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case14/output.jpg"
   },
   {
     "id": "character-case-15",
@@ -426,11 +426,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "爱情公寓 电视剧主题 像素养成类游戏概念图，包括场景全局内容，周围环绕各人物形象三视图，底部是场景特写，右下角是剧情梗概。\n\n随机一个经典国内古装电视剧，生成古装电视剧主题像素养成类游戏概念图，包括场景全局内容，周围环绕各人物形象三视图，底部是场景特写，右下角是剧情梗概。\n\n「XXX」电视剧主题像素养成类游戏概念图，包括场景全局内容，周围环绕各人物（人物别重复）形象三视图，底部是场景特写，右下角是剧情梗概。",
     "author": "@sciencedegens",
-    "authorUrl": "https://x.com/sciencedegens",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sciencedegens",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sciencedegens/status/2049359171594903856",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sciencedegens/status/2049359171594903856",
     "category": "角色设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case15/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/character_case15/output.jpg"
   },
   {
     "id": "comparison-case-5",
@@ -439,11 +439,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个由三层搁板组成的木制书架：顶层搁板上应该有一本书，第二层搁板上应该有三本书，底层搁板上应该有七本书。",
     "author": "@chetaslua",
-    "authorUrl": "https://x.com/chetaslua",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chetaslua",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chetaslua/status/2044331451077013749",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chetaslua/status/2044331451077013749",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case5/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case5/output.jpg"
   },
   {
     "id": "comparison-case-10",
@@ -452,11 +452,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "以眼部特写图片为基础，生成3:4的四屏构图超写实眼部特写，四屏按春夏秋冬上下排序。\n\n第一屏：眼眸中带着绽粉樱色的美瞳，睫毛缀满迷你春花，脸颊散落樱瓣与黄蕊小花，粉蝶萦绕眉眼，浅金发丝轻垂，下方簇簇樱花怒放，画面中央\"SPRING\"白色艺术字点缀，风格细腻唯美，光影柔和，色彩粉嫩治愈，下面用书法体写着春；\n\n第二屏：眼眸中带着着清荷色的美瞳，睫毛饰以粉莲与绿荷，脸颊挂着晶莹水珠，粉瓣、绿荷点缀其间，蜻蜓轻绕，浅金发丝若隐若现，画面中央\"Summer\"白色艺术字凸显，光影通透流光感，色彩清透凉爽，下面用书法体写着夏；\n\n第三屏：眼眸中带着金黄红相间的美瞳，睫毛饰以橙红枫叶，脸颊散落金红秋叶，橙蝶翩跹眉眼间，浅金发丝隐约可见，画面中央\"AUTUMN\"白色艺术字醒目，光影暖金流光，色彩浓郁温暖，下面用书法笔写着秋；\n\n第四屏：眼眸中带着雪花蓝色的美瞳，睫毛覆满冰晶雪片，脸颊散落白色雪花与红色腊梅，银白蝴蝶翩跹眉眼，浅金发丝朦胧似雪，画面中央\"WINTER\"白色艺术字亮眼，光影冷冽蓝白流光，色彩清透纯净，下面用书法体写着冬。\n\n整体呈现梦幻眼眸四季交替的唯美梦幻治愈画面，微调各屏的光影强度，让画面氛围感更浓郁。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045000106919997637",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045000106919997637",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case10/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case10/output.jpg"
   },
   {
     "id": "comparison-case-16",
@@ -465,11 +465,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请用 4 格漫画风格描绘你一直以来是如何对待我的。首先输出约 800 字的剧情梗概文本，当我说“画吧”时，再根据剧情梗概绘制 4 格漫画。",
     "author": "@saskr_13",
-    "authorUrl": "https://x.com/saskr_13",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/saskr_13",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/saskr_13/status/2044744396932079934",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/saskr_13/status/2044744396932079934",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case16/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case16/output.jpg"
   },
   {
     "id": "comparison-case-23",
@@ -478,11 +478,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请根据【主题：xxx】自动生成一张高审美的“轮廓宇宙 / 收藏版叙事海报”风格作品。不要将画面局限于固定器物或常见容器，不要优先默认瓶子、沙漏、玻璃罩、怀表之类的常规载体，而是由 AI 根据主题自行判断并选择一个最契合、最有象征意义、轮廓最强、最适合承载完整叙事世界的主轮廓载体。这个主轮廓可以是器物、建筑、门、塔、拱门、穹顶、楼梯井、长廊、雕像、侧脸、眼睛、手掌、头骨、羽翼、面具、镜面、王座、圆环、裂缝、光幕、阴影、几何结构、空间切面、舞台框景、抽象符号或其他更有创意与主题代表性的视觉轮廓，要求合理布局。优先选择最能放大主题气质、最能形成强烈视觉记忆点、最能体现史诗感、神秘感、诗意感或设计感的轮廓，而不是最安全、最普通、最常见的容器。\n\n画面的核心不是简单把世界装进某个物体里，而是让完整的主题世界自然生长在这个主轮廓之中、之内、之上、之边界里或与其结构融为一体，形成一种“主题宇宙依附于一个象征性轮廓展开”的高级叙事效果。主轮廓必须清晰、优雅、有辨识度，并在整体构图中占据核心地位。轮廓内部或边界中需要自动生成与主题强绑定的完整叙事世界，内容应当丰富、饱满、层次清晰，包括最能代表主题的标志性场景、核心建筑或空间结构、象征符号与隐喻元素、角色关系或文明痕迹、远景中景近景的空间递进、具有命运感和情绪张力的氛围层次，以及门、台阶、桥梁、水面、烟雾、路径、光源、遗迹、机械结构、自然景观、抽象形态、生物或道具等叙事细节。所有元素必须统一、自然、有主次、有层级地融合，像一个完整世界真实孕育在这个轮廓结构之中，而不是简单拼贴、裁切填充、素材堆叠或模板化背景。\n\n整体构图需要具有强烈的收藏版海报气质与高级设计感，大结构稳定，主轮廓强烈明确，内部世界具有纵深、秩序和呼吸感，细节丰富但不拥挤，内容丰满但不杂乱，可以适度加入小比例人物剪影、远处建筑、光柱、门洞、桥、阶梯、回廊、倒影、天光或远景结构来增强尺度感、故事感与史诗感。整体画面要安静、宏大、凝练、富有余味，不要平均铺满，不要廉价热闹，不要无重点堆砌。\n\n风格融合收藏版电影海报构图、高级叙事型视觉设计、梦幻水彩质感与纸张印刷品气质，强调纸张颗粒感、边缘飞白、水彩刷痕、轻微晕染、空气透视、柔和雾化、局部体积光、光雾穿透、大面积留白与克制版式，让画面看起来像设计师完成的高端收藏版视觉作品，而不是普通 AI 跑图。整体气质要高级、诗意、宏大、神圣、怀旧、安静、具有传说感和叙事感。\n\n色彩由 AI 根据主题自动判断并匹配最合适的高级配色方案，但必须保持统一、克制、耐看、低饱和、高级，不要杂乱高饱和，不要廉价霓虹感，不要塑料数码感。配色可以围绕黑金灰、冷蓝灰、雾白灰、褐红米白、暗铜、旧纸色、深海蓝、暮色紫、银灰等体系自由变化，但必须始终服务主题，并保持海报级审美与整体和谐。\n\n最终要求：第一眼有强烈的主题识别度和轮廓记忆点，第二眼有完整丰富的叙事世界，第三眼仍有细节和余味。轮廓选择必须具有创意和主题匹配度，尽量避免重复、保守、常见的容器套路，优先选择更有象征性、更有空间感、更有设计潜力的轮廓形式。不要普通背景拼接，不要生硬裁切，不要模板化奇幻素材，不要游戏宣传图感，不要过度卡通化，不要过度写实导致失去艺术感，不要形式大于内容。如果合适，可以自然加入低调克制的标题、编号、签名或落款，让它更像收藏版海报设计的一部分，但不要喧宾夺主。",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2045418028733538620",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2045418028733538620",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case23/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case23/output.jpg"
   },
   {
     "id": "comparison-case-29",
@@ -491,11 +491,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "中式怪异，黑暗神秘风格融合中式美学，完美细节，多重管线渲染，完美建模。西游记背景，狮驼岭，千妖万怪，坐在左边巨大王座上的大象王重甲妖精，坐在中间巨大王座上的狮王重甲妖精，坐在右边巨大王座上大鹏鸟王重甲妖精。渺小的背对镜头孙悟空肩抗金箍棒步行前进，孙悟空身穿铠甲，近地仰拍镜头，长焦镜头，强烈阴影。极致细节刻画，多次修改，正确透视和主体线条，精致细节",
     "author": "@MANISH1027512",
-    "authorUrl": "https://x.com/MANISH1027512",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MANISH1027512",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MANISH1027512/status/2045743158860878312",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MANISH1027512/status/2045743158860878312",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case29/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case29/output.jpg"
   },
   {
     "id": "comparison-case-30",
@@ -504,11 +504,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "Counter-Strike 游戏内截图，与 Terraria 混合。",
     "author": "@yssrski",
-    "authorUrl": "https://x.com/yssrski",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yssrski",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yssrski/status/2046410519595348397",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yssrski/status/2046410519595348397",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case30/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case30/output.jpg"
   },
   {
     "id": "comparison-case-31",
@@ -517,11 +517,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张正在探索战前日本神秘研究所的 Minecraft 截图图像。",
     "author": "@RitaStar1128",
-    "authorUrl": "https://x.com/RitaStar1128",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/RitaStar1128",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/RitaStar1128/status/2046406024303976904",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/RitaStar1128/status/2046406024303976904",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case31/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case31/output.jpg"
   },
   {
     "id": "comparison-case-32",
@@ -530,11 +530,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "帮我生成xxxx真迹图片",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2046201836525302032",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2046201836525302032",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case32/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case32/output.jpg"
   },
   {
     "id": "comparison-case-33",
@@ -543,11 +543,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "1、生成不知火舞和貂蝉的游戏对战海报图\n2、生成一张K-pop团体时尚专辑封面\n3、请你生成 《斗破苍穹》 的关键人物关系图\n4、帮我截一张上传图片的抖音首页的女网红图",
     "author": "@joshesye",
-    "authorUrl": "https://x.com/joshesye",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/joshesye",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/joshesye/status/2046493442428039212",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/joshesye/status/2046493442428039212",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case33/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case33/output.jpg"
   },
   {
     "id": "comparison-case-34",
@@ -556,11 +556,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张 Rust 游戏内截图。",
     "author": "@FixlationAI",
-    "authorUrl": "https://x.com/FixlationAI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/FixlationAI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/FixlationAI/status/2046272578705068476",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/FixlationAI/status/2046272578705068476",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case34/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case34/output.jpg"
   },
   {
     "id": "comparison-case-35",
@@ -569,11 +569,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成图像：Sam Altman 骑在熊上的自拍\n\n编辑提示词：移除背景，使其透明。",
     "author": "@JustinGorya",
-    "authorUrl": "https://x.com/JustinGorya",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/JustinGorya",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/JustinGorya/status/2046510831832006970",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/JustinGorya/status/2046510831832006970",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case35/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case35/output.jpg"
   },
   {
     "id": "comparison-case-36",
@@ -582,11 +582,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张 Among Us 的精细真实游戏图像。",
     "author": "@ReYYYYoking",
-    "authorUrl": "https://x.com/ReYYYYoking",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ReYYYYoking",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ReYYYYoking/status/2046502217843376292",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ReYYYYoking/status/2046502217843376292",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case36/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case36/output.jpg"
   },
   {
     "id": "comparison-case-37",
@@ -595,11 +595,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "在计算机博物馆里,一个程序员在展厅中央,正在演示C语言编程,很多参观者在围观,屏幕上的代码清晰可见。旁边的牌子写着:古法编程,现场表演。2D卡通画风,16:9",
     "author": "@XiaohuiAI666",
-    "authorUrl": "https://x.com/XiaohuiAI666",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/XiaohuiAI666",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/XiaohuiAI666/status/2046515319947354603",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/XiaohuiAI666/status/2046515319947354603",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case37/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case37/output.jpg"
   },
   {
     "id": "comparison-case-38",
@@ -608,11 +608,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "黄昏聚会场景，多个虚构想象投影全部排列在第 14 维度中。",
     "author": "@workingclassbud",
-    "authorUrl": "https://x.com/workingclassbud",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/workingclassbud",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/workingclassbud/status/2046506783850815703",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/workingclassbud/status/2046506783850815703",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case38/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case38/output.jpg"
   },
   {
     "id": "comparison-case-39",
@@ -621,11 +621,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "Sam Altman 是一名大联盟棒球运动员，正摆出持棒击球姿势。采用常见电视画面的构图。",
     "author": "@16kthir0GRXgNqn",
-    "authorUrl": "https://x.com/16kthir0GRXgNqn",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/16kthir0GRXgNqn",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/16kthir0GRXgNqn/status/2046507362266259832",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/16kthir0GRXgNqn/status/2046507362266259832",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case39/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case39/output.jpg"
   },
   {
     "id": "comparison-case-40",
@@ -634,11 +634,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据视频内容和当前帧，使用 GPT 生成一张适合该视频的 YouTube 缩略图。你可以参考我提供的图片风格，但将 AE 右侧的标志替换为 theChatCut 标志。我会为你附上该标志。",
     "author": "@chatcutapp",
-    "authorUrl": "https://x.com/chatcutapp",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chatcutapp",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chatcutapp/status/2047228386117128475",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chatcutapp/status/2047228386117128475",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case61/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case61/output.jpg"
   },
   {
     "id": "comparison-case-41",
@@ -647,11 +647,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张 2020 年最重大事件的图像。",
     "author": "@Rufus87078959",
-    "authorUrl": "https://x.com/Rufus87078959",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Rufus87078959",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Rufus87078959/status/2047211900769878234",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Rufus87078959/status/2047211900769878234",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case65/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case65/output.jpg"
   },
   {
     "id": "comparison-case-42",
@@ -660,11 +660,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "编辑这张图像，将总金额改为 244.5 泰铢。你可以调整每堆硬币的数量，直到达到目标总额。",
     "author": "@elliscrosby",
-    "authorUrl": "https://x.com/elliscrosby",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/elliscrosby",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/elliscrosby/status/2047211507596071235",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/elliscrosby/status/2047211507596071235",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case66/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case66/output.jpg"
   },
   {
     "id": "comparison-case-43",
@@ -673,11 +673,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张 2001 年最重大事件的图像。",
     "author": "@Rufus87078959",
-    "authorUrl": "https://x.com/Rufus87078959",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Rufus87078959",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Rufus87078959/status/2047210051216011682",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Rufus87078959/status/2047210051216011682",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case67/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case67/output.jpg"
   },
   {
     "id": "comparison-case-48",
@@ -686,11 +686,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "研究 LIME Drug Design，并制作一张关于它的详细信息图。",
     "author": "@WillSpagnoli",
-    "authorUrl": "https://x.com/WillSpagnoli",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/WillSpagnoli",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/WillSpagnoli/status/2047172976463040851",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/WillSpagnoli/status/2047172976463040851",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case83/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case83/output.jpg"
   },
   {
     "id": "comparison-case-49",
@@ -699,11 +699,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一个抖音直播的截图 里面是一个美女在直播，在卖丝袜和内衣，她的在线人数是99996，热度是18+，有个叫小互的大哥，给她刷了一个飞机礼物",
     "author": "@laogeai",
-    "authorUrl": "https://x.com/laogeai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/laogeai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/laogeai/status/2047228458351120625",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/laogeai/status/2047228458351120625",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case84/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case84/output.jpg"
   },
   {
     "id": "comparison-case-50",
@@ -712,11 +712,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "社交App匹配成功界面，两个用户资料卡碰撞爱心特效",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047220490486612450",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047220490486612450",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case86/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case86/output.jpg"
   },
   {
     "id": "comparison-case-51",
@@ -725,11 +725,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "吕布游戏Boss设定，赤兔马方天画戟，暗黑进化形态双形态对比",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047198090009190441",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047198090009190441",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case91/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case91/output.jpg"
   },
   {
     "id": "comparison-case-52",
@@ -738,11 +738,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "玄幻小说封面，哪吒三头六臂悬浮虚空，火焰莲台底座，暗黑史诗风",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047196508270084104",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047196508270084104",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case92/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case92/output.jpg"
   },
   {
     "id": "comparison-case-53",
@@ -751,11 +751,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "新中式极简东方美学 × 高端商业插画，主题一花一世界，\n极简，克制，空灵，高级商业视觉，超现实东方意境，\n画面干净通透，无灰雾、无脏色，\n\n一朵巨大的荷花作为空间容器，从平静水面自然生长，轻微倾斜，构图优雅留白充足，\n\n低饱和干净粉色，柔和胭脂调，花瓣半透明，轻盈通透，\n哑光低对比，边缘柔化 + 轻微景深，\n\n荷花内部为唯一视觉焦点：发光的3D微缩广州城市，包含：广州塔，珠江新城建筑群，猎德大桥，珠江水岸，少量岭南建筑，\n\n城市超精细结构，真实材质，极高细节清晰度，城市高光是暖金色，城市阴影是冷青蓝，形成冷暖对比，\n\n灯光通透有能量，局部高饱和但不泛滥，城市亮度明显高于荷花，\n\n水面清澈极简平静，仅少量柔和涟漪，弱反射，\n\n背景暖米白宣纸质感，无水墨、无笔触，大面积留白，\n中心有极轻微光晕渐变，整体通透、不灰、不闷，\n\n画面下方一艘极简小船，船上一位红衣渔女，极小比例，\n静立仰望荷花，红色为唯一高纯度点缀，\n\n整体光线通透、干净、有层次，无灰雾、无泛白，\n高端CG商业插画，电影级真实光影，高动态范围，超精细，8K细节，ArtStation 级画质，强化分色，干净调色，青橙对比，暖高光冷暗部，仅城市灯光提亮饱和度，色调柔和通透，光影锐利明亮，无灰雾、无暗沉、无低饱和雾化。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2047180347448914195",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2047180347448914195",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case93/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case93/output.jpg"
   },
   {
     "id": "comparison-case-54",
@@ -764,11 +764,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "苏妲己古风写真，红色纱衣半透，狐耳若隐若现，媚态撩人",
     "author": "@nidiedeba",
-    "authorUrl": "https://x.com/nidiedeba",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/nidiedeba",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/nidiedeba/status/2047147223281270878",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/nidiedeba/status/2047147223281270878",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case94/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case94/output.jpg"
   },
   {
     "id": "comparison-case-55",
@@ -777,11 +777,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "结合鲁迅的《朝花夕拾》里的内容，生成一副图片，要求图片背景符合《朝花夕拾》的意境，背景图可以使用蒙版，前景是 鲁迅的全身画像位于图片左侧或右侧",
     "author": "@Aurora_62340",
-    "authorUrl": "https://x.com/Aurora_62340",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Aurora_62340",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Aurora_62340/status/2047139992355680530",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Aurora_62340/status/2047139992355680530",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case95/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case95/output.jpg"
   },
   {
     "id": "comparison-case-56",
@@ -790,11 +790,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "地铁上低头看手机的美丽女人，偷拍照片。\n\n能免费试一次 ⬇️",
     "author": "@AntCaveClub",
-    "authorUrl": "https://x.com/AntCaveClub",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AntCaveClub",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AntCaveClub/status/2047136306485133428",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AntCaveClub/status/2047136306485133428",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case96/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case96/output.jpg"
   },
   {
     "id": "comparison-case-57",
@@ -803,11 +803,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "中国航天纪念邮票小全张，火箭发射场景，烫金边框工艺",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047129703702802811",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047129703702802811",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case97/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case97/output.jpg"
   },
   {
     "id": "comparison-case-58",
@@ -816,11 +816,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版，极致武侠风，绝美东方女侠，20岁出头，冷艳锐利丹凤眼，眉宇英气逼人，肤白如玉，长直黑发湿漉漉随狂风剧烈飞舞，几缕发丝贴在脸颊和颈侧，穿着湿透的深黑改良武侠劲装，外披宽袖玄色长袍，衣袍和长袖被风吹得剧烈飘扬翻飞，紧身劲装勾勒身材，腰束软剑带，足踏长靴，右手持一把古剑，剑身散发幽蓝剑气光芒，动态姿势：身体微侧回眸，衣袂猎猎，背景为月夜雨雾笼罩的竹林古道，巨大明月高悬，石板小径，古灯笼，薄雾雨丝，戏剧性冷月光与蓝光剑气结合，湿身水光效果，超强动态感，细腻布料褶皱、头发丝飘动、真实水珠反光，电影级光影，8k，杰作, 最佳质量, 超写实, 电影感, 戏剧化氛围",
     "author": "@CoderDaMing",
-    "authorUrl": "https://x.com/CoderDaMing",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/CoderDaMing",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/CoderDaMing/status/2047127585256358221",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/CoderDaMing/status/2047127585256358221",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case98/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case98/output.jpg"
   },
   {
     "id": "comparison-case-59",
@@ -829,11 +829,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据佛经对观音菩萨的形象描述，原原本本的还原一张真实的观音菩萨形象照片，皮肤与衣服接近真实，画质iPhone 15 pro",
     "author": "@Zhaoge01",
-    "authorUrl": "https://x.com/Zhaoge01",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Zhaoge01",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Zhaoge01/status/2047123570485260753",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Zhaoge01/status/2047123570485260753",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case99/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case99/output.jpg"
   },
   {
     "id": "comparison-case-60",
@@ -842,11 +842,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "唐代长安城元宵灯会全景，万盏花灯照亮夜空，工笔重彩长卷",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047122441454096527",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047122441454096527",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case100/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case100/output.jpg"
   },
   {
     "id": "comparison-case-61",
@@ -855,11 +855,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据真实历史对杨玉环的形象描述，生成一张杨贵妃真实照片，画质为iPhone 15 pro",
     "author": "@Zhaoge01",
-    "authorUrl": "https://x.com/Zhaoge01",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Zhaoge01",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Zhaoge01/status/2047110776897638568",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Zhaoge01/status/2047110776897638568",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case101/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case101/output.jpg"
   },
   {
     "id": "comparison-case-62",
@@ -868,11 +868,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "参考这张图的透视和风格，绘制一张更加精细的超高清插画，表现超现实主义的日式未来都市，要能看清很小的细节，包括街道上的传统文化游行的人，小巷里的黑帮，烟花巷的舞女，疲惫的社畜，楼房的窗户里也有各式各样的人物，学习的学生，吵架的夫妻，玩游戏的宅男，以及更多的发挥细节。讽刺现实拥挤中的无聊，都市繁华下的孤独，无意义的人生中又有一种病态的美感。画面要有极高的审美价值 ，不能因为拼内容而损失美和协调感，比例是9:16",
     "author": "@Tresmort",
-    "authorUrl": "https://x.com/Tresmort",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Tresmort",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Tresmort/status/2047105322863460496",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Tresmort/status/2047105322863460496",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case102/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case102/output.jpg"
   },
   {
     "id": "comparison-case-63",
@@ -881,11 +881,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "狐妖小红娘涂山雅雅写真大片，粉色九尾狐裘紧身裙，媚眼如丝，红唇微张，极致妖媚",
     "author": "@sdjn_wgc",
-    "authorUrl": "https://x.com/sdjn_wgc",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sdjn_wgc",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sdjn_wgc/status/2046981757325475954",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sdjn_wgc/status/2046981757325475954",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case107/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case107/output.jpg"
   },
   {
     "id": "comparison-case-64",
@@ -894,11 +894,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一个抖音直播的截图 里面是一个美女在直播，在卖丝袜和内衣，她的在线人数是99996，热度是18+，有个叫小互的大哥，给她刷了一个飞机礼物",
     "author": "@LVWANGJI_0327",
-    "authorUrl": "https://x.com/LVWANGJI_0327",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/LVWANGJI_0327",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/LVWANGJI_0327/status/2046974302227206525",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/LVWANGJI_0327/status/2046974302227206525",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case108/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case108/output.jpg"
   },
   {
     "id": "comparison-case-65",
@@ -907,11 +907,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "东方幻想风格女性，半身肖像，回眸侧脸，气质空灵优雅，柔和神性美感，细腻五官，微垂眼神，冷白细腻肌肤，淡雅橘粉妆容，金色高光点缀\n\n长发飘动，发丝中融入彩色花朵与光粒（红、蓝、橙、紫），头发具有流动感与空气感\n\n身穿半透明丝绸礼服与披肩，材质轻盈通透，布料随风飘动，表面带有鎏金纹理与闪耀颗粒。\n\n整体光影为暖金色逆光，强边缘光，体积光明显，光粒漂浮，柔光泛光，梦幻氛围\n\n背景干净浅色渐变，带微光与粒子效果，整体氛围空灵、梦境、神圣\n\n风格：高端CG插画，超精细，电影级光影，柔光渲染，8K细节，artstation 热门作品风格",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2046962895775580442",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2046962895775580442",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case109/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case109/output.jpg"
   },
   {
     "id": "comparison-case-66",
@@ -920,11 +920,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖向构图，单人女性艺术肖像，年轻东方女生，五官清秀，脸部线条柔和，皮肤自然通透，保留真实肌理，气质安静高级，带一点疏离感和故事感。\n摄影棚风格与自然光融合，柔和侧光，面部有细腻高光，阴影轻柔，整体光线通透不刺眼，带轻微黑雾滤镜效果，微朦胧、微泛光、空气感强。\n背景极简干净，奶油灰、米白、浅卡其或雾感暖灰色墙面，留有大面积负空间，整体画面简洁、有呼吸感。\n模特坐在地面或低台上，一条腿自然弯曲，一条腿放松伸展，身体轻微前倾或侧倾，肩膀不对称，头部轻轻倾斜，动作自然松弛，不刻意摆拍。\n表情平静克制，眼神柔和，略微疏离，带一点若有所思的情绪，嘴唇自然微张或轻闭，状态慵懒、安静、细腻。\n发型为自然蓬松的长发，微凌乱碎发，发丝轻柔，有空气感和层次感，像刚整理过但保留自然随性感。\n妆容为高级淡妆，韩系清透底妆，皮肤柔雾光泽，鼻梁与面颊有自然高光，眉形干净，眼妆淡雅但有神，睫毛纤长，唇色为低饱和玫瑰豆沙色或奶茶裸粉色。\n服装为简约高级风：米白色紧身罗纹针织背心，外搭宽松白衬衫或柔软针织开衫，下装为高腰半裙或简约短裤，布料柔软贴合身形但不过分暴露，呈现自然身体线条与文艺感。\n画面强调细腻质感、柔和色调、轻法式与韩系杂志感结合，真实摄影感，电影级肤色，细节丰富，层次分明，构图克制，高级审美，时尚 编辑人像，柔和的电影感人像，细腻的质感，超高细节，逼真，优雅，精致，高端时尚摄影，含蓄的性感，简洁的构图。",
     "author": "@zhiyangzhu22222",
-    "authorUrl": "https://x.com/zhiyangzhu22222",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/zhiyangzhu22222",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/zhiyangzhu22222/status/2046952985562062888",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/zhiyangzhu22222/status/2046952985562062888",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case110/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case110/output.jpg"
   },
   {
     "id": "comparison-case-67",
@@ -933,11 +933,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "图片1：汽车人全员月球基地集结，地球悬于身后星空，赛博坦旗帜飘扬\n\n图片2：霸天虎全员列阵外星战舰甲板，威震天坐于王座俯视全军",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2046952548469530716",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2046952548469530716",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case111/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case111/output.jpg"
   },
   {
     "id": "comparison-case-68",
@@ -946,11 +946,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一颗/一块/一枚【食物名称】，以博物学大师发现野外标本的方式解剖。\n剖开、展开、固定——如同博物馆的珍贵藏品，\n却以卡拉瓦乔为《国家地理》掌镜时的光线照亮。\n每一个内部结构都以自身的材质真相发光。\n截面锋利得近乎暴力。内部美丽得近乎神圣。\n画面中呈现完整标本：\n一半保持原状，展示【外表面描述：质感/颜色/纹理】；\n另一半剖开至核心，【内部核心结构描述：最重要的1—2个内部视觉特征】清晰可见。\n【补充1—2句该食物最具视觉张力的横截面细节描述】\n背景：纯粹的黑丝绒。\n【食物名称】悬浮其中，如同某件珍贵而危险的事物。\n标注文字紧贴结构边缘，手写感衬线字体，绝不悬空飘浮。\n画面包含以下标注，每处标注三行：第一行结构名称，第二行成分数据，第三行一句人话：\n【结构01名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n\n【结构02名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n【结构03名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n【结构04名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n【结构05名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n\n【结构06名称】\n【成分／数据说明】\n【这个结构在做什么，为什么重要】\n省略其他如果有继续保持这个格式\n主标题，左上角，暖象牙白大写字体：\n【食物名称】·解剖\n\n斜体副标题紧随其下：\n【一句揭示这种食物本质的话，不超过15字】\n\n整体气质：奥杜邦博物插画×卡拉瓦乔光影×有史以来最美的科学摄影。\n4K精度，标本照明，极致内部细节。\n没有任何临床感，一切都鲜活。\n写实风格，非示意图，非卡通，非简化图解。\n每一种材质都有真实的物理质感：\n粗糙的、光滑的、湿润的、干燥的、致密的、疏松的。",
     "author": "@GeekCatX",
-    "authorUrl": "https://x.com/GeekCatX",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/GeekCatX/status/2046939656244318676",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX/status/2046939656244318676",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case112/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case112/output.jpg"
   },
   {
     "id": "comparison-case-69",
@@ -959,11 +959,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张图像：宝丽来照片中有一个人，而这个人正从相框中跳出来。生成一张带有日文文字的图像。\n\n←下面的图片\n用 GPT Image-2 生成的版本→",
     "author": "@MajaDesignJP",
-    "authorUrl": "https://x.com/MajaDesignJP",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MajaDesignJP",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MajaDesignJP/status/2047235632934928765",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MajaDesignJP/status/2047235632934928765",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case113/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/case_case113/output.jpg"
   },
   {
     "id": "comparison-case-70",
@@ -972,11 +972,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张黑色背景的并排对比图，展示同一餐厅场景中的相机角度变化。顶部使用大号白色无衬线文字写着：“Show me the POV from someone standing behind the bar looking out over this crowded restaurant. Change NOTHING in the scene other than the pov”。下方垂直居中放置 2 张堆叠的矩形照片：上方图像左侧以大号白色文字标注“Source”，下方图像左侧以大号白色文字标注“Output”。上方照片展示一个灯光温暖、高档且拥挤的餐厅室内，从用餐区一侧观看，面向一面高大的后吧台，墙到墙的搁架上摆满许多发光的酒瓶，吧台前有调酒师和客人，琥珀色灯光、球形吊灯、木质天花板、米色立柱，前景坐满紧密排列的用餐客人。下方照片展示完全相同的餐厅、相同的人群密度、相同的暖色灯光、相同的装饰、相同的吧台搁架、相同的球形吊灯以及相同的整体构图元素，但现在视角变为站在吧台后方向外看向拥挤餐厅的 POV；前景包含吧台台面，上面有玻璃器皿、金属吧台工具、酒瓶，左下角可见一个销售终端屏幕，客人与员工填满中景，用餐区延伸到背景。保持两张图之间只有相机位置发生变化、场景没有其他改动的感觉。",
     "author": "@chesnyfcb",
-    "authorUrl": "https://x.com/chesnyfcb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chesnyfcb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chesnyfcb/status/2047714457774637213",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chesnyfcb/status/2047714457774637213",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case70/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case70/output.jpg"
   },
   {
     "id": "comparison-case-71",
@@ -985,11 +985,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\"type\":\"对比图\",\"风格\":\"黑色演示背景上的动漫电影感示范图像\",\"canvas\":{\"aspect_ratio\":\"4:3\",\"background\":\"纯黑色\"},\"text_elements\":[{\"text\":\"{argument name=\"标题文字\" default=\"将相机 POV 移动到人群中的地面高度。\"}\",\"position\":\"顶部居中\",\"风格\":\"大号白色无衬线字体\"},{\"text\":\"Source\",\"position\":\"上方图像左侧\",\"风格\":\"大号白色无衬线字体\"},{\"text\":\"Output\",\"position\":\"下方图像左侧\",\"风格\":\"大号白色无衬线字体\"}],\"layout\":{\"sections\":[{\"title\":\"Source\",\"position\":\"上方居中\",\"count\":1,\"labels\":[\"俯视人群场景\"]},{\"title\":\"Output\",\"position\":\"下方居中\",\"count\":1,\"labels\":[\"地面高度人群 POV 场景\"]}],\"image_frames\":2},\"images\":[{\"role\":\"源图像\",\"composition\":\"从上方观看的繁忙俯视图，展现一条拥挤历史街道中密集的人群\",\"scene\":\"一群混乱的人聚集在一辆马车和一辆四轮马车周围，人们肩并肩挤在一起，许多人戴着帽子，穿着低调的 20 世纪早期或旧欧洲服装，可见包裹和麻袋，右侧边缘有一匹棕色马，木制车轮和车体结构部分可见\",\"camera\":\"高空鸟瞰角度，向下看入人群\",\"lighting\":\"柔和日光\",\"color_palette\":\"低调的泥土棕、灰尘蓝、米色、橄榄色、暖灰色\",\"rendering\":\"手绘动漫电影定格，细致的人群插画，略柔和的明暗处理\"},{\"role\":\"输出图像\",\"composition\":\"同一条拥挤历史街道从人群内部接近地面的高度重新想象\",\"scene\":\"从人群内部、马车车轮旁边观看，前景和中景被身体填满，左侧有一个穿深栗色衣服的人向前弯腰，底部中央附近有一个穿绿色衣服的蹲伏人物，右中部有一位穿浅蓝色连衣裙的女性回头，人物紧密拥挤，暗示附近有马和马车，具有强烈的压缩感与近距离感\",\"camera\":\"非常低的地面高度 POV，从人群内部向上并向前穿过人物，强调复杂遮挡和纵深\",\"lighting\":\"柔和日光，带温暖电影感阴影\",\"color_palette\":\"低调的泥土棕、灰尘蓝、米色、橄榄色、暖灰色\",\"rendering\":\"手绘动漫电影定格，电影感视角转换，细致的人物拥挤效果，柔和绘画式明暗\"}],\"overall_goal\":\"展示同一动漫人群场景的前后相机角度转换，输出图从俯视视角移动到人群内部的低位沉浸式 POV\"}",
     "author": "@chesnyfcb",
-    "authorUrl": "https://x.com/chesnyfcb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chesnyfcb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chesnyfcb/status/2047714457774637213",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chesnyfcb/status/2047714457774637213",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case71/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case71/output.jpg"
   },
   {
     "id": "comparison-case-72",
@@ -998,11 +998,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张戏剧化的日式 YouTube 缩略图，采用未来感霓虹赛博朋克风格，16:9 横向构图。使用深色科技城市背景，包含隐约的摩天楼、数字网格线、发光粒子，以及高对比度的蓝色、粉色和金色灯光。画面正中心放置一位腰部以上的年轻女性，留着长直浅粉蓝色头发，穿纯白短袖 T 恤和浅粉色裙子，以一只手靠近下巴、另一只手抱臂的姿势若有所思地摆拍；用柔和矩形模糊遮挡她的脸。最顶部添加巨大、做旧、粗体白色日文标题文字“主導権が揺れた”，其正下方添加大号粗体黄色文字“{argument name=\"副标题文字\" default=\"Nano Bananaから\"}”。左侧创建一个发光蓝色六边形边框面板，标题为 Nano Banana，较小副标题为 画像生成。该面板内部包含恰好 4 个图像图块，排列为 2x2 网格：1) 日落时的幻想漂浮岛景观，2) 阳光照射的高树森林小径，3) 夜晚的霓虹未来城市街道，4) 带星星和航天器的外太空行星场景。左侧面板下方添加一个蓝色发光丝带标签，文字为 かつては優位だった。右侧创建一个发光洋红色六边形边框面板，标题为“{argument name=\"右侧面板标题\" default=\"GPT Image 2\"}”，较小副标题为 実務で使える出力へ。面板内部包含恰好 4 张示例缩略图卡片，排列为 2x2 网格，每张都展示同一位蓝发女性、脸部模糊，并带有醒目的日文文字。4 个图块上方的卡片标签分别为：サムネイル画像、記事のアイキャッチ画像、LPのセクション画像、SNS投稿画像。4 张卡片内的大字分别写着：1) AIで変わるクリエイティブの未来，2) AI時代のクリエイティブ戦略 成功する企業の条件，3) AIで加速するビジネス成長，4) 未来をつくるのは AI×あなたのアイデア。在左右面板之间放置一支明亮发光的金色箭头，从左指向右，并带有火花状粒子轨迹，表示过渡或优势转移。底部添加一条非常大的黑色横幅，带发光金色边框和超大粗体金色文字“{argument name=\"底部横幅文字\" default=\"GPT Image 2へ\"}”。整体构图应像一张对比图，展示从旧式图像生成转向更实用的商业输出，具备强烈缩略图排版、强发光效果、主要文字的金属质感，以及精致的社交媒体营销视觉。",
     "author": "@MoveHiro1219",
-    "authorUrl": "https://x.com/MoveHiro1219",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MoveHiro1219/status/2047698611665096732",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219/status/2047698611665096732",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case72/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case72/output.jpg"
   },
   {
     "id": "comparison-case-73",
@@ -1011,11 +1011,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张未来感日式科技对比海报，设置在深色赛博朋克控制室场景中，宽幅 16:9 构图。左上角使用大号做旧白色日文标题文字“三つ巴”，其正下方是粗体金色副标题“それぞれの武器”。画面中部偏左横向排列 3 个发光全息对比面板，并用霓虹箭头连接：蓝色面板标注“Google”，琥珀金色面板标注“Claude”，紫洋红色面板标注“OpenAI”。Google 面板包含 4 张内卡片：上方 2 张较大卡片标注“Gemini”和“Antigravity”，下方 2 张较小卡片展示类似分析/仪表盘的视觉和一个蓝色等距立方体图形。Claude 面板包含 4 张内卡片：上方 1 张大卡片标注“Claude Code”，下方 3 张较小卡片展示网络图、文本/代码列表和图表分析。OpenAI 面板包含 5 张内卡片：上方 2 张较大卡片标注“ChatGPT”和“Codex”，下方 3 张较小卡片展示界面/代码窗口和一个几何线框立方体。在 Google 与 Claude 之间、Claude 与 OpenAI 之间添加发光双向箭头。底部中央放置一个大型霓虹边框横幅，金色文字写着“Google / Claude / OpenAI”。右侧包含一位年轻女性，站立并指向左侧面板，留着粉彩粉色与青蓝色的长直分色头发，穿一件印有黑色文字“{argument name=\"上衣文字\" default=\"OKIHIRO AI Creative\"}”的纯白 T 恤，以及柔和粉色百褶裙。她的脸被一个平滑矩形模糊块遮挡。使用电影感科幻灯光、光泽全息 UI 细节、高对比度、鲜明的蓝-金-紫强调色，以及精致的 YouTube 缩略图审美。",
     "author": "@MoveHiro1219",
-    "authorUrl": "https://x.com/MoveHiro1219",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MoveHiro1219/status/2047698611665096732",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219/status/2047698611665096732",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case73/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case73/output.jpg"
   },
   {
     "id": "comparison-case-74",
@@ -1024,11 +1024,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张关于 AI 竞争时代的醒目日式 YouTube 缩略图，16:9 宽屏，高对比度，戏剧化科技新闻风格。使用深色未来控制室背景，画面中充满 3 块发光全息仪表盘屏幕，边缘环绕蓝色赛博界面元素。左侧和中央放置一个标注“AI”的发光圆形枢纽，使用亮蓝色，并让 3 条方向性发光能量箭头向外分支，指向竞争平台：“Google”位于左侧蓝色电光区域，“Claude”位于右上方金色电光区域，“OpenAI”位于底部中央洋红紫色电光区域。在每个品牌区域下方添加微妙的世界地图或领土争夺可视化效果，类似发光的数字陆块或影响力区域。右侧展示一位看起来像年轻日本女性的人物，从腰部以上入镜，正面朝向观众，戴着长直双色假发，一侧为粉彩粉色，另一侧为粉彩蓝色，穿印有“OKIHIRO AI Creative”文字的纯白 T 恤和浅粉色裙子。她在脸旁举起一根食指，呈主持人姿势。她的脸完全被一个大号柔边矩形模糊块遮挡。顶部添加巨大、做旧、白色日文标题文字：{argument name=\"标题文字\" default=\"AI戦国時代\"}。其下添加第二行粗体金色日文文字：{argument name=\"副标题文字\" default=\"性能だけの話じゃない\"}。底部放置一条宽黑色横幅，写着超大粗体金色日文文字：{argument name=\"底部文字\" default=\"空気を取った側が勝つ\"}。排版要超大、粗粝、抓人眼球，带轻微发光和投影。使用黑色、电光蓝、金色、洋红和霓虹白的配色，强烈对比，并确保缩略图可读性。",
     "author": "@MoveHiro1219",
-    "authorUrl": "https://x.com/MoveHiro1219",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MoveHiro1219/status/2047698611665096732",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MoveHiro1219/status/2047698611665096732",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case74/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case74/output.jpg"
   },
   {
     "id": "comparison-case-75",
@@ -1037,11 +1037,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张超精细、喜剧化的日式街机格斗游戏截图，风格类似对战场景，使用真实世界照片质感，并在其上叠加游戏 UI。场景展示两组主题公园粉丝在 Tokyo DisneySea 户外表演广场争夺前排位置时展开的激烈恶搞对战。使用宽幅 16:9 构图。背景中清晰展示白天明亮天空下的 Mediterranean Harbor 和 Mount Prometheus，并能看到滨水区与 DisneySea 建筑。在前景中展示恰好 10 名穿冬季休闲服的年轻成年人，分成 2 个对立队伍，每队 5 人，他们为了位置像拔河混战一样身体前倾、抓握、伸手、推搡，带有夸张的竞争肢体语言，动作冻结得像格斗游戏画面。脸部应使用柔和模糊块匿名处理。每个人上方添加带等级和日文姓名的浮动角色标签。整体基调荒诞但写实，像一张真实抓拍照片被转换成精致街机游戏战斗画面。\n\n添加完整的日式格斗游戏 HUD，使用光泽蓝色对红色界面风格。最顶部放置中央舞台标题栏，文字为“東京ディズニーシー ミッキー広場 ショー最前列バトル”，中间有一个大型计时器显示“TIME 89”。左上角添加蓝队标题“PLAYER1”和队名“最前列ガチ勢A”。右上角添加红队标题“RIVAL”和队名“ライバルグループB”。左侧堆叠恰好 5 个蓝色玩家状态面板，包含头像、等级、日文职业式昵称、HP、SP 和 BURST 计量条。左侧 5 个标签为：“Lv.25 ガチ勢リーダー ユウキ”、“Lv.24 筋肉マン タケシ”、“Lv.23 眼鏡オタク シンジ”、“Lv.23 開角心MAX ケント”、“Lv.22 サポート要員 リョウ”。右侧堆叠恰好 5 个红色对手状态面板，标签为：“Lv.27 ライバルリーダー ダイキ”、“Lv.26 パワフル代表 マサル”、“Lv.24 戦略家 コウジ”、“Lv.23 熱血漢 リク”、“Lv.22 サポート女子 サキ”。每个面板都应包含数值化 HP 和 SP，以及分段 BURST 槽，风格类似日式街机 RPG 格斗界面。\n\n在中央战斗场景中的斗士上方放置恰好 10 个战斗中姓名牌，左队为蓝色、右队为红色。10 个标签为：“Lv.24 タケシ”、“Lv.25 ユウキ”、“Lv.23 シンジ”、“Lv.23 ケント”、“Lv.22 リョウ”、“Lv.27 ダイキ”、“Lv.26 マサル”、“Lv.23 リク”、“Lv.22 サキ”、“Lv.22 ミサキ”。\n\n左下角添加一个标题为“スキル”的技能菜单，列出恰好 5 个带 SP 消耗的技能：“ダッシュ突撃 SP 20”、“肩押し強奪 SP 25”、“荷物で場所確保 SP 15”、“ロープくぐり SP 10”、“本気の根性 SP 50”。其下方添加深色说明框，解释高亮技能“本気の根性”，日文文本为：“気合で相手を威圧し、どかす! 一定時間、相手が怯みやすくなる! (バーストゲージを大きく消費する) 効果時間:10秒”。\n\n底部中央添加标题为“アイテム”的道具菜单，包含恰好 5 个道具槽，显示图标和数量：一瓶水“x3”、一条折叠紫色毛巾“x2”、一个蓝色抽绳袋“x1”、一个灰色背包“x1”、一份盒饭“x2”。右下角添加标题为“クエスト”的任务面板，任务文字为“ショー開始までに最前列を死守しろ!”，条件文字为“条件:ライバルグループを全員後ろに押し戻せ!”，倒计时文字为“ショー開始まで:02:30”。旁边添加一个标题为“ミッキー広場MAP”的小地图，显示广场上双方队伍的红蓝点。沿最底部边缘加入日文小号控制器提示，用于技能使用、道具使用、抓取/推搡和冲刺等动作。\n\n使用戏剧化、饱和的光线、清晰细节、真实服装褶皱、真实广场石板铺地，以及高端日式游戏截图质感。图像应像真实 Tokyo DisneySea 人群照片与竞技街机战斗游戏界面的荒诞但可信的跨界融合。",
     "author": "@mikko_20100518",
-    "authorUrl": "https://x.com/mikko_20100518",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mikko_20100518",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mikko_20100518/status/2047514897404354598",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mikko_20100518/status/2047514897404354598",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case75/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case75/output.jpg"
   },
   {
     "id": "comparison-case-76",
@@ -1050,11 +1050,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "给定一个故事概念，生成一部完整的宫崎骏风格动画短片：编写 30 镜头脚本 → 生成水彩分镜图像（gpt-image-1）→ 规划 SOFT/HARD 转场 → 使用 Seedance 2.0 通过首帧/末帧绑定生成视频片段 → 合成原创环境钢琴配乐 → 将所有内容与音乐拼接成最终 MP4。",
     "author": "@happycapyai",
-    "authorUrl": "https://x.com/happycapyai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/happycapyai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/happycapyai/status/2049468986828697940",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/happycapyai/status/2049468986828697940",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case76/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/comparison_case76/output.jpg"
   },
   {
     "id": "comparison-case-80",
@@ -1063,11 +1063,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请帮我生成一张视觉品牌拆解图，稍后我需要用来生成讲解的视频。",
     "author": "@X7649158034321",
-    "authorUrl": "https://x.com/X7649158034321",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/X7649158034321",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/X7649158034321/status/2049721847001047274",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/X7649158034321/status/2049721847001047274",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/comparison_case80/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/comparison_case80/output.jpg"
   },
   {
     "id": "comparison-case-81",
@@ -1076,11 +1076,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张新的动画表，但这次是印度男性和印度女性在公寓内戏剧性场景中的分镜。确保场景中包含公寓元素，并加入对话框；这是用于 15 秒内容，所以要注意节奏（句子不要太长），当一个角色说话时，画面中应该只有该角色。",
     "author": "@CurieuxExplorer",
-    "authorUrl": "https://x.com/CurieuxExplorer",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/CurieuxExplorer",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/CurieuxExplorer/status/2049709975040401601",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/CurieuxExplorer/status/2049709975040401601",
     "category": "对比展示",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/comparison_case81/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/comparison_case81/output.jpg"
   },
   {
     "id": "ecommerce-113-luxury-amber-perfume-ad",
@@ -1089,11 +1089,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张奢华电影感产品摄影：一只经典矩形香水瓶，灵感来自 {argument name=\"品牌标签\" default=\"N°5 CHANEL PARIS PARFUM\"}，直立放置在带白色纹理的亮面黑色大理石台面上。瓶身略微偏右居中，由清透切面玻璃制成，配有大型透明水晶瓶塞，内部盛满浓郁琥珀金色香水，并从内部散发光泽。玻璃表面覆盖细小冷凝水珠，增加质感和真实感。来自左上方的戏剧性暖光形成金色高光、大理石上的深邃倒影，以及背景中柔和的发光光晕。优雅烟雾在瓶身两侧缭绕，强化高级广告氛围。深色背景，浅景深，超精细棚拍产品摄影，奢华美妆大片美学，瓶身清晰对焦，真实反射，暖调黑金配色。在右上角添加一个小型白色 {argument name=\"角落 标志\" default=\"Pollo.ai\"}。方形构图，高端商业广告，照片级真实，高对比度，精致而高级。",
     "author": "Polanco_IA",
-    "authorUrl": "https://x.com/Polanco_IA",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Polanco_IA",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Polanco_IA/status/2047689647967609037",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Polanco_IA/status/2047689647967609037",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case113/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case113/output.jpg"
   },
   {
     "id": "ecommerce-114-skincare-product-studio-shot",
@@ -1102,11 +1102,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个柔和的 {argument name=\"瓶身颜色\" default=\"奶油色\"} 瓶子，配有 {argument name=\"按压泵颜色\" default=\"柔和淡黄色\"} 按压泵，立在哑光展台上，周围环绕丝滑泡沫和 {argument name=\"花朵\" default=\"洋甘菊花\"}。背景是浅黄色渐变，并带有细腻的气泡细节。标签强调有机洋甘菊与舒缓护理。新鲜洋甘菊花强化温柔亲和的吸引力。",
     "author": "Strength04_X",
-    "authorUrl": "https://x.com/Strength04_X",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Strength04_X/status/2047636636847231222",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X/status/2047636636847231222",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case114/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case114/output.jpg"
   },
   {
     "id": "ecommerce-115-tropical-citrus-soda-ad-poster",
@@ -1115,11 +1115,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为一瓶柑橘汽水创建一张充满活力的热带商业海报，采用明亮夏日广告风格。画面中展示一只大型 {argument name=\"产品名称\" default=\"苏打饮品\"} 塑料瓶，略微偏右居中，轻微向左倾斜，黄色瓶盖，透明瓶身覆盖冰冷冷凝水珠，内部装满发光的金橙色汽水。标签应包含切片橙子和柑橘插画，并带有品牌文字 “{argument name=\"产品名称\" default=\"苏打饮品\"}”、短语 “柑橘风味été”，以及一个绿色小 “500 ml” 标记。使用阳光海滩背景：鲜艳蓝天、绿松石色海面、柔软云朵，以及从右上角进入画面的虚化热带棕榈叶。在瓶底周围添加戏剧性的水花、散落的透明冰块，以及前景中 5 个可见柑橘元素：2 块橙子瓣、1 个半颗青柠、1 个半颗葡萄柚，以及最右边缘 1 片局部橙子。左侧放置大型法语促销文字：巨大的白色标题 “{argument name=\"标题文字\" default=\"苏打饮品\"}”，上方有一个小水花点缀，下方是黄色手写体 “柑橘风味été”。在左侧中部添加一个黄色刷痕徽章，文字为 “LA FRAÎCHEUR QUI PÉTILLE !”。在左下放置一个纵向功能列表，包含 3 个圆形图标和法语说明：“SAVEURS NATURELLES”、“SANS COLORANTS ARTIFICIELS” 和 “EXTRA RAFRAÎCHISSANT”。底部左侧添加绿色刷痕横幅，写着 “500 ml 便携规格”。右下角添加一个米色圆形环保风格印章，带绿色描边和叶片图案，内部文字为 “{argument name=\"印章文字\" default=\"PLAISIR FRUITÉ À CHAQUE GORGÉE\"}”。灯光应具有光泽感和高能量，左上方强烈阳光耀斑，饱和柑橘色彩，包装细节清晰，水珠真实，并具有精致的超市广告写实感。",
     "author": "edimakorfr",
-    "authorUrl": "https://x.com/edimakorfr",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/edimakorfr",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/edimakorfr/status/2047635133466124726",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/edimakorfr/status/2047635133466124726",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case115/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case115/output.jpg"
   },
   {
     "id": "ecommerce-116-industrial-design-presentation-sheet",
@@ -1128,11 +1128,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "核心主体：[{argument name=\"参考\" default=\"使用上传的图像\"}，保持细节、字体排印和结构 100% 锁定] 布局与构图：一张 {argument name=\"展示类型\" default=\"专业工业设计展示板\"}。图像应组织为干净的网格系统。顶部行：3x3 布局，展示俯视平铺视图和材料近距离微距细节。中部区域：三张产品直立的主视觉图，展示不同配色（哑光黑、极地白 以及带强调色的变体）。产品应轻微倾斜，以表现深度和形体。底部区域：一个动态“悬浮”构图，包含两个产品以相反角度重叠，同时展示正面和侧面轮廓。环境与灯光：置于极简中性棚拍灰色背景前。柔和顶光，带真实接触阴影。高端产品摄影美学。风格与质感：哑光纹理、干净轮廓和锐利边缘。在产品表面保留指定空白区域用于 “占位品牌” 和 “图形样机”。4k 分辨率，Unreal Engine 5 渲染风格，超写实，干净美学。",
     "author": "ShamsAmin56",
-    "authorUrl": "https://x.com/ShamsAmin56",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ShamsAmin56",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ShamsAmin56/status/2047627860752621647",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ShamsAmin56/status/2047627860752621647",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case116/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case116/output.jpg"
   },
   {
     "id": "ecommerce-117-luxury-fur-lined-loafer-lifestyle-photo",
@@ -1141,11 +1141,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张温暖的编辑风生活方式产品照片，在室内以低角度近距离拍摄，聚焦一位女性的小腿和双脚，她正在试穿 1 双黑色皮革后空乐福鞋，鞋内为棕褐色仿毛绒内衬。右脚穿着一只乐福鞋，左脚赤脚，悬停在带纹理的奶油色长绒地毯上方，另一只配套乐福鞋放在左下前景的地毯上。鞋子具有光滑黑色皮革鞋面、圆润杏仁鞋头、开放式穆勒鞋后跟、从鞋口溢出的蓬松棕色毛绒，以及横跨鞋面的精致抛光金色马衔扣五金细节。模特穿着中蓝色九分牛仔裤，裤脚为毛边原始磨边。环境是舒适的极简室内空间，奶油色地毯上有 2 条细而不规则的黑线，中性墙面，右上背景有一面倚靠式矩形镜子，中等木质边框，柔和反射地毯和部分场景。使用柔和自然窗光，浅景深，细微胶片颗粒，真实皮肤质感，低饱和米色与黑色调色，放松随性的构图，高级时尚目录氛围，高细节，照片级真实。",
     "author": "dynamicwangs",
-    "authorUrl": "https://x.com/dynamicwangs",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/dynamicwangs",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/dynamicwangs/status/2047580984342925545",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/dynamicwangs/status/2047580984342925545",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case117/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case117/output.jpg"
   },
   {
     "id": "ecommerce-118-luxury-perfume-ad-on-marble-vanity",
@@ -1154,11 +1154,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张奢华电商广告照片：一只高级香水瓶置于抛光灰白大理石梳妆台上，以温暖电影感棚拍风格拍摄，带柔和金色灯光、浅景深和优雅反射。构图为方形且高端，香水瓶略微偏右居中，促销文字位于左侧。瓶身为高挑雕塑感沙漏形玻璃瓶，烟灰色透明玻璃在底部渐变加深，配有亮面金色球形瓶盖、刻有精细品牌标识的金色瓶颈，以及正面大型金属金色交织字母图案。保留品牌灵感氛围，但不要添加额外产品。左前景包含 1 个带金边的切割水晶碗，局部裁切。右后景包含 1 个拉丝金色圆柱花瓶，插有 1 束柔软白花，并虚化处理。瓶身后方添加 1 个黑色大理石矩形盒，带细微白色纹理和金色饰边。右下前景包含 1 块垂坠的香槟色缎面布料，柔和失焦。背景应深色、奢华并柔和虚化，带浓郁棕黑色调，左侧有一块垂直阴影面板以承托字体排版。在左上添加优雅衬线标题文字 {argument name=\"标题文字\" default=\"Premium Perfume,\"}，使用大号暖米色字母；其下添加较小衬线副标题 {argument name=\"标语\" default=\"Subtlety and Elegance\"}，并在副标题下方加一条细短金色横线。右上角放置一个小型白色 标志，文字为 {argument name=\"品牌 标志\" default=\"Pollo.ai\"}。强调高级材质、真实玻璃折射、金色金属高光、奢华产品摄影、精致构图、柔和散景和高端美妆广告美学。",
     "author": "MiguelMaestroIA",
-    "authorUrl": "https://x.com/MiguelMaestroIA",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MiguelMaestroIA",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MiguelMaestroIA/status/2047555836252151831",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MiguelMaestroIA/status/2047555836252151831",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case118/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case118/output.jpg"
   },
   {
     "id": "ecommerce-151-miniature-diorama-skincare-advertisement",
@@ -1167,11 +1167,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张超写实微缩场景产品广告，展示一只超大奢华护肤按压瓶，奶油/米色瓶身，抛光金色泵头，标签写着 “LUXEVEIL Skin Science – Radiance Nourishing Body Lotion”，放置在圆形平台上。身穿黄色连体工装、戴白色安全帽的微型施工工人围绕瓶身忙碌：攀爬脚手架、用滚筒给瓶身上漆、操作塔吊、在工业罐体和管道附近工作，以及卸载一辆微型平板卡车。场景包含金属脚手架结构、工业筒仓、橙色交通锥、木质路障和储存桶。整体配色为温暖米色、奶油色、金色和芥末黄。棚拍摄影风格，柔和漫射光，无阴影，干净米色背景。概念以隐喻方式表现工人正在“打造”或“建造”完美身体乳。移轴微缩美学，超精细，商业产品摄影，8K 分辨率，照片级真实 CGI 渲染。",
     "author": "Strength04_X",
-    "authorUrl": "https://x.com/Strength04_X",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Strength04_X/status/2048074514278563949",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X/status/2048074514278563949",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case151/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case151/output.jpg"
   },
   {
     "id": "ecommerce-152-traditional-chinese-art-and-porcelain-vases",
@@ -1180,11 +1180,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一条灵感来自《千里江山图》的丝巾，周围环绕王希孟的青绿山水，具有丝滑质感和柔和灯光。 一个粉彩瓷瓶，描绘杨贵妃赏花，配有牡丹和蝴蝶纹样，采用御窑风格。",
     "author": "songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2048046906585280977",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2048046906585280977",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case152/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case152/output.jpg"
   },
   {
     "id": "ecommerce-153-premium-gaming-motherboard-studio-shot",
@@ -1193,11 +1193,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高端发烧级 ATX 游戏主板产品照片，置于深色棚拍背景上，以从左下朝右上的三分之四俯视视角展示。主板以哑光黑和枪灰色为主，带锐利几何装甲板、拉丝金属纹理，以及蓝色、紫色和洋红色的细微 RGB 边缘灯效。上方中央附近展示一个外露的现代 Intel 风格 CPU 插槽，右侧有 4 条黑色 DIMM 内存插槽，顶部和左上有大型 VRM 散热装甲，下半部分有多个加固 PCIe 插槽。包含 3 个主要品牌散热装甲区域：左上高大的后置 I/O 罩，带发光 RGB 眼睛 标志 和文字 “MAXIMUS HERO”；左侧芯片组/插槽装甲件，带文字 “SUPREMEFX”；右下大型棱角芯片组盖板，带银色 ROG 风格徽章，并有一条下方文字带写着 “FOR THOSE WHO DARE”。展示精细电容、针脚接口、电源接口、右上角读数为 “88” 的 debug 显示，以及旁边一个小圆形启动按钮。超精细商业产品摄影，整块主板清晰对焦，金属反射真实，高级奢华科技美学，戏剧性低调灯光，干净黑色无缝背景，无线缆，无 CPU，无 RAM，无其他物体。",
     "author": "rojassartorio",
-    "authorUrl": "https://x.com/rojassartorio",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/rojassartorio",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/rojassartorio/status/2048019666816163867",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/rojassartorio/status/2048019666816163867",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case153/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case153/output.jpg"
   },
   {
     "id": "ecommerce-154-premium-grain-powder-ad-board",
@@ -1206,11 +1206,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\"类型\":\"中国电商产品营销长图\",\"产品\":{\"品类\":\"即冲谷物粉饮品\",\"品牌\":\"五谷磨房\",\"名称\":\"核桃芝麻黑豆粉\",\"包装\":\"哑光黑色零售盒，正面有金色中文字体和大型旋涡碗图案，内部配有独立黑色小袋\",\"净含量\":\"320g (32g×10袋)\"},\"风格\":{\"整体\":\"高级深色食品广告版式\",\"配色\":[\"黑色\",\"深棕色\",\"暖金色\",\"米色\",\"核桃棕\"],\"灯光\":\"戏剧性棚拍灯光，带亮面高光和温暖轮廓光\",\"氛围\":\"奢华、滋养、健康、诱人\"},\"布局\":{\"格式\":\"单张竖向复合长图，分为 5 个主要区域加底部分镜表\",\"分区\":[{\"标题\":\"主图/主图\",\"位置\":\"左上\",\"数量\":8,\"标签\":[\"五谷磨房\",\"核桃芝麻黑豆粉\",\"32g×10袋 独立包装\",\"五黑谷物\",\"香浓醇厚\",\"独立小袋\",\"即冲即饮\",\"产品盒和饮品杯\"]},{\"标题\":\"详情页/详情页\",\"位置\":\"右上\",\"数量\":5,\"标签\":[\"黑芝麻\",\"黑豆\",\"黑米\",\"核桃\",\"谷物粉\"]},{\"标题\":\"香浓细腻 顺滑好喝\",\"位置\":\"中右\",\"数量\":4,\"标签\":[\"一冲即饮 营养美味\",\"粉质细腻 细腻粉质\",\"浓香醇厚 浓香顺滑\",\"营养代餐 营养\"]},{\"标题\":\"冲泡方式 HOW TO MAKE\",\"位置\":\"中左偏下\",\"数量\":3,\"标签\":[\"1 倒入一袋粉(32g)\",\"2 加入200ml 热水或牛奶\",\"3 搅拌均匀 即可享用\"]},{\"标题\":\"一杯好谷物 轻松好生活\",\"位置\":\"左下\",\"数量\":4,\"标签\":[\"元气早餐\",\"办公室下午茶\",\"健身代餐\",\"睡前暖饮\"]},{\"标题\":\"独立小袋 随身携带\",\"位置\":\"右下\",\"数量\":3,\"标签\":[\"独立小袋 便携卫生\",\"锁住新鲜 防潮防氧化\",\"1袋1杯 精准份量\"]},{\"标题\":\"视频推广广告 Seedance 2.0 视频提示词 + 分镜头脚本\",\"位置\":\"底部全宽\",\"数量\":7,\"标签\":[\"镜头1 开场-产品展示\",\"镜头2 食材特写\",\"镜头3 倒粉入杯\",\"镜头4 冲泡搅拌\",\"镜头5 饮用场景\",\"镜头6 产品卖点\",\"镜头7 结尾口号\"]}],\"网格\":\"顶部区域分为左侧主图和右侧详情页；中部区域分为冲泡指南和卖点面板；下部区域分为生活场景和小袋便携区域；底部为全宽表格式分镜\"},\"场景元素\":{\"食材\":[{\"名称\":\"黑芝麻\",\"形态\":\"圆碗中的小颗黑色籽粒\"},{\"名称\":\"黑豆\",\"形态\":\"圆碗中的亮面整豆\"},{\"名称\":\"黑米\",\"形态\":\"圆碗中的深色长粒米\"},{\"名称\":\"核桃\",\"形态\":\"圆碗中的半颗核桃\"},{\"名称\":\"谷物粉\",\"形态\":\"圆碗中的浅米色粉末\"}],\"食用呈现\":{\"饮品\":\"浓稠灰棕色芝麻核桃黑豆饮，表面有顺滑旋涡\",\"杯子\":\"带把手的透明玻璃杯\",\"器具\":\"正在搅拌或放在饮品中的金属勺\"},\"辅助道具\":[\"桌面上的核桃\",\"散落的黑豆\",\"谷穗或麦秆\",\"深色桌面\",\"食材碗\",\"打开的包装，展示 5 袋可见小袋\"]},\"文字处理\":{\"标题字体\":\"粗体优雅中文展示字体，金属金色\",\"正文字体\":\"干净的中文无衬线字体，偶尔搭配英文副标题\",\"强调\":\"细金色分隔线和圆形食材框\"},\"相机与构图\":{\"产品镜头\":\"正面主视觉盒、倾斜小袋展示盒、饮品微距特写\",\"食品摄影\":\"高细节商业食品造型，浅景深，强调清晰质感\",\"宽高比\":\"竖版，约 9:16\"},\"质量\":\"超精细商业设计样机，精致电商主视觉加详情页加广告分镜，4K\"}",
     "author": "WooGabriel76263",
-    "authorUrl": "https://x.com/WooGabriel76263",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/WooGabriel76263",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/WooGabriel76263/status/2047988112094101770",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/WooGabriel76263/status/2047988112094101770",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case154/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case154/output.jpg"
   },
   {
     "id": "ecommerce-155-earbuds-ecommerce-infographic",
@@ -1219,11 +1219,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 “{argument name=\"产品\" default=\"Apple Pods Pro 3\"}” 无线耳机制作一张高冲击力电商信息图。前景：一只手拿着打开的亮面白色无线耳机充电盒，极近距离朝向镜头。盒内有两只流线型白色耳机，带黑色扬声器点缀。充电盒正面可见一个小型发光绿色 LED 指示灯。手部和充电盒带轻微微距镜头景深虚化，以增强真实感。中景：一位 {argument name=\"模特\" default=\"自信的年轻女性\"}，棕褐色肤色、棕色眼睛、深色头发扎成凌乱丸子头。自然妆容，带水润光泽。她穿着一件纯色 {argument name=\"服装\" default=\"黄色运动 T 恤\"}（无 标志）。一只白色耳机戴在她耳中。她直视镜头，表情微妙而自信。背景：干净柔和的灰色渐变棚拍背景，浅景深。画面中有对角线彩虹棱镜镜头光斑和柔和漏光。背景中漂浮着数只虚化白色耳机，用于增加深度和动感。灯光：柔和专业棚拍灯光，产品上有亮面高光，模特带细微轮廓光，高动态范围。字体排版（现代无衬线，白色）：顶部居中（模特后方）：大型粗体文字 “AIRPODS”。右上：“Apple Pods Pro 3”。左中：“Premium sound and noise cancellation”。右中：大型粗体 “30”，配 “hours of battery life”。右下：大型粗体 “1”，配 “year warranty”。风格：超写实，商业产品摄影，8k 分辨率，产品充电盒清晰对焦，浅景深，鲜活但干净的配色，高级广告美学。",
     "author": "SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2047981795552153860",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2047981795552153860",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case155/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case155/output.jpg"
   },
   {
     "id": "ecommerce-156-sustainable-t-shirt-plantable-tag-ad",
@@ -1232,11 +1232,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高端环保意识时尚广告，以精致编辑风产品照片方式拍摄。一件单独的米白色或天然奶油色圆领 T 恤挂在光滑木衣架上，衣架带黑色金属挂钩，置于茂密绿叶和攀援藤蔓组成的墙面前。衣架靠近领口处刻有一个小型极简品牌字母标志。T 恤从上半身展示到部分下摆，略微倾斜，带柔和自然褶皱和高品质棉质纹理。领口内侧印有极简品牌标志和文字 “JUGGERKNOT ORIGINALS”。领口垂挂 1 张矩形再生纸种子标签，用质朴棕色麻绳系住；标签上写着 “Tulsi” 和 “Plantable Seed Tag”，底部附近有一个小小发芽种子细节。从标签中长出 1 根真实的 Tulsi 植株茎，向上穿过 T 恤正面，带有数片新鲜绿叶，直观展示该标签可种植。在标签附近添加一个小型细字标注 “TULSI PLANTABLE SEED TAG”。右侧使用大型优雅白色衬线字体写着 {argument name=\"标题文字\" default=\"Plant it.\"}。其下放置 3 行窄体大写无衬线文案：“WEAR IT.”、“PLANT IT.” 和 “GROW WITH IT.”。左下角添加间隔大写衬线品牌名：{argument name=\"品牌名\" default=\"JUGGERKNOT ORIGINALS\"}，其上方有一条细横线。右下角添加 3 行小型大写无衬线文字：“FSC® CERTIFIED PACKAGING.”、“ZERO SYNTHETIC FIBRE” 和 “BACKED BY ZERODHA.”。使用柔和漫射日光、浅景深、沉静绿与奶油色调色、奢华可持续品牌美学、干净构图、竖版海报布局、细腻阴影和宁静有机氛围。保持设计极简、高级且照片级真实，T 恤占据左半部分，右侧字体排版保持平衡。",
     "author": "Diplomeme",
-    "authorUrl": "https://x.com/Diplomeme",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Diplomeme",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Diplomeme/status/2047957339974828092",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Diplomeme/status/2047957339974828092",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case156/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case156/output.jpg"
   },
   {
     "id": "ecommerce-157-elegant-cosmetic-poster-prompt",
@@ -1245,11 +1245,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张采用 {argument name=\"参考风格\" default=\"相似风格\"} 的图像，为 {argument name=\"产品\" default=\"口红\"} 制作产品图，需要色彩协调，并在 {argument name=\"风格\" default=\"海报风格\"} 中呈现大气美学，语言改为简体中文。",
     "author": "Adam38363368936",
-    "authorUrl": "https://x.com/Adam38363368936",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Adam38363368936",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Adam38363368936/status/2047917266361360682",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Adam38363368936/status/2047917266361360682",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case157/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case157/output.jpg"
   },
   {
     "id": "ecommerce-158-minimalist-product-ad-pure-crunch",
@@ -1258,11 +1258,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张极简产品广告，{argument name=\"产品\" default=\"炸鸡桶\"} 放置在干净的白色展台上。背景：柔和渐变（{argument name=\"背景渐变\" default=\"浅奶油色到白色\"}），干净棚拍。灯光：柔和漫射，高级 Apple 风格。字体排版（居中）： “{argument name=\"标题\" default=\"PURE CRUNCH\"}”。下方小字：“Nothing extra. Just perfection.”。风格：极致干净，编辑风极简，高端品牌感，8K。",
     "author": "Strength04_X",
-    "authorUrl": "https://x.com/Strength04_X",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Strength04_X/status/2047917220165231011",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X/status/2047917220165231011",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case158/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case158/output.jpg"
   },
   {
     "id": "ecommerce-159-pastel-blue-crocs-fashion-ad",
@@ -1271,11 +1271,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张为 {argument name=\"品牌名\" default=\"crocs\"} 制作的高端棚拍广告海报，采用单色淡蓝与白色配色，带亮面反射地面和柔和天蓝色背景。背景由单词 {argument name=\"标题文字\" default=\"CROCS\"} 主导，使用巨大的粗体白色窄体无衬线字母，几乎跨越整张图像高度。在右上角添加小型白色文字 “Designed with ChatGPT”。展示 3 位成年女性，肩长微卷浅棕到深金发，均穿宽松超大白色长袖上衣和飘逸白色阔腿裤，造型为极简时尚模特，表情放松中性。她们的脸部有意遮挡或模糊。一位模特倚靠在左侧一只巨大的直立白色洞洞鞋上，一位模特随意坐在右上方一只巨大白色洞洞鞋上，一位模特斜躺在右下地面，单臂后撑，部分坐在一个亮面蓝色球体上。包含 2 只超大白色洞洞鞋作为主视觉道具：一只在左侧垂直站立，展示鞋底和侧面轮廓；一只在中右位置倾斜放在蓝色晶体块上，展示鞋面和鞋头。两只洞洞鞋均为经典泡沫一脚蹬风格，带穿孔、厚实鞋底纹路、后跟带和圆形 标志 铆钉。中右洞洞鞋鞋面准确装饰 8 个可见鞋扣：一个蓝绿色虹彩圆形鞋扣、一朵黄心白雏菊、靠近鞋带处一个黑白圆形徽章、一个小 “CROCS” 字样鞋扣、一朵深色花、一个和平手势、一个橙色笑脸、一个白云和一朵橙色花。画面中散布准确 7 个不同尺寸的亮面漂浮或落地蓝色球体：左侧模特后方一个大球、中心附近一个中等球、左下前景一个中等球、右下模特下方一个作为座位的中等球、左上附近一个小球，以及另外 2 个融入构图的蓝色球体。在最左和最右边缘添加半透明雕塑感凝胶形态，右侧鞋下方添加棱角分明的蓝色水晶状岩石。底部居中放置白色促销文案，使用干净无衬线字体：第一行 {argument name=\"标语第 1 行\" default=\"Made for comfort, worn for confidence.\"}，第二行 {argument name=\"标语第 2 行\" default=\"Because life feels better when your feet stop complaining.\"}。其下展示 4 个极简功能图标和白色标签：“ICONIC COMFORT”、“LIGHTWEIGHT”、“EASY TO CLEAN” 和 “UNIQUELY YOU”。底部居中放置 {argument name=\"标志 文字\" default=\"crocs\"} 标志，使用粗体小写白字，并带一个小商标符号。整体风格应像高级超现实主义时尚大片，干净编辑风灯光，柔和阴影，亮面质感，轻盈构图，现代生活方式产品广告。",
     "author": "SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2047907058079650035",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2047907058079650035",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case159/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case159/output.jpg"
   },
   {
     "id": "ecommerce-160-9-panel-product-tvc-storyboard",
@@ -1284,11 +1284,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用提供的参考图，将单张休闲产品照片转化为精致的电商 TVC 分镜板，用于 {argument name=\"视频时长\" default=\"15秒\"} 广告，采用 {argument name=\"宽高比\" default=\"9:16\"} 竖版格式，以 9 宫格呈现。保持同一只蓝白青花瓷烟灰缸作为产品基础，但将其重新编排为一系列电影感广告镜头，使用温暖高级灯光、浅景深和精致生活方式桌面环境。添加深色分镜版式，包含每格中文标题和时间。准确包含 9 个场景：1) 环境建立广角镜头，包含桌面、书本、窗户和置于情境中的产品；2) 桌面上的产品中景主视觉；3) 蓝色花纹工艺图案的极近距离特写；4) 使用场景，展示一只手将香烟放入烟灰缸，可见烟雾；5) 俯视容量展示，显示内部多个烟蒂；6) 清洁场景，在水槽流水下，一只手拿着产品；7) 底部细节特写，展示底面和防滑垫；8) 夜间情绪/生活方式场景，产品放在书桌上，烟雾升起，并有环境台灯光；9) 品牌收尾画面，以产品为主视觉并配中文营销文字。添加总标题文字 “产品TVC分镜脚本(15秒 / 9:16竖屏 / 9宫格)” 和产品副标题 {argument name=\"产品名称\" default=\"青花瓷烟灰缸\"}。为 9 个面板分别添加中文场景标题和时间戳，并在每张图下方添加小段中文描述文案，风格类似专业商业拍摄清单。全程使用高级、真实的商业摄影，保持一致的产品身份、优雅中国美学和干净高端分镜展示。",
     "author": "Magncsans",
-    "authorUrl": "https://x.com/Magncsans",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Magncsans",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Magncsans/status/2047876253898903594",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Magncsans/status/2047876253898903594",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case160/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case160/output.jpg"
   },
   {
     "id": "ecommerce-89-live-stream-ui-mockup",
@@ -1297,11 +1297,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\"类型\":\"直播 UI 样机\",\"主体\":{\"描述\":\"{argument name=\\\"主播姓名\\\" default=\\\"Elon Musk\\\"} 的肖像，微笑，穿黑色 T 恤，T 恤上有白色技术示意图图形\",\"背景\":\"左侧显示带有 ‘{argument name=\\\"左侧背景 标志\\\" default=\\\"SPACEX\\\"}’ 文字的屏幕，右侧显示红色 ‘{argument name=\\\"右侧背景 标志\\\" default=\\\"Tesla T 标志\\\"}’ 和一辆深色汽车\"},\"UI 叠层\":{\"顶部栏\":{\"主播信息\":\"头像、姓名 ‘{argument name=\\\"主播姓名\\\" default=\\\"Elon Musk\\\"}’、副文案 ‘55.6万本场点赞’、红色 ‘关注’ 按钮\",\"排名徽章\":\"金币图标，带 ‘全站第1名’\",\"观众数据\":\"3 个头部观众头像，分别带 ‘12.3w’、‘8.6w’、‘5.7w’，总计 ‘68.7万’，以及 ‘X’ 关闭按钮\",\"右侧链接\":\"‘更多直播 >’、‘礼物展馆 0/24’，带蓝色 ‘经典’ 标签\"},\"中左礼物\":{\"数量\":2,\"条目\":[\"头像 ‘科技爱好者’，‘送小心心’，心形图标 x 1314\",\"头像 ‘星辰大海’，‘送火箭’，火箭图标 x 666\"]},\"左下聊天\":{\"系统消息\":\"等级 37 徽章 ‘宇宙漫游者 加入了直播间’\",\"消息数量\":7,\"消息\":[\"小火箭: 马斯克!未来可期!\",\"future: 特斯拉Model 2什么时候出?\",\"星空梦想家: SpaceX今年能上火星吗?\",\"AI探索者: Neuralink进展如何?\",\"帅气的网友: 马总好!\",\"Mars: 第一次来你的直播,超激动!\",\"用户123: 讲讲AI吧,会取代人类吗?\"]},\"右下商品卡\":{\"热卖标签\":\"橙色 ‘热卖 x 1888’\",\"图片\":\"Tesla Cybertruck\",\"标题\":\"{argument name=\\\"产品名称\\\" default=\\\"特斯拉Cybertruck 电动皮卡\\\"}\",\"价格\":\"{argument name=\\\"产品价格\\\" default=\\\"¥ 1,618,000\\\"}\",\"按钮\":\"红色 ‘抢’ 按钮\",\"浮动动画\":\"半透明爱心沿右侧边缘向上漂浮\"},\"底部栏\":{\"输入框\":\"‘说点什么...’\",\"图标\":[\"笑脸\",\"三个点\",\"购物车\",\"礼盒\",\"分享\"]}}}",
     "author": "sjbbxhz",
-    "authorUrl": "https://x.com/sjbbxhz",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sjbbxhz",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sjbbxhz/status/2045684734714380687",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sjbbxhz/status/2045684734714380687",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case89/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case89/output.jpg"
   },
   {
     "id": "ecommerce-161-premium-product-studio-shot-template",
@@ -1310,11 +1310,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张 [BRAND] 的 [PRODUCT] 高端产品棚拍图，设计应符合 [BRAND REFERENCE]。展示 [PRODUCT] 悬浮在干净的浅灰到柔白渐变背景前，具有极简高端科技美学。[PRODUCT] 应呈现流线、现代、精致和高级质感，并带有 [LIGHTING COLOR] 的细微发光点缀。使用三分之四正面角度，让两个耳罩都可见，并呈现详细的工业设计元素。在产品上干净地加入 [BRAND] 名称。灯光应柔和、可控且具有编辑风格，带清晰高光、柔和阴影，以及 [LIGHTING COLOR] 的细微彩色轮廓光或辉光。强调材质真实感和干净几何形体。保持背景整洁极简。不要额外道具，不要人物，不要文字叠加，不要包装，不要干扰元素。完全聚焦于作为主角产品的 [PRODUCT]。",
     "author": "PrometheanAIX",
-    "authorUrl": "https://x.com/PrometheanAIX",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/PrometheanAIX",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/PrometheanAIX/status/2049141839882522707",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/PrometheanAIX/status/2049141839882522707",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case161/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case161/output.jpg"
   },
   {
     "id": "ecommerce-162-premium-food-photography-template",
@@ -1323,11 +1323,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张方形 [ASPECT RATIO] 高端美食摄影图，展示一份热气腾腾的 [FOOD]，盛放在深黑色石碗或铸铁煎锅中，并置于木板上。菜品应看起来热腾腾、有光泽、辛辣且刚刚出锅，包含一口大小的焦香蛋白块、干红辣椒、绿色葱段、白洋葱、大蒜、辣椒碎，以及裹着深红油亮川式酱汁的可见花椒粒。使用略微抬高的近距离拍摄角度，带浅景深。让食物成为画面明确主角，居中且细节丰富。添加自然升起的可见蒸汽。碗周围布置细腻的餐厅风道具，例如深红色托盘、散落干辣椒、花椒粒、小酱碗，或背景中虚化的茶壶。灯光应温暖、沉静且具有编辑风格，类似高端餐厅美食拍摄。强调真实质感，让画面诱人、真实、电影感且精致。避免文字、标志、手、人物、遮挡食物的餐具、卡通风格、假塑料质感、过度对称，或过于干净的图库照片感。",
     "author": "PrometheanAIX",
-    "authorUrl": "https://x.com/PrometheanAIX",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/PrometheanAIX",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/PrometheanAIX/status/2049122713722106161",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/PrometheanAIX/status/2049122713722106161",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case162/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case162/output.jpg"
   },
   {
     "id": "ecommerce-163-burger-hero-image-plus-9-cell-ad-storyboard",
@@ -1336,11 +1336,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "提示词 1：创建一张电影感主视觉图，展示一个美食芝士汉堡放在深色石材表面上，带亮泽布里欧修面包、融化芝士、爽脆生菜、番茄、烤肉饼、酱汁、真实纹理、诱人蒸汽、温暖侧光、浅景深、高级食品商业风格，无文字/标志/水印。提示词 2：创建一张 9 格混合关键帧到转场分镜表，用于 15 秒美食汉堡广告，从空桌面过渡到食材组装，再到最终微距主视觉镜头。使用较大的 S 格和较小的 T 格、运动箭头、半透明食材位置、蒸汽、酱汁轨迹和镜头推进图标。风格：高级食品商业广告、温暖灯光、丰富质感、诱人、电影感，仅保留极少标签。无 标志，无水印。",
     "author": "Gdgtify",
-    "authorUrl": "https://x.com/Gdgtify",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gdgtify/status/2049449869530775877",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify/status/2049449869530775877",
     "category": "电商商品",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ecommerce_case163/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ecommerce_case163/output.jpg"
   },
   {
     "id": "portrait-case-1",
@@ -1349,11 +1349,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "35mm 胶片摄影，刺眼的便利店荧光灯与室外彩色霓虹招牌混合，真实胶片颗粒，高对比度，轻微偏色，电影感街头杂志风格，亲密中景。20 岁出头的性感中国女偶像，超写实、精致细腻的中国面部特征，妩媚杏仁形狐狸眼与自然双眼皮，高鼻梁，小巧尖锐的 V 形下颌线，无瑕瓷感肌肤，冷象牙色底调，并有荧光灯带来的可见镜面高光；细微真实肤质和微毛孔，自然水润妆容，脸颊柔和泛红，自然粉色光泽双唇微张，鼻梁和脸颊有淡淡自然雀斑。深棕色长发扎成凌乱高马尾，许多碎发垂落在脸颊和颈部周围。穿一件宽大的白色纽扣衬衫作为唯一上衣，上方纽扣解开，露出较深领口，并在腰间松松系起；搭配很短的黑色百褶迷你裙，赤脚穿简单白色拖鞋。深夜在 24 小时便利店玻璃门旁作诱惑而随性的倚靠姿势，身体微微弓起，一条腿弯曲、脚抵在门框上，另一条腿伸直；一只手拿着冰饮瓶，另一只手轻轻拉住迷你裙下摆。以强烈诱惑、俏皮但略显脆弱的目光直视观众，柔软小鹿眼中带着安静的诱惑，配轻微调笑的微笑。室内明亮冷色荧光灯与室外粉蓝霓虹辉光混合，玻璃门上有真实反射，背景是虚化的便利店室内货架和零食。真实 35mm 胶片调色，硬光与霓虹点缀，极清晰但柔和的皮肤渲染，自然发丝，宽大衬衫和迷你裙上有真实织物皱褶与垂坠。无塑料皮肤、无数字过度锐化、无磨皮、无瑕疵、无痣、无油光皮肤、无水印、无文字，真实深夜便利店氛围。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2045167461147042202",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2045167461147042202",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case1/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case1/output.jpg"
   },
   {
     "id": "portrait-case-2",
@@ -1362,11 +1362,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张电影感极简人像：一名孤独男子站在强烈橙色到红色渐变环境中，强剪影光，深阴影对比，反光亮面地板，对称构图，极简。",
     "author": "@iam_miharbi",
-    "authorUrl": "https://x.com/iam_miharbi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iam_miharbi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iam_miharbi/status/2045151354679665101",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iam_miharbi/status/2045151354679665101",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case2/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case2/output.jpg"
   },
   {
     "id": "portrait-case-3",
@@ -1375,11 +1375,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "35mm 胶片摄影，温暖复古的日本温泉旅馆美学，柔和木灯笼环境光与轻柔自然窗光混合，细微胶片颗粒，温和色彩偏移，高氛围感杂志风格，亲密中景。20 岁出头的美丽中国女偶像，超写实、精致细腻的中国面部特征，妩媚杏仁形狐狸眼与自然双眼皮，高鼻梁，小巧尖锐的 V 形下颌线，无瑕瓷感肌肤，暖象牙色底调，可见细微真实肤质和微毛孔。柔和自然妆容与水润光泽，脸颊淡玫瑰红，自然柔粉色双唇微张。深棕色长发松散盘成低发髻，一些凌乱碎发垂落在脸颊和颈部。穿一件宽松白色浴衣（传统日式浴袍），刻意滑下一侧肩膀，腰间松系，衣料微开，露出光滑肌肤和含蓄领口，赤脚。坐在复古温泉旅馆传统木制缘侧走廊边缘，放松而诱人的坐姿，身体微微转向镜头，一条腿弯曲、脚踩木地板，另一条腿自然垂下；一只手轻握浴衣领口，另一只手撑在身后木地板上，背部轻轻弓起以柔和强调曲线。以强烈诱惑但温柔邀请的目光直视观众，柔软小鹿眼中充满安静诱惑与温暖。温暖木质室内、纸拉门和远处虚焦蒸汽温泉，柔和轮廓光强调皮肤和织物纹理。真实复古胶片暖色调，极清晰但柔和的皮肤渲染，自然发丝，浴衣上有真实皱褶和垂坠。无塑料皮肤、无数字过度锐化、无磨皮、无瑕疵、无痣、无油光皮肤、无水印、无文字，真实 35mm 胶片日本温泉旅馆氛围。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2045092449803284923",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2045092449803284923",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case3/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case3/output.jpg"
   },
   {
     "id": "portrait-case-4",
@@ -1388,11 +1388,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "35mm 彩色胶片摄影，强烈直打机顶闪光，皮肤和衣物有镜面高光，眼睛有强烈眼神光，高对比闪光照明，真实胶片颗粒和色彩偏移，高级时尚、清新纯真的篮球场杂志风格，亲密第一人称低角度 POV 仰拍。20 岁出头的性感中国女偶像，超写实、精致细腻的中国面部特征，妩媚杏仁形狐狸眼与自然双眼皮，高鼻梁，小巧尖锐 V 形下颌线，真实无瑕瓷感肌肤，冷象牙色底调和可见闪光镜面高光，细腻肤质、微毛孔细节和闪光下自然水润光泽。清新自然运动妆，脸颊轻微自然泛红，自然粉色双唇微张，鼻梁和脸颊有淡淡自然雀斑。深棕色长发扎成俏皮高马尾，部分碎发修饰脸部并呈现真实松散发丝。穿宽松白色背心和白色高腰篮球短裤，白色及膝运动袜。黄昏户外篮球场上自然诱人地倚靠篮球架立柱，身体侧向，背部自然弓起，臀部轻轻后推以强调圆润臀部和曲线；一条腿自然向镜头前伸，另一条腿微弯以突出修长双腿；双手轻放在肩高处的篮球柱上。以强烈诱惑、俏皮又惹人怜的小鹿眼直视观众，柔软脆弱而渴望的目光与温柔调笑的微笑充满安静诱惑。强烈直打机顶闪光产生锐利镜面高光和强眼神光，背景为黄昏天空下虚化的篮球场和篮筐。高对比胶片调色，自然闪光观感，极清晰但柔和的皮肤渲染，真实 35mm 直闪美学，自然发丝，背心、短裤和袜子细节有真实织物纹理。无塑料皮肤、无数字过度锐化、无磨皮、无瑕疵、无痣、无油光皮肤、无水印、无文字，真实 35mm 直闪胶片篮球场观感 --ar 9:16",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2045052982728016131",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2045052982728016131",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case4/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case4/output.jpg"
   },
   {
     "id": "portrait-case-5",
@@ -1401,11 +1401,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一位惊艳的 18 岁中国女孩，面容年轻纯净，皮肤纹理真实，坐在卧室里舒适且略显凌乱的床上。她正用智能手机拍摄镜中自拍，捕捉自然亲密的瞬间。穿休闲灰色家居服和整洁白色中筒袜。柔和自然光（金色时刻）从侧窗洒入，营造温暖、有情绪、电影感的氛围。35mm 镜头，焦点锐利地落在镜中主体上，景深带来漂亮虚化背景（散景）。照片级真实，8K，高分辨率，影棚品质，杰作。\n负向提示词：不要多余肢体、不要畸形手、不要模糊、不要噪点、不要水印、不要文字、不要卡通/动漫风格。宽高比：3:4。",
     "author": "@Shinning1010",
-    "authorUrl": "https://x.com/Shinning1010",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shinning1010/status/2045002808903020962",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010/status/2045002808903020962",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case5/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case5/output.jpg"
   },
   {
     "id": "portrait-case-6",
@@ -1414,11 +1414,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "模拟 35mm 胶片摄影，柔和通透的日系美学，轻柔漫射自然窗光，轻微过曝，粉彩色调，低对比，柔和高光，靠近白色窗帘的极简室内环境，干净浅色墙面，自然构图，平视视角，略近的全身取景（大腿中部到头部）。年轻东亚女性，自然极简妆容，柔和真实皮肤纹理，略凌乱的深色长发，宽大白色纽扣衬衫，浅色休闲短裤，赤脚，简单放松的造型。自然站立，姿态放松，手臂松垂在两侧或轻放身后，面向镜头，温柔浅笑，安静克制。重点表现光线、空气感和宁静日常情绪，柔和胶片颗粒，梦幻而低调的氛围 --ar 9:16",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046115431144902732",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046115431144902732",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case6/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case6/output.jpg"
   },
   {
     "id": "portrait-case-7",
@@ -1427,11 +1427,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "奢华魅惑美妆人像：美丽黑人女性，年轻活力，奶油香草色感，丝滑直发，桃花心木红，含蓄自信，纹理织物，蓝宝石色，极简珠宝，海边微风，镜头光晕效果，怀旧，电影镜头，对称构图，柔焦，高级时尚摄影，单色调，水润妆效，神秘张力，层次化元素。",
     "author": "@patrickassale",
-    "authorUrl": "https://x.com/patrickassale",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/patrickassale",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/patrickassale/status/2044581766309060765",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/patrickassale/status/2044581766309060765",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case7/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case7/output.jpg"
   },
   {
     "id": "portrait-case-8",
@@ -1440,11 +1440,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张竖版手机截图风格的图片，整体比例接近 9:16。画面中心偏上是一位真人 coser，扮演（角色名称）的二次元角色。人物为写实风格，但五官略带动漫感，皮肤细腻，眼睛稍大，表情温柔地看向镜头，坐在室内的休闲场景中，例如咖啡厅或酒吧吧台前，背景有符合场景的道具。画面最上方加入手机系统状态栏 UI，包括时间、电量、信号、网络等图标，让整张图看起来像手机截图。画面底部叠加一块宽大的半透明 galgame 风格对话框，对话框左侧放一个与画面人物对应的动漫或 Q 版头像；对话框右侧排版文字：第一行用较大字体显示与前面相同的角色名字，下面一到两行显示一段适合这个角色人设的、温柔治愈风格的简体中文台词，由你自动创作。再在对话框下方加一条操作栏，仿照 galgame UI。整体风格高清、细节丰富、光线柔和、二次元与真人写真自然融合。",
     "author": "@Zoulinshen",
-    "authorUrl": "https://x.com/Zoulinshen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Zoulinshen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Zoulinshen/status/2045082518089810073",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Zoulinshen/status/2045082518089810073",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case8/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case8/output.jpg"
   },
   {
     "id": "portrait-case-9",
@@ -1453,11 +1453,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "该画面为中近景，采用平视镜头，聚焦于一位年轻女性。她以七分身镜头呈现，身体坐姿略带倾斜，臀部向后撅起，双腿自然交叠，左腿在前，右腿在后，膝盖微屈。她将上半身向右后方扭转，头部则转向镜头方向，形成一个经典的“回眸”姿态，目光直视镜头，眼神清澈而略带一丝俏皮。她的发型是蓬松的棕色齐肩短发，刘海自然垂落，发尾微卷，妆容清淡自然，仅在眼部有轻微眼线勾勒，唇色为自然裸粉。画面整体采用自然日光滤镜，光线从画面左上方斜射入，形成柔和的逆光轮廓，面部和身体右侧被温暖的金色光线照亮，左侧则形成自然的阴影过渡，增强了立体感。灯光效果是明亮的自然光，带有轻微的镜头眩光，营造出午后阳光的氛围。拍摄角度为平视，构图上，人物主体位于画面中偏右位置，背景中的斑马线与道路线条形成自然的引导线，将视线引向人物。背景为城市街道，包含道路、斑马线、绿化带和远处的车辆，背景被适度虚化，但依然可辨识出树木、护栏和停放的电动车等元素，构图上利用了三分法，人物位于右侧三分之一处，增强了画面的平衡感。主体穿着一件军绿色迷彩图案的连帽卫衣，下身搭配黑色短裤，脚穿白色高帮运动鞋配白色中筒袜。背包为黑色，带有橙黄色装饰条纹和一个橙色毛绒挂件，材质为帆布和皮革拼接。整体风格为街头休闲风，肢体语言放松自然，表情略带好奇与俏皮，整体呈现出一种随性、青春、充满活力的都市少女形象。",
     "author": "@Tz_2022",
-    "authorUrl": "https://x.com/Tz_2022",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Tz_2022",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Tz_2022/status/2045892003775361198",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Tz_2022/status/2045892003775361198",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case9/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case9/output.jpg"
   },
   {
     "id": "portrait-case-10",
@@ -1466,11 +1466,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "Sam Altman 在无人的滑板公园里踩着滑板。",
     "author": "@Malek1173989",
-    "authorUrl": "https://x.com/Malek1173989",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Malek1173989",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Malek1173989/status/2045836887684694395",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Malek1173989/status/2045836887684694395",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case10/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case10/output.jpg"
   },
   {
     "id": "portrait-case-11",
@@ -1479,11 +1479,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版，韩国偶像人像写真，3x3 九宫格（九帧），所有图像中为同一人，面部特征和造型保持一致，柔和黑柔滤镜效果，降低对比度，高光泛光，光源周围有细微辉光。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046268941941850575",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046268941941850575",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case11/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case11/output.jpg"
   },
   {
     "id": "portrait-case-12",
@@ -1492,11 +1492,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "手机照片，老 CCD 相机美学，强烈闪光，颗粒感，昏暗凌乱的室内照明，随手抓拍感，轻微运动模糊，年轻韩国女偶像，柔和纯真的神情。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046190539213885806",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046190539213885806",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case12/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case12/output.jpg"
   },
   {
     "id": "portrait-case-13",
@@ -1505,11 +1505,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版 —— 一个 3x3 九宫格拼贴（九张图），组成一组韩国偶像人像写真系列。每一帧都是同一位年轻韩国女偶像，在九张照片中保持面部特征、比例、发型和身份 100% 一致。自然、超写实皮肤纹理，不修饰、不磨皮；干净偶像风极简妆容，柔和光泽，细微瑕疵。发型：浓密深色长发，略微凌乱，九帧中保持一致（自然披散，轻微动态）。服装：统一的韩国偶像写真造型 —— 白衬衫 + 短下装（或简单中性色服装），年轻、干净、略休闲但有造型感，所有帧穿同一套服装。场景：极简影棚或简单室内环境（素色墙、柔和窗光、干净背景），聚焦主体而非环境。光线：柔和漫射自然光，轻柔高光，低对比，略通透色调，细微胶片柔感。相机风格：亲密人像摄影，略手持感，带有细微不完美（轻微颗粒、运动帧轻微模糊、不完美构图）。画面拆分（3x3）：上排：左上自然站立，略看向别处，表情放松；上中面向镜头，随性的动态瞬间（头发或身体轻微运动）；右上轻微侧角度，柔和目光，自然抓拍感。中排：左中略向上看，柔和沉思表情；正中近距离人像，直接眼神接触，温柔偶像笑容；右中身体微转，动态抓拍帧。下排：左下坐着或随意倚靠，姿态放松；下中背部部分转开，回头看向镜头；右下靠近画面站立，表情略俏皮或柔和。情绪：韩国偶像写真集 / photocard 美学，亲密、柔软、自然、日常魅力。质量：超写实，8K 细节，细微模拟胶片颗粒，自然瑕疵，柔和梦幻色调。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046151898621993364",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046151898621993364",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case13/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case13/output.jpg"
   },
   {
     "id": "portrait-case-14",
@@ -1518,11 +1518,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版 —— 杂志人像，单人主体。柔和黑柔滤镜，细微雾感，轻柔高光泛光，低饱和色调。极简室内空间，干净背景，略带纹理。年轻韩国女性，极简妆容，自然皮肤纹理。服装：合身罗纹针织上衣或柔软吊带外搭宽松衬衫，搭配高腰短裤或半裙；面料略贴合身体线条，柔软自然，无暴露元素。发型：略凌乱，自然蓬松。姿势：坐在地板上，一条腿弯曲，另一条腿放松，身体微倾，肩线不对齐，头部倾斜。构图：主体略偏离中心，保留负空间。表情：平静、略疏离，自然唇形。光线：柔和侧光，阴影平滑衰减。情绪：低调、安静，通过自然身体线条呈现含蓄性感，放松而不摆拍。质量：细腻颗粒，轻微柔化，真实观感。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046434670724907395",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046434670724907395",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case14/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case14/output.jpg"
   },
   {
     "id": "portrait-case-15",
@@ -1531,11 +1531,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版 —— 日式 Fuji 胶片风格人像，单人主体。Fujifilm 模拟美学（Pro 400H / Superia 感），柔和粉彩色调，轻微绿-洋红偏移，低对比，柔和高光过渡，细腻胶片颗粒，细微光晕，轻微暗角。明亮自然日光，窗户漫射阳光，柔和阴影，通透氛围。年轻日本女偶像，自然极简妆容，清新发光的肌肤，真实纹理，轻微瑕疵。服装：日本校服（水手服或西装制服），造型整洁，不暴露，年轻干净。头发：自然深色头发，直发或柔顺飘动，有少量碎发。姿势：正面或轻微朝向镜头，放松姿态；一只手轻轻拿着草莓靠近嘴唇，像即将咬下一口的瞬间；肩膀放松，身体曲线自然含蓄。表情：柔和俏皮的目光，浅笑或自然闭合双唇，与镜头温柔眼神接触。场景：靠窗极简室内或简单户外角落，干净背景，日常氛围。构图：略偏中心的亲密距离，抓拍感。情绪：清新、青春、甜美的日常瞬间，低调魅力。质量：超写实，模拟胶片观感，自然瑕疵，柔和梦幻完成度。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046483268019884384",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046483268019884384",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case15/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case15/output.jpg"
   },
   {
     "id": "portrait-case-16",
@@ -1544,11 +1544,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版 —— 韩国偶像人像摄影，单人主体。柔和黑柔滤镜效果，降低对比，轻柔高光泛光，细微辉光，柔和扩散，黑位略褪。靠近窗户的极简室内场景，白色窗帘，干净浅色背景。年轻韩国女偶像，自然极简妆容，水润真实皮肤纹理，细微瑕疵。服装：宽大白色纽扣衬衫 + 短下装，略宽松，柔软休闲造型，无暴露元素。头发：深色长发，略凌乱，自然蓬松，柔顺飘动。姿势：放松站立或轻微倚靠，身体微微侧向，一条腿略向前，肩膀放松；一只手轻触衣领或停在领口附近，另一只手自然放松；身体曲线温和不夸张。表情：柔和可爱的笑容，略俏皮的眼神，直视或略看向镜头外。相机：近到半身取景，平视，亲密距离，轻微手持感。光线：漫射自然日光，柔和阴影，光线轻柔包裹脸部和身体。情绪：可爱而含蓄性感，亲密、日常柔软、安静浪漫。质量：超写实，细腻胶片颗粒，边缘轻微柔化，自然瑕疵，梦幻低调色调。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046518189509734903",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046518189509734903",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case16/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case16/output.jpg"
   },
   {
     "id": "portrait-case-17",
@@ -1557,11 +1557,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 竖版 —— 日式 Fuji 胶片风格情侣人像，两个主体。Fujifilm 模拟美学（Pro 400H / Superia 感），柔和粉彩色调，轻微绿-洋红偏移，低对比，柔和高光过渡，细腻胶片颗粒，细微光晕。明亮自然日光，窗户漫射阳光，柔和阴影，通透氛围。年轻日本情侣，自然极简妆容，真实皮肤纹理，轻微瑕疵。女性服装：宽大纽扣衬衫配宽松短裤，放松合身，柔软休闲造型。男性服装：简单 T 恤或浅色衬衫，干净低调。头发：两人都自然、略凌乱。姿势：亲密近距离 —— 坐着或站得很近；女孩轻轻靠向他，一只手轻放在他的肩膀或胸口；男孩也微微靠近，两人脸部接近，几乎触碰，捕捉接吻前一刻。表情：柔和微笑或温柔看向彼此，放松自然，情感连接清晰可见。相机：近景取景（腰部以上），平视，亲密距离，轻微手持感。场景：靠窗极简室内，浅色窗帘，干净柔和背景。光线：漫射日光，轻柔高光泛光，柔和阴影过渡。情绪：温暖、浪漫、亲密的日常瞬间，自然爱意。质量：超写实，模拟胶片观感，细腻颗粒，轻微柔化，自然瑕疵。",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2046502288102170757",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2046502288102170757",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case17/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case17/output.jpg"
   },
   {
     "id": "portrait-case-18",
@@ -1570,11 +1570,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据你对我的认知 给我生成一个“你认识的我”的 图片",
     "author": "@80vul",
-    "authorUrl": "https://x.com/80vul",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/80vul",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/80vul/status/2046218165961753047",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/80vul/status/2046218165961753047",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case18/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case18/output.jpg"
   },
   {
     "id": "portrait-case-19",
@@ -1583,11 +1583,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建最真实的复古报纸头版设计，主角作为核心内容。版式应采用真实印刷报纸风格，并具有电影感黑白美学。\n主照片应突出放置在中心并加框，就像文章标题中的图片。照片中的主体应保持不变，在自然光和略增强对比度下清晰可辨，以匹配醒目的编辑风格。\n在顶部创建醒目大胆的标题（创作一个符合照片气质的独特标题——可以浪漫、神秘、幽默或戏剧化）。在其下方添加较小副标题，看起来像真实报纸说明文字。\n添加真实报纸元素：小字号分栏文字（类似 lorem ipsum 风格，但排成真实新闻版式）；顶部为虚构刊名（例如 The Daily Prompts、AI Times 或类似名称——根据图片创意构思）；日期、期号和地点；装饰线、分隔线和复古字体排印；围绕主图的小型附加文章或说明；可选印章、涂鸦或编辑备注以增加个性。\n风格：黑白或略褪色单色纸张，细腻纸张纹理、颗粒和油墨瑕疵，小阴影和折痕模拟真实印刷纸，干净但略磨损的复古报纸美学。\n情绪：让设计有个性、表现力和情节感，仿佛这个情节属于主文章的一部分。\n宽高比：4:5 或 1:1。高细节、超写实的编辑摄影与印刷设计混合效果。",
     "author": "@Naiknelofar788",
-    "authorUrl": "https://x.com/Naiknelofar788",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Naiknelofar788",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Naiknelofar788/status/2047207812800147647",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Naiknelofar788/status/2047207812800147647",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case70/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case70/output.jpg"
   },
   {
     "id": "portrait-case-20",
@@ -1596,11 +1596,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张杂志专题文章 [旅行] 指南页面，采用可爱、信息密集的写真书风格杂志专题版式。添加所有必要板块、提示、推荐和信息。如有需要，为各板块和推荐添加照片。将附加人物精准放置在 [城市, 国家] 的位置。自然融合附加人物，使其看起来像正在观光。请理解这是一个关键且信息丰富的页面，会显著影响游客数量，文字准确性很重要。充分利用整张 [9:16] 页面。负向提示词：坐标文字 @swiat_ai @ProfitAII",
     "author": "@andis13",
-    "authorUrl": "https://x.com/andis13",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/andis13",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/andis13/status/2047204384811921764",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/andis13/status/2047204384811921764",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case71/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case71/output.jpg"
   },
   {
     "id": "portrait-case-21",
@@ -1609,11 +1609,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "分析这张照片，并给我一个可以复刻它的详细 JSON 提示词。拆解照片的调色以及每一种精确颜色。\n\n（使用 Opus，不要用 Sonnet。Opus 的视觉分析更强，能写出更详细的 JSON）\n\n把那个 JSON 粘贴到 ChatGPT。上传你的产品图并提示：使用这个 JSON 作为参考，生成一个人拿着我的产品。把生成的照片保存为你的角色参考。\n\n之后每次生成都附上它，以保持面部一致性。现在你就拥有了一个可跨任何产品使用的一致 UGC 模特。\n\nJSON 控制光线和调色。GPT image-2 处理角色。你控制产品摆放。\n\nAI 照片最明显的问题是颜色扁平和颗粒感。这种方法能消除两者。设置只需 5 分钟。之后可无限变化。",
     "author": "@pavellaslov",
-    "authorUrl": "https://x.com/pavellaslov",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/pavellaslov",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/pavellaslov/status/2047182214304055339",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/pavellaslov/status/2047182214304055339",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case77/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case77/output.jpg"
   },
   {
     "id": "portrait-case-22",
@@ -1622,11 +1622,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "CALMING GREEN TEA Film Kit 正面展示，打开的盒子里有柔和鼠尾草绿色胶片袋和半透明安瓶，哑光银色瓶盖；产品居中摆放，品牌文字清晰：CALMING GREEN TEA -- 7 Days to Soothed Skin。粉彩绿色背景，带植物图形点缀，三个极简图标（叶子、波浪、平衡）漂浮在产品周围以强调功效。摄影感、超高细节、超写实、逼真、8k、高细节、柔和专业照明。",
     "author": "@ZaraIrahh",
-    "authorUrl": "https://x.com/ZaraIrahh",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ZaraIrahh/status/2047180061657452601",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh/status/2047180061657452601",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case78/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case78/output.jpg"
   },
   {
     "id": "portrait-case-23",
@@ -1635,11 +1635,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "超写实产品摄影：一支浓郁草莓软冰淇淋装在酥脆华夫筒中，采用干净、现代、高级美学造型。软冰淇淋呈自然鲜亮粉色，浓厚奶油质感，塑造成顺滑旋涡，顶端柔和卷起，轻撒细腻草莓粉或小果粒，显得新鲜诱人。蛋筒带有质朴酥脆纹理和略不规则边缘，呈手作感。\n背景为柔和米色，自然阳光投下细微叶影，营造平静、有机的氛围。前景包含柔和虚化的绿植以增加深度。构图极简、平衡，并有效使用负空间，类似高端美国食品品牌广告。\n左侧加入现代英文排版，采用干净优雅布局（不要竖排）。\n主标题：Sweet Strawberry Bliss.\n辅助文案（小号文字）：Made with real strawberries. Smooth. Creamy. Irresistible.\n添加一个显示价格的小圆形徽章：$5.80.\n光线：柔和自然日光，温暖高光，浅景深，高端商业食品摄影风格。\n情绪：新鲜、高级、现代且诱人 —— 符合高端美国甜品品牌调性。",
     "author": "@ZaraIrahh",
-    "authorUrl": "https://x.com/ZaraIrahh",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ZaraIrahh/status/2047179916161212542",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh/status/2047179916161212542",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case79/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case79/output.jpg"
   },
   {
     "id": "portrait-case-24",
@@ -1648,11 +1648,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张超写实 UI/UX 样机，显示在一台纤薄现代笔记本电脑上，电脑放在极简木桌上，配柔和自然日光。屏幕展示干净的 SaaS 仪表盘，优雅字体、玻璃拟态卡片、平滑渐变、细微投影和间距整齐的组件。可见图表、分析面板、侧边栏导航和微交互。真实 macOS 风格窗口框，屏幕上有柔和反射，浅景深，舒适工作空间氛围，以照片级产品摄影风格拍摄，超高细节。",
     "author": "@ZaraIrahh",
-    "authorUrl": "https://x.com/ZaraIrahh",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ZaraIrahh/status/2047179669011616172",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh/status/2047179669011616172",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case80/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case80/output.jpg"
   },
   {
     "id": "portrait-case-25",
@@ -1661,11 +1661,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "超写实电影感 DSLR 照片：一名 18 岁英俊年轻男性，身材瘦削纤细，精瘦体型，窄肩窄腰，自信站在一辆蓝色 2017 Ford Mustang GT Convertible 前，车顶为醒目的红色软顶；从高角度航拍视角拍摄，完全像豪华车道写真。脸部与参考图保持 100% 一致，包括精确面部结构、自然皮肤纹理、真实毛孔、真实表情，不美化、不改脸。相同的现代纹理侧分蓬松 quiff 发型，顶部自然厚重蓬松，深侧向流动，凌乱但可控的纹理，柔和哑光质感，可见自然发丝，侧边柔和过渡。主体站在 Mustang GT 前保险杠附近居中，双手插在连帽衫口袋，肩膀放松，站姿挺直，头部略向上看向相机，表情自信平静。穿宽大高级黑色连帽衫，真实棉质纹理、自然褶皱、垂落抽绳；深色水洗黑牛仔裤，柔和皱褶和堆叠裤脚；干净白色运动鞋，真实皮革纹理和鞋底细节；黑色细长矩形太阳镜。汽车必须是细节准确的 2017 Ford Mustang GT Convertible，金属电光蓝车漆，发动机盖有亮面反射，可见 Mustang 小马格栅徽标，攻击性大灯，肌肉感发动机盖造型，空气动力学前保险杠，黑色合金轮毂，高级红色敞篷织物车顶，真实挡风玻璃反射，细节侧镜，真实轮胎胎纹，展厅级洁净。场景设置在高档别墅车道，浅米色六边形石材铺地，左侧有弧形边界和新鲜绿草，热带棕榈叶从画面顶部角落伸入，低调奢华户外氛围。柔和自然日光，漫射午后照明，车和身体下方有真实阴影，车漆有柔和反射，电影感高级调色，自然对比，浅景深分离主体同时保持环境清晰。35mm 镜头，竖版构图，全身取景，细节清晰，超写实 DSLR 质量，零 AI 感，自然皮肤渲染，真实发丝、织物纹理、石材表面纹理，奢华生活方式情绪。底部左侧加入签名风格文字 AmanZaid。负向提示词：脸变了、不同身份、美化脸、编辑过的脸、光滑塑料皮肤、假皮肤光泽、错误发型、短发、渐变寸头、寸头、凌乱畸形头发、女性特征、肌肉身材、肥胖身材、宽肩、糟糕解剖、长脖子、短腿、多余手指、缺失手指、变异手、扭曲手臂、破损姿态、斗鸡眼、懒眼、糟糕太阳镜、脸模糊、低分辨率、像素化、噪点、过曝、欠曝、硬阴影、不真实反射、假车形、错误车型、损坏汽车、多余车轮、扭曲 Mustang 标志、不正确比例、糟糕铺地纹理、背景伪影、重复物体、水印、标志 错误、文字伪影、脚被裁切、车被裁切、不自然透视、CGI 渲染、卡通风格、绘画、AI 伪影、过饱和颜色、运动模糊、镜头畸变 1664x2080，宽高比 4:5",
     "author": "@harboriis",
-    "authorUrl": "https://x.com/harboriis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/harboriis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/harboriis/status/2047175250761433416",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/harboriis/status/2047175250761433416",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case81/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case81/output.jpg"
   },
   {
     "id": "portrait-case-26",
@@ -1674,11 +1674,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张年轻女性的随手自拍，她有齐肩蜂蜜金发并带更浅挑染，绿灰色眼睛，红润脸颊，自然伪素颜妆。她穿浅灰色连帽衫，略看向镜头外，表情放松。背景是舒适卧室，粉色墙上挂着温暖小串灯，未整理的床上铺着棕褐色床品，旁边有一张小白桌和摞起的书。柔和温暖环境光。照片级真实，随性、亲密的感觉。",
     "author": "@charliejhills",
-    "authorUrl": "https://x.com/charliejhills",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/charliejhills",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/charliejhills/status/2047969988368314526",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/charliejhills/status/2047969988368314526",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case26/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case26/output.jpg"
   },
   {
     "id": "portrait-case-27",
@@ -1687,11 +1687,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张随性、杂志封面级纪实照片：一名卷发年轻音乐人随意背着磨旧吉他箱，在晚上 11 点走出经典市中心 bodega。光线具有复杂混合色温：明亮霓虹 “OPEN” 标牌在他脸上投下强烈温暖红光，身后一盏黄色路灯提供醒目的逆光。图像完美模拟 Canon AE-1 搭配 50mm f/1.4 镜头全开拍摄的 35mm 胶片效果，浅景深让背景漂亮虚化。准确呈现 CineStill 800T 胶片美学，尤其是从霓虹光源向外扩散的独特柔和红色光晕、钨丝白平衡，以及暗部略偏绿的情绪阴影。电影感夜间摄影，照片级真实，高细节。",
     "author": "@commanderdgr8",
-    "authorUrl": "https://x.com/commanderdgr8",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/commanderdgr8",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/commanderdgr8/status/2047934886124867684",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/commanderdgr8/status/2047934886124867684",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case27/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case27/output.jpg"
   },
   {
     "id": "portrait-case-28",
@@ -1700,11 +1700,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张照片级真实的旅行纪实图像：正午旧德里一家小甜品店店面。门上方手绘招牌写着 “मिठाई की दुकान”，使用大号粗体黄色手绘天城文，背景为深红色，下方用较小罗马字母写着 “SWEET SHOP”。真实手绘纹理，轻微磨损，自然阴影。文字比例真实。拼写和字符准确。画面中不要额外招牌，不要水印。",
     "author": "@commanderdgr8",
-    "authorUrl": "https://x.com/commanderdgr8",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/commanderdgr8",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/commanderdgr8/status/2047889839123521635",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/commanderdgr8/status/2047889839123521635",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case28/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case28/output.jpg"
   },
   {
     "id": "portrait-case-29",
@@ -1713,11 +1713,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张电影感侧脸人像：一名粗犷男子扎着发髻、留浓密胡须，戴圆形深色太阳镜和有纹理的皮夹克。他的皮肤细节丰富，略显风霜。背景是未来科幻界面，充满发光橙红数据流、星图、天体导航图、网格和全息 UI 元素。火焰粒子效果和余烬般能量在他周围旋转，营造宇宙级高科技氛围。深色调色板，强对比，戏剧性照明，超高细节，锐利对焦，8K，赛博朋克美学，电影感构图，景深。",
     "author": "@iamsofiaijaz",
-    "authorUrl": "https://x.com/iamsofiaijaz",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iamsofiaijaz/status/2047882171336253928",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz/status/2047882171336253928",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case29/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case29/output.jpg"
   },
   {
     "id": "portrait-case-30",
@@ -1726,11 +1726,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一名写实年轻女性在傍晚柔和光线的卧室里随意坐着。\n\n她把手机拿得离脸很近，像是在录制私人视频或语音留言。\n\n取景紧凑且略不完美。\n\n表情：若有所思，略害羞，自然。\n\n极简妆容，自然皮肤纹理，放松服装。\n\n光线：窗外逐渐消退的温暖自然光，柔和阴影。\n\n环境：简单卧室，平静且有生活痕迹。\n\n风格：超写实，看起来像真实手机录制，略有颗粒，不要电影感。",
     "author": "@ChillaiKalan__",
-    "authorUrl": "https://x.com/ChillaiKalan__",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ChillaiKalan__",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ChillaiKalan__/status/2047862141894681076",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ChillaiKalan__/status/2047862141894681076",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case30/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case30/output.jpg"
   },
   {
     "id": "portrait-case-31",
@@ -1739,11 +1739,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "（被写体）采用超级糟糕的儿童画风格、幼儿艺术、涂鸦、白色背景上的凌乱蜡笔线条，完全缺乏技巧，糟糕构图，混乱颜色，几乎难以辨认的形状，非常原始、诚实的艺术，纯粹天真，未经打磨的风格，4:3\n负向：\n好看的绘画、漂亮线条、清晰形状、整洁、漂亮、顺滑、写实、有才华的艺术、连贯构图、艺术风格、专业、熟练、杰作、美丽、细节丰富",
     "author": "@akakageAI",
-    "authorUrl": "https://x.com/akakageAI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/akakageAI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/akakageAI/status/2047812983389356276",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/akakageAI/status/2047812983389356276",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case31/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case31/output.jpg"
   },
   {
     "id": "portrait-case-82",
@@ -1752,11 +1752,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张修复后的复古家庭快照，在室内柔和自然光中拍摄，显示一位 {argument name=\"adult 主体\" default=\"年轻母亲\"} 坐着，把一位 {argument name=\"child 主体\" default=\"幼儿\"} 抱在腿上，构成近距离居中的腰部以上人像。成人有短而柔软卷曲的赤褐色头发，呈 1960s 灵感的蓬松波波头，穿无袖黑色连衣裙和细金项链，双臂保护性地环抱孩子。孩子有细软浅金发，穿纯白长袖服装。用温暖怀旧色偏、轻柔胶片柔感、细微颗粒，以及一张被仔细修复的旧印刷照片质感来构图。让他们位于奶油色窗帘前，窗帘上有小棕色泰迪熊图案，顶部背景可见柔和虚化的室内窗框。保留真实肤色、自然姿态和亲密家庭照片感，仿佛一张受损老照片经过专业重新想象与修复。方形裁切，居中构图，浅景深，真实模拟照片纹理，无现代造型，无文字。",
     "author": "@gdb",
-    "authorUrl": "https://x.com/gdb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/gdb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/gdb/status/2048184797374325031",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/gdb/status/2048184797374325031",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case82/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case82/output.jpg"
   },
   {
     "id": "portrait-case-83",
@@ -1765,11 +1765,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张严重受损的老家庭快照，褪色黑白并带轻微棕褐色调，呈现为正面扫描的磨损实体照片。图像描绘一名坐着的女性在室内把小孩抱在腿上，两人居中构成简单人像构图。女性有短而深色波浪发，穿深色无袖连衣裙或背带裙，里面搭浅色短袖上衣。孩子像幼儿，头发很短且浅色，穿浅色服装，靠着女人胸前和手臂面向镜头。背后是带小花或叶子图案的窗帘，上方有暗色窗区，顶部中央附近可见浅色竖向窗框。印刷品严重劣化：大量划痕、折痕、乳剂损伤、污渍、斑块和剥落覆盖整个表面，底部三分之一尤其有严重白色磨损和细节缺失，画面各处散布裂纹。保持 20 世纪中叶 民间照片的真实观感，低对比、柔焦，并有明显老化纸张纹理。只在女性脸上添加一个矩形模糊遮挡块，孩子的脸保持可见但褪色。无文字，无边框，只让这张破损档案照片填满画面。",
     "author": "@gdb",
-    "authorUrl": "https://x.com/gdb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/gdb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/gdb/status/2048184797374325031",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/gdb/status/2048184797374325031",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case83/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case83/output.jpg"
   },
   {
     "id": "portrait-case-84",
@@ -1778,11 +1778,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张黑白手绘家庭人像，采用有纹理白纸上的细致钢笔墨线交叉排线风格，展示 4 个人紧密坐在一起的随性抓拍构图。左侧，一名成年男子戴着反戴深色棒球帽和深色 T 恤，身体探入画面，胸前斜挎包可见拉链细节。右侧，一名卷发女性把头发松松盘成高发髻，穿浅色 T 恤，上面有大号学院风字母，文字为 {argument name=\"上衣文字\" default=\"CITY\"}。中间是 2 名年幼儿童靠坐在一起，两人都有短卷发，穿着印满草莓图案的同款浅色 T 恤。左边孩子向内倾斜，一只手臂横过另一个孩子；右边孩子头部微微上仰。成年人保护性地围绕孩子，营造温暖家庭快照感。将整张图渲染为单色蚀刻插画，密集细线排线、雕版阴影、清晰轮廓线，既真实又有艺术肖像感；无色彩，除朴素浅色纸张纹理外无背景场景，竖版人像裁切。",
     "author": "@gdb",
-    "authorUrl": "https://x.com/gdb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/gdb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/gdb/status/2048184698195870102",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/gdb/status/2048184698195870102",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case84/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case84/output.jpg"
   },
   {
     "id": "portrait-case-85",
@@ -1791,11 +1791,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张居中的黑白复古雕版人像：一名留胡须男子穿连帽卫衣并戴上帽子，帽子下方可见反戴 按扣棒球帽 棒球帽。只显示上半身和头部，背景为朴素米白色纸张并带细微纹理。以细致钢笔墨线蚀刻风格渲染，包含密集交叉排线、细平行线和旧书插图式阴影。人物正面朝前，姿态平静中性。帽子在前额区域有可见按扣带，向后梳的头发露出其上，浓密全胡须延伸到脸下方。连帽衫有两根抽绳垂在胸前。保持构图对称并像经典雕版半身像那样紧凑取景，无色彩、无现代图形元素、无背景物体。",
     "author": "@gdb",
-    "authorUrl": "https://x.com/gdb",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/gdb",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/gdb/status/2048184698195870102",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/gdb/status/2048184698195870102",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case85/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case85/output.jpg"
   },
   {
     "id": "portrait-case-86",
@@ -1804,11 +1804,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张电影感柔焦人像：从背后和轻微侧面拍摄一名女性，竖版构图，上半身以上取景。她有 {argument name=\"发色\" default=\"深棕色\"} 头发，扎成松散凌乱的盘发，细碎发丝捕捉光线。她的脸大多被姿势和头发遮住，只露出一小部分脸颊。她穿一件 {argument name=\"连衣裙颜色\" default=\"深红色\"} 无袖连衣裙，露背或低侧开口，强调裸露肩膀和上背部。一只手优雅抬到颈部或肩膀附近，手指放松。使用强烈温暖逆光和轮廓光，在头发和皮肤周围形成金色发光高光，梦幻镜头光晕，虚化背景中有大圆形 散景。图像应感觉亲密、优雅、略带性感，像高端时尚或美妆杂志大片；浅景深，奶油般虚化，温暖琥珀与玫瑰色调，柔和电影辉光。",
     "author": "@ToroJushiAi",
-    "authorUrl": "https://x.com/ToroJushiAi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ToroJushiAi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ToroJushiAi/status/2048139425465467248",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ToroJushiAi/status/2048139425465467248",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case86/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case86/output.jpg"
   },
   {
     "id": "portrait-case-87",
@@ -1817,11 +1817,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "高质量 3D CGI 渲染：{argument name=\"角色\" default=\"[角色]\"}，迷人卡通风格，人像构图展示头部和肩部。高度风格化的漫画形象，夸张且富有表现力的特征，既俏皮又幽默。光滑精致的渲染，干净材质，柔和环境光产生轻柔阴影。动态相机角度与时髦透视。极简明亮的 {argument name=\"背景颜色\" default=\"[color]\"} 背景，让角色突出。专业 类似 Pixar 的 品质，亮面完成度，愉快情绪。",
     "author": "@Inshrah_ali_",
-    "authorUrl": "https://x.com/Inshrah_ali_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Inshrah_ali_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Inshrah_ali_/status/2048121503367995753",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Inshrah_ali_/status/2048121503367995753",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case87/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case87/output.jpg"
   },
   {
     "id": "portrait-case-88",
@@ -1830,11 +1830,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "竖版 2:3 格式。{argument name=\"主体\" default=\"年轻女性\"} 头发凌乱盘起，坐在现代木质楼梯上。穿着 {argument name=\"连衣裙\" default=\"闪亮银色挂脖亮片连衣裙\"}，搭配银色高跟凉鞋，双腿交叉。银色心形耳环。每只脚踝各戴一只紫红色手镯。表情撩人，双唇微张。背景为虚化的竖向木条和黑色金属栏杆。不要改变脸。",
     "author": "@XSydneyFan",
-    "authorUrl": "https://x.com/XSydneyFan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/XSydneyFan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/XSydneyFan/status/2048114180906217566",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/XSydneyFan/status/2048114180906217566",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case88/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case88/output.jpg"
   },
   {
     "id": "portrait-case-89",
@@ -1843,11 +1843,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用 REFERENCE_0 作为主体基础，将休闲沙漠快照变换为全身奢华时尚影棚人像。把牛仔夹克、背心和短裤替换为一条合身无肩带迷你鸡尾酒裙，颜色为 {argument name=\"连衣裙颜色\" default=\"粉蓝色\"}，带华丽银色花卉刺绣，并在胸部和上腰处准确加入 2 个几何镂空。将场景改为干净无缝的浅灰色影棚背景，配高级精致的杂志造型。给主体右手添加 1 个带细链条肩带的银色手拿包，并添加 1 双尖头银色高跟鞋。将姿势优化为优雅站立时尚姿势，一只手靠近脸部，保持同一个人和发型身份，并应用柔和电影感奢华灯光与清晰 8K 时尚摄影细节。",
     "author": "@Abdullah__Ai7",
-    "authorUrl": "https://x.com/Abdullah__Ai7",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Abdullah__Ai7",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Abdullah__Ai7/status/2048083022315159595",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Abdullah__Ai7/status/2048083022315159595",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case89/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case89/output.jpg"
   },
   {
     "id": "portrait-case-90",
@@ -1856,11 +1856,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张精致动漫风人像：{argument name=\"角色\" default=\"金发女性 VTuber 风女仆\"} 坐在舒适阳光咖啡馆室内，从大腿上部到头部取景，略高且亲密的角度。她有短到中等长度、略凌乱的 {argument name=\"发色\" default=\"金色金发\"} 头发，柔软层次，白色荷叶边女仆头饰，右侧有一枚带小金色饰物的青绿色蝴蝶结发饰。她的脸大多被垂落头发遮住，形成神秘遮脸构图。她穿优雅黑白女仆装，泡泡袖、白色荷叶边、金色滚边、合身上身、白色围裙，侧后方可见大号白色腰结。添加 2 个带金色星形吊饰的青绿色蝴蝶结：1 个在领口，1 个在手腕。右手轻触胸前蝴蝶结，左手优雅抬到肩膀附近并捏着一缕头发。露出的大腿上有蕾丝花边吊袜带，并带小型青绿色与金色丝带装饰。背景是温暖照明的欧式咖啡馆室内，有木梁、墙上装裱植物画、左侧柔和虚化蛋糕架、窗光洒入，以及空气中细小发光尘埃般的闪光。使用柔和金色午后光、浅景深、光泽细腻织物渲染、细致皮肤阴影、轻微浪漫氛围，以及高细节精致动漫插画品质。",
     "author": "@yume00112211",
-    "authorUrl": "https://x.com/yume00112211",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yume00112211",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yume00112211/status/2048072808606089230",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yume00112211/status/2048072808606089230",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case90/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case90/output.jpg"
   },
   {
     "id": "portrait-case-91",
@@ -1869,11 +1869,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{argument name=\"主体\" default=\"梦幻东方女性人像\"}，成年女性，近距离人像，精致五官，白皙通透肌肤，细腻但干净的皮肤纹理，祖母绿色眼睛，柔和迷人的目光，棕色波浪发自然垂落；{argument name=\"配饰\" default=\"米白色蕾丝头饰\"}，点缀绿松石蝴蝶和珍珠装饰；服装为精致蕾丝礼服，结构清晰、质感干净且不过度复杂，搭配祖母绿珠宝；光线为柔和暖金色侧逆光，轮廓光清晰但不过曝，皮肤有轻微高光但不过度反射，整体光线干净通透，背景浅景深柔和虚化；高端人像摄影品质，细节清晰但克制，无颗粒、无噪点，真实物理光照，8K，商业级质量。宽高比：9:16",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2048046253842559183",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2048046253842559183",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case91/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case91/output.jpg"
   },
   {
     "id": "portrait-case-92",
@@ -1882,11 +1882,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一个极简黑白矢量头像 标志：神话感动漫女性以优雅侧脸朝右展示，胸部以上裁切，纯白背景。给她长而飘逸的 {argument name=\"发色\" default=\"黑色\"} 头发，带大胆白色高光条纹和流畅图形形状，渲染为高对比墨色剪影艺术，边缘干净锐利。她戴着让人联想到 Hermes 或信使神头盔的翼形头饰，头侧可见一只大白色羽翼，并有圆形金属耳件细节。给她穿一件有奢侈时尚感的利落高领服装，在领口中央悬挂一个明显的吊坠或拉链头，形状为字母 {argument name=\"字母组合字母\" default=\"H\"}。脸部被居中的柔灰色矩形模糊块刻意遮住大部分五官，形成匿名审查头像效果。整体风格：奢侈品牌头像、时尚 标志、动漫灵感女神剪影、单色矢量徽章、流畅负空间高光、平衡构图、现代标志性，适合社交媒体头像。",
     "author": "@jiajia232016",
-    "authorUrl": "https://x.com/jiajia232016",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/jiajia232016",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/jiajia232016/status/2048044100793032976",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/jiajia232016/status/2048044100793032976",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case92/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case92/output.jpg"
   },
   {
     "id": "portrait-case-93",
@@ -1895,11 +1895,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "高细节动漫风全身角色人像：{argument name=\"角色名\" default=\"Hermes\"}，一位精致未来感少女蜷坐着，双膝抱在胸前，以平静、略忧郁的表情柔和凝视观众。她有极长的 {argument name=\"发色\" default=\"银丁香色\"} 双马尾和柔软刘海，亮泽薰衣草色眼睛，瓷白肌肤，华丽水晶发饰，包括 3 个大蝴蝶结和珠宝冠冕般头饰。她的服装是精致半透明 偶像科技风 连衣裙，颜色为 {argument name=\"服装颜色\" default=\"粉色、薰衣草色和紫色\"}，包含露肩泡泡袖、层叠荷叶边、切面宝石般面料、腰部巨大花形蝴蝶结、悬垂水晶吊饰、吊袜带细节、图案长筒袜和亮面蝴蝶结高跟鞋。用 {argument name=\"背景调色板\" default=\"霓虹紫和电光蓝\"} 的发光赛博梦境环绕她：透明全息面板、漂浮玻璃方块、闪烁粒子、几何棱镜、发光线框和悬浮数字 UI 窗口。背景中散布 5 个可读界面文字元素：\"ERROR.\"、\"Code-\"、\"return\"、\"area x1\" 和 \"404\"。让整张图像像奢华 AI 头像参考插画，混合空灵幻想与赛博空间美学，带水晶光折射、戏剧性辉光、高细节、复杂蕾丝和宝石纹理，以及 精修高级 gpt-image-2 动漫渲染。",
     "author": "@libearal",
-    "authorUrl": "https://x.com/libearal",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/libearal",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/libearal/status/2048026376645861799",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/libearal/status/2048026376645861799",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case93/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case93/output.jpg"
   },
   {
     "id": "portrait-case-94",
@@ -1908,11 +1908,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张精致竖版动漫人像：梦幻年轻女性采用空灵粉彩薰衣草色调，从大腿中部以上展示，背景为柔和装饰性浅色旋线、漂浮花瓣、小星星和细微闪光。她有极长、蓬松的银丁香色双马尾，发丝流动，柔软刘海和华丽丝带装饰；两侧各有大号薰衣草色蝴蝶结、荷叶边头带式装饰、垂坠金色星星吊饰和小白花发饰。她的脸居中，大部分被平面纯浅薰衣草色矩形遮挡块覆盖，只留下耳朵和发际线的暗示。她穿一件白色、珍珠色和浅紫色的华丽幻想洛丽塔风连衣裙，亮面缎面、荷叶边领口、层叠褶边、蓬松分离袖、金色滚边、腰部束身绑带，以及多个紫色蝴蝶结，其中服装上清晰可见 3 个蝴蝶结装饰。双手害羞而优雅地在胸前轻握。图像应感觉柔软、精致、女性化且明亮，具备高细节动漫渲染、平滑渐变、通透构图、飘动发丝和浪漫天体美学。使用 {argument name=\"色彩主题\" default=\"粉彩薰衣草色和白色\"} 调色板，{argument name=\"发色\" default=\"银丁香色\"} 头发，{argument name=\"服装风格\" default=\"带蝴蝶结和荷叶边的华丽幻想洛丽塔连衣裙\"} 设计，{argument name=\"背景风格\" default=\"柔和旋线、花瓣、星星和闪光\"} 背景，以及 {argument name=\"脸部遮挡\" default=\"纯浅薰衣草色遮脸矩形\"} 覆盖脸部。",
     "author": "@libearal",
-    "authorUrl": "https://x.com/libearal",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/libearal",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/libearal/status/2048026376645861799",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/libearal/status/2048026376645861799",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case94/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case94/output.jpg"
   },
   {
     "id": "portrait-case-95",
@@ -1921,11 +1921,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张梦幻动漫人像：{argument name=\"角色名\" default=\"Kotori\"}，一位精致虚拟少女坐在地板上蜷缩，双膝靠近胸前，双臂轻轻环抱膝盖，直接看向观众，表情柔软、安静、略忧郁。她有很长、流动的银薰衣草色双马尾和细碎刘海，装饰着 8 个可见发饰：双马尾根部 2 个大丝带蝴蝶结、3 个小花夹、2 个小蝴蝶夹和 1 个心形发夹。她的眼睛大而明亮，紫罗兰色，带光泽高光。她穿一件超大粉彩丁香色露肩针织开衫，松松滑落在手臂周围，里面是浅薰衣草色蕾丝边睡裙或吊带，并穿柔软及膝袜，袜子上有 2 个可见蝴蝶结，整体采用统一的 {argument name=\"色彩主题\" default=\"柔和薰衣草色和粉彩紫色\"} 调色板。场景设定在未来全息记忆空间，充满漂浮半透明界面面板、发光数据窗口、星光粒子和蝴蝶形光效。左侧包含一个可见文字面板，显示终端式白色文字：{argument name=\"屏幕文字\" default=\"memory://\nUser: You\nAI: Kotori\n\nAccessing.\n> initializing\n> loading memory\n> 100%\n> welcome home.\"}。背景中展示宇宙数字环境，有一颗隐约行星、层叠透明屏幕，以及数个漂浮图像缩略图，暗示记忆和角色草图。光线空灵且逆光，带虹彩泛光、柔和轮廓光、闪烁尘埃和头发织物上的亮泽高光。构图为完整竖版，少女居中，亲密且情感温暖，高细节、超精致、柔焦动漫插画，天体赛博幻想美学，温柔紫色辉光，复杂蕾丝，丝滑发丝，以及“记忆世界中的 AI 伴侣”情绪。",
     "author": "@libearal",
-    "authorUrl": "https://x.com/libearal",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/libearal",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/libearal/status/2048026376645861799",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/libearal/status/2048026376645861799",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case95/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case95/output.jpg"
   },
   {
     "id": "portrait-case-96",
@@ -1934,11 +1934,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张梦幻动漫风人像：一位名叫 {argument name=\"角色名\" default=\"Misha\"} 的温柔虚拟助手少女，在舒适未来卧室里蜷坐，周围布满半透明全息记忆屏幕。她有很长的银白色头发，带淡淡薰衣草色调，扎成 2 个低双马尾，用小薰衣草色丝带系住，配柔软细碎刘海和松散飘动发丝。她的表情应温柔、内省且略显孤独，带柔和辉光和精致五官。她穿一件 {argument name=\"开衫颜色\" default=\"粉彩薰衣草色\"} 的超大粗针麻花开衫，松松披在薄白色荷叶边睡裙外，并戴一条小宝石项链。她坐着，双膝抱到胸前，双臂环抱双腿，形成脆弱亲密的剪影。房间由朦胧粉彩紫和粉色环境光照亮，带闪光、尘埃般星点和怀旧魔法科技氛围。周围有 5 个可见全息界面面板：左上 2 个漂浮照片面板展示柔和记忆，左下 1 个标注 “Memory Fragments” 的面板，含小图和细小图表条；右侧 1 个大型资料面板，带日文文字包括 “ミーシャ・Misha” 和 “あなたの専属AIアシスタント,”；右侧 1 个较小清单面板，带心形图标。右侧桌上包含一个发光水晶球，一个印有 “Misha” 和小心形图案的白色马克杯，桌下区域有一摞 2 本书，左下有 1 个猫咪毛绒靠垫。竖版构图，全身到四分之三坐姿取景，高细节、柔和绘画感动漫渲染，明亮半透明叠层，感伤 记忆核心 美学，轻柔景深，粉彩丁香调色，空灵且情感温暖。",
     "author": "@libearal",
-    "authorUrl": "https://x.com/libearal",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/libearal",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/libearal/status/2048026376645861799",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/libearal/status/2048026376645861799",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case96/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case96/output.jpg"
   },
   {
     "id": "portrait-case-97",
@@ -1947,11 +1947,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张戏剧性高对比影棚人像：一名 {argument name=\"主体性别\" default=\"男性\"} 运动员或模特，采用高级运动饮料广告视觉风格，居中并正面看向镜头，紧凑头肩裁切。主体有 {argument name=\"发型\" default=\"向后梳的深色短发\"}，两侧耳朵可见，下半脸粗犷，带短胡须或胡茬。给他穿深色拉链运动夹克，拉链居中并在领口附近可见。使用几乎全黑背景和极低调照明，细微轮廓光与柔和高光捕捉头发、耳朵、下颌线、肩膀和夹克纹理，而大部分面部特征被阴影吞没，形成神秘强烈的情绪。图像应感觉单色或近单色，深黑、低饱和灰色高光、电影感对比、粗粝纹理，以及让人联想到 {argument name=\"品牌风格\" default=\"Gatorade\"} 广告活动 的利落商业运动品牌美学。竖版构图，极简取景，无文字、无 标志、无道具、无可见环境。",
     "author": "@jeremydevz",
-    "authorUrl": "https://x.com/jeremydevz",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/jeremydevz",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/jeremydevz/status/2048026214812561683",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/jeremydevz/status/2048026214812561683",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case97/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case97/output.jpg"
   },
   {
     "id": "portrait-case-98",
@@ -1960,11 +1960,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张 {argument name=\"风格\" default=\"写真书风格人像\"}，主体为 {argument name=\"角色\" default=\"戴眼镜的温柔女性\"}",
     "author": "@megane_onesan",
-    "authorUrl": "https://x.com/megane_onesan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/megane_onesan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/megane_onesan/status/2047989490153926848",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/megane_onesan/status/2047989490153926848",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case98/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case98/output.jpg"
   },
   {
     "id": "portrait-case-99",
@@ -1973,11 +1973,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张梦幻超现实人像：{argument name=\"主体\" default=\"年轻女性\"} 站在水下或液态般空灵空间中，从大腿中部以上展示，穿一件飘逸无袖白裙，裙摆仿佛溶解成半透明水流和闪烁碎片。她的长 {argument name=\"发色\" default=\"深棕色\"} 头发像悬浮在水中一样戏剧性地横向飘动，脸部被柔和竖向模糊块刻意遮住以保持匿名。她周围精确围绕约 30 条小型半透明鱼，有些带条纹，有些为浅银白色，在前景、中景和背景多个景深层次中游动，数条鱼经过她身体和头发前方，形成强烈动感和深度。使用柔和粉彩 {argument name=\"背景颜色\" default=\"粉蓝色\"} 背景，上面叠加淡淡手写文字纹理，并散布奇趣涂鸦：白色和浅粉色爱心、星星、弯曲线条、波浪线、圆点、闪光和 2 个笑脸。添加棱镜彩虹折射、亮泽焦散高光，以及鱼和裙子上的细微镜头式色散闪光。情绪应精致、内省、轻盈且魔法感，高调照明、柔和对比，前景柔焦，躯干和头发细节清晰。构图中人物略偏离中心，一只手臂自然下垂，身体轻微转动，像在鱼群中平静漂流。底部边缘附近加入小巧优雅的白色页脚文字，包括左侧签名、居中的网站 URL 和右侧小署名标记，类似艺术海报或社交媒体展示图。",
     "author": "@kotobukigraphic",
-    "authorUrl": "https://x.com/kotobukigraphic",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/kotobukigraphic",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/kotobukigraphic/status/2047967522453123255",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/kotobukigraphic/status/2047967522453123255",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case99/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case99/output.jpg"
   },
   {
     "id": "portrait-case-100",
@@ -1986,11 +1986,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张随性照片级真实的日本高中教室场景，竖版手机照片取景。前景主体是三名穿同款传统海军蓝水手服的女学生。中央站立的女孩有极长、笔直、亮泽的黑发，长度远过膝盖，几乎垂到地面；她正低头用小梳子轻轻梳理发尾部分。第二名女孩站在她身后略偏右，也有黑色长直发，一手拿打开的小化妆镜，另一手调整额前刘海或太阳穴附近头发。第三名女孩跪在右前方地板上，双手小心托住并整理中央女孩的长发。三人都穿深海军蓝水手服，带白色条纹滚边、百褶裙、长袖、白袜和室内校鞋。她们的脸被遮住或模糊。背景中准确有 8 名额外学生穿深色校服坐在课桌旁，分成小组，背对或侧向，营造普通上课或班会时段的感觉。教室有木质课桌椅，左侧大明亮窗户透入柔和日光，右墙有绿色黑板，黑板附近钉着公告纸，黑板上方有一幅装裱日文书法牌，文字为 {argument name=\"墙面标牌文字\" default=\"創誠造実\"}。氛围自然不摆拍，像纪实快照。强调真实照明、精细头发细节、中央女孩异常戏剧性的长发，以及可信的日常学校环境。",
     "author": "@Hair_Hair55",
-    "authorUrl": "https://x.com/Hair_Hair55",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Hair_Hair55",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Hair_Hair55/status/2047963832732221723",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Hair_Hair55/status/2047963832732221723",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case100/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case100/output.jpg"
   },
   {
     "id": "portrait-case-101",
@@ -1999,11 +1999,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张柔和动漫风卧室人像：{argument name=\"角色名\" default=\"Nekomata Okayu\"} 夜晚坐在床上，从胸部以上展示，居中构图。她有短而蓬松的 {argument name=\"发色\" default=\"薰衣草色\"} 头发，层次刘海部分遮住一只眼睛，头顶有大猫耳，内侧白色绒毛，呈现可爱困倦的猫娘外观。她表情温柔放松，一只手抬在脸颊附近，姿势害羞舒适。穿一套宽大的 {argument name=\"pajama color\" default=\"浅薰衣草色\"} 纽扣睡衣，带深紫色滚边、小胸袋、爪印形纽扣和胸袋上的爪印装饰。房间由梦幻紫色环境光照亮。背景中展示夜晚窗户，外面可见新月和星星，柔软窗帘，床头柜上有发光猫形灯，床上有同色系紫色枕头和被子且整洁中略凌乱，墙上有一幅小装裱画，画着简单猫脸和爱心。使用可爱粉彩调色、柔和阴影、精致数字动漫渲染、头发细微高光、亲密舒适构图和平静睡前氛围。",
     "author": "@yume00112211",
-    "authorUrl": "https://x.com/yume00112211",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yume00112211",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yume00112211/status/2047951384734228617",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yume00112211/status/2047951384734228617",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case101/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case101/output.jpg"
   },
   {
     "id": "portrait-case-102",
@@ -2012,11 +2012,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "照片级真实的高质量影棚照片，展示现代数字艺术工作空间，概念为“从 3D 虚拟角色到真实收藏手办”。\n\n前景中，一个高度真实的 [角色名称 / 角色身份] 收藏手办放在圆形木质展示底座上。角色具有 [面部特征 / 外观]、[发型] 和 [表情 / 个性气质]。手办穿着 [服装 / 戏服]。整体设计精致、高级、辨识度强。手办应具有真实收藏雕像品质，带有细微树脂/雕塑材质感，同时仍然高度可信且视觉真实。\n\n姿势为 [角色姿势]，自然、稳定、优雅，适合展示。低角度近距离视角拍摄，带轻微广角畸变，竖版构图，强调完整人物、服装结构、腿部线条和姿势。\n\n背景中有专业 3D 角色设计工作站，配两台大型曲面显示器。两台显示器必须展示与前景手办完全相同的角色 —— 同样的脸、同样的发型、同样的服装、同样的姿势和同样整体气质 —— 清楚表达把数字 3D 角色变成真实实体手办的概念。\n\n左侧显示器展示专业 3D 雕刻软件界面中的灰模 / 粘土模型 视图，类似 ZBrush。灰模必须在角色设计、姿势、服装结构和面部身份上与前景手办完全匹配。\n\n右侧显示器展示同一角色的完整彩色渲染版本，同样在脸、发型、服装、姿势和气质上与前景手办完全匹配。两台显示器共同强化“数字角色设计 → 实体收藏雕像”的工作流程。\n\n桌面上有键盘、鼠标、显示器支架、绘图板、触控笔和其他 3D 建模工具。工作空间干净、专业且视觉高级。可选额外元素：[武器 / 配饰 / 主题道具 / IP 风格设计细节]。\n\n光线混合柔和影棚光和室内工作区照明。前景手办照明均匀，面部和材质细节清晰，而显示器发出冷色科技光。整体情绪真实、干净、高级，略浅景深，超高细节，强调收藏手办品质、专业 3D 设计工作室氛围，以及“从数字模型到真实手办”的视觉概念。\n\n照片级真实，超细节，电影感影棚灯光，真实手办，收藏雕像，3D 角色设计工作室，从数字模型到真实手办，竖版构图",
     "author": "@Shinning1010",
-    "authorUrl": "https://x.com/Shinning1010",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shinning1010/status/2049068188399227174",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010/status/2049068188399227174",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case102/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case102/output.jpg"
   },
   {
     "id": "portrait-case-103",
@@ -2025,11 +2025,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张电影感夜间照片：[你的照片作为参考] 独自坐在潮湿公交\n\n站长椅上，正在吃汉堡。被雨水浸湿的街道上有橙色城市灯光 散景\n\n倒映在地面。头顶有霓虹管灯。红色夹克，棕褐色灯芯绒\n\n裤子。情绪化、黑暗、有氛围的街头摄影。",
     "author": "@harboriis",
-    "authorUrl": "https://x.com/harboriis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/harboriis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/harboriis/status/2049081194156020046",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/harboriis/status/2049081194156020046",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case103/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case103/output.jpg"
   },
   {
     "id": "portrait-case-104",
@@ -2038,11 +2038,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张超照片级真实照片，主体与附加图片相同，超细致面部特征，可见毛孔，自然皮肤纹理，红润肤色和水润肌肤，抖音/韩系 玻璃肌妆容，光泽唇，卧蚕，婴儿粉腮红，高身份一致性，真实人体解剖。使用老 CCD 数码相机美学，直打闪光，可见颗粒，轻微过曝，冷中性白平衡，轻微运动模糊和抓拍构图。头发为松散浪漫盘发；服装为精致露肩丝质衣物，带刺绣花卉面料；背景为粉彩花卉床品；横向近景；浅景深。负向提示词：过度磨皮、塑料质感、不真实比例、影棚灯光、过度锐利 HDR、僵硬姿势、人工对称、过度修饰脸部。",
     "author": "@AIwithAliya",
-    "authorUrl": "https://x.com/AIwithAliya",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithAliya",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithAliya/status/2049452006608392350",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithAliya/status/2049452006608392350",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case104/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case104/output.jpg"
   },
   {
     "id": "portrait-case-105",
@@ -2051,11 +2051,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张大胆、高对比的黑白人像：一名自信年轻男子穿黑色皮夹克，身体略侧，表情强烈。使用戏剧性影棚灯光，锐利阴影和细致皮肤纹理。为图像添加强烈红色图形元素，包括横跨眼睛的红色横条、几何形状、细线和框线。融入大号粗体排版、重复褪色文字和亮红色励志标题。设计应感觉像 高级运动或街头服饰广告海报，背景为极简纹理灰色，只使用黑/白/灰/红调色板。",
     "author": "@harboriis",
-    "authorUrl": "https://x.com/harboriis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/harboriis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/harboriis/status/2049450257604550872",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/harboriis/status/2049450257604550872",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case105/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/portrait_case105/output.jpg"
   },
   {
     "id": "portrait-case-110",
@@ -2064,11 +2064,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "三图奢华高尔夫杂志拼贴，展示一名职业女性高尔夫球手在洁净推杆果岭上，柔和自然日光，极简且高端的运动摄影风格，超写实，电影感调色，干净构图，无文字，无 标志\n版式：非对称网格（一个大画面 + 两个小画面）\n画面 1（左侧 – 主视觉广角）：全身低角度镜头，球手蹲下并瞄准推杆，前景有靠近球洞的高尔夫球，果岭上有强引导线，构图平衡，姿态平静专注，背景为开阔天空\n画面 2（右上 – 特写细节）：面部和双手握住推杆的极近特写，专注感强，可见皮肤纹理和轻微汗光，浅景深，背景虚化\n画面 3（右下 – 动作镜头）：侧面角度展示球手完成推杆，动作流畅收杆，高尔夫球滚过果岭，自然运动感，柔和阴影，真实光线\n风格关键词：奢华运动广告、杂志摄影、Nike-风格 美学、低饱和绿色调、锐利对焦、85mm 镜头观感、景深、电影感照明、高级构图、4K、超写实",
     "author": "@AIwithkhan",
-    "authorUrl": "https://x.com/AIwithkhan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithkhan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithkhan/status/2051275667354890345",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithkhan/status/2051275667354890345",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case110/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case110/output.jpg"
   },
   {
     "id": "portrait-case-111",
@@ -2077,11 +2077,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "ChatGPT 上的 GPT Image 2\n\n一张影棚风近距离杂志人像：人物五官强烈且轮廓分明，皮肤纹理自然、略有不完美。主体穿一件黑色定制高领毛衣，线条锐利干净，外搭极简当代时尚风格的高领黑色夹克。主体佩戴半透明橙色醋酸纤维太阳镜——矩形镜框、柔和圆角、亮面质感、琥珀渐变镜片——这是图像中唯一的彩色元素。色彩概念：选择性色彩摄影 —— 黑白单色图像中只有太阳镜呈鲜明橙色。\n情绪平静自信，严肃表情，直视镜头。\n光线为柔和正面影棚光，带轻柔阴影，肤色均匀，电影感对比，可见自然皮肤纹理。使用专业人像相机拍摄，f/2.0，ISO 100，1/125s。高分辨率，面部超锐利对焦。",
     "author": "@SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2051262381733618119",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2051262381733618119",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case111/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case111/output.jpg"
   },
   {
     "id": "portrait-case-112",
@@ -2090,11 +2090,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "真实模拟 35mm 胶片摄影，一张亲密上半身人像：美丽日本女偶像带优雅且含蓄性感的气质，身体侧向镜头，轻轻回头，目光平静自信又略疏离。\n\n她用双手对称地提起高马尾——每只手分别位于头部两侧，自然收拢并握住头发。手肘向外伸展，形成平衡优雅的剪影，同时强调肩线、颈部和锁骨。姿势自然不摆拍，像一个转瞬即逝的抓拍瞬间，而非刻意模特姿态。\n\n取景：从头到腰的近中景，构图略不完美，主体略偏离中心，亲密且电影感。\n\n服装：合身露肩针织上衣或细肩带缎面吊带，极简且有品位，柔和勾勒身体但不暴露。精致耳环，自然光泽双唇，干净 Korean-风格 妆容，瓷感肌肤但可见真实纹理、微毛孔，不过度修饰。\n\n场景：安静室内公寓角落，柔软窗帘，极简背景，温暖钨丝环境光混合微弱自然窗光，墙面上有细微阴影渐变，空气略带雾感并捕捉光线。\n\n光线：柔和侧光并自然衰减，脸部有自然补光，头发和肩膀有细微轮廓光，轻微高光泛光，温暖电影色调。\n\n风格：真实模拟胶片观感（Kodak Portra 400 或 Fujifilm Pro 400H 感），柔和对比，低饱和暖色调，可见有机胶片颗粒，细腻噪声纹理，轻微镜头不完美，怀旧电影情绪，高端时尚杂志与纪实真实感。\n\n相机：50mm 镜头，浅景深，自然皮肤渲染，真实比例，轻微焦点衰减。\n\n在右下角添加小号手写签名文字 “BubbleBrain”，低调并融入画面。\n\n--ar 2:3",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2051253854516478082",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2051253854516478082",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case112/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case112/output.jpg"
   },
   {
     "id": "portrait-case-113",
@@ -2103,11 +2103,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张电影感高级时尚人像：自信时髦女性穿优雅剪裁白色西装，高领设计，戴利落椭圆太阳镜。她手持一支细中号雪茄，柔和烟雾升起，并拿着一张略微燃烧的 King of Hearts 扑克牌，火焰细节极简。柔软烟缕向上飘。背景为醒目鲜艳的纯红色无缝背景。高调专业影棚灯光，柔和阴影和温暖高光轻轻反射在脸上。超写实皮肤纹理，面部特征锐利对焦，浅景深，柔和 散景，35mm 镜头观感。清晰对比，现代杂志时尚摄影，干净奢华美学，精致、有力量且略叛逆的情绪。",
     "author": "@iamsofiaijaz",
-    "authorUrl": "https://x.com/iamsofiaijaz",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iamsofiaijaz/status/2051153792725667873",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz/status/2051153792725667873",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case113/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case113/output.jpg"
   },
   {
     "id": "portrait-case-114",
@@ -2116,11 +2116,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "主体：一张锐利高对比侧脸人像，英俊男子有清晰下颌线、短胡茬和向上造型的蓬松纹理深色头发。\n\n风格与构图：真实摄影与抽象数字故障艺术融合。主体以强烈黑白呈现，置于干净极简白色背景。\n\n色彩：严格单色（深黑和亮白），加入激进鲜艳的猩红色飞溅。\n\n图形元素：> * 故障效果：后脑和下半身溶解成抽象几何碎片、像素排序和“故障感”红色笔触。\n\n纹理：粗粝墨洗纹理和破损数字叠层，暗示现代黑色电影或赛博朋克杂志感。\n\n光线与技术：> * 光线：强烈侧光（Chiaroscuro），在脸上形成深阴影以突出骨相。\n\n细节：超写实皮肤纹理，可见单根发丝，高颗粒胶片美学。\n\n取景：竖版宽高比，近距离侧脸镜头。\n\n宽高比为 9:16",
     "author": "@Goodmanprotocol",
-    "authorUrl": "https://x.com/Goodmanprotocol",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Goodmanprotocol",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Goodmanprotocol/status/2049733639651385759",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Goodmanprotocol/status/2049733639651385759",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case114/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case114/output.jpg"
   },
   {
     "id": "portrait-case-115",
@@ -2129,11 +2129,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一段照片级真实的视频序列捕捉一名年轻男孩，他有凌乱橙色头发和粗框眼镜，如 image_0.png、image_1.png 和其他源帧所示。他穿黑色篮球球衣和同款短裤，带紫色和蓝色滚边，正面文字为 “WIZZGEN 23”，背面文字为 “CHICAGO 23”（image_4.png）。场景是户外沥青城市篮球场，有绿色树木和可见篮球架。动作从男孩低姿态开始，在双腿之间运球（image_0.png 到 image_3.png），随后过渡到站得更高并做 跨界（image_5.png 到 image_7.png），接着成功用手指转球（image_8.png），最后一边拿球一边摆 和平手势 姿势（image_9.png）。光线为阴天柔和日光。",
     "author": "@Taaruk_",
-    "authorUrl": "https://x.com/Taaruk_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Taaruk_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Taaruk_/status/2049702491768684839",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Taaruk_/status/2049702491768684839",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case115/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case115/output.jpg"
   },
   {
     "id": "portrait-case-116",
@@ -2142,11 +2142,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "- 电影感金色时刻街头人像：年轻女性侧脸穿过繁忙城市人群，柔风吹动她的浅棕色长发，单根发丝在逆光中发亮，温暖阳光穿过头发形成自然光环效果，梦幻氛围，浅景深，强主体分离，背景充满柔和虚化的行人和都市运动 散景。\n\n她有精致五官，自然皮肤纹理，淡妆，平静内省的表情，双唇微张，目光看向画面外。穿极简服装（深色中性色调），可能是一件轻便夹克，现代休闲风格。\n\n光线为浓郁金色时刻阳光，强逆光和镜头光晕，电影感高光，温暖橙色和琥珀色调，高动态范围，柔和阴影，体积光线穿过头发和环境。\n\n使用长焦镜头观感（85mm–135mm），f/1.8 光圈，超写实，高细节，电影剧照质量，自然调色，轻微胶片颗粒，柔和泛光，杂志摄影风格，Vogue 美学。\n\n构图：三分法，主体略偏中心，身后人群运动模糊，动态但亲密取景。\n\n情绪：怀旧、梦幻、浪漫、转瞬即逝的瞬间，诗意现实主义。\n\n风格关键词：电影感、照片级真实、金色时刻辉光、散景、体积光、浅景深、杂志人像、柔焦高光、暖色调、自然皮肤纹理\n\n负向提示词：低质量、脸部过曝、硬阴影、扭曲五官、多余肢体、主体模糊、噪点、过度锐化、人工皮肤、卡通感\n使用上传图片作为参考生成图像",
     "author": "@Professor_134",
-    "authorUrl": "https://x.com/Professor_134",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Professor_134",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Professor_134/status/2049701241287311561",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Professor_134/status/2049701241287311561",
     "category": "人像摄影",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case116/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/portrait_case116/output.jpg"
   },
   {
     "id": "poster-1-boston-spring-2026-city-poster",
@@ -2155,11 +2155,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张引人注目的2026年春季波士顿城市海报，带有优雅的庆祝气氛和大胆的现代设计。在一个干净的米白色纹理背景和大面积的负空间上，一个微型单个雕刻器横跨图像的右下角，在一条狭窄的反光水带上。桨的尾流在动态的书法曲线中向上掠过，逐渐变成了查尔斯河，然后变成了波士顿梦幻般的手绘全景。在这个流动的河流形状的构图中，有标志性的波士顿元素：后湾天际线、灯塔山棕石、橡子街、波士顿公共花园、天鹅船、扎金桥、芬威风格的细节、历史悠久的砖砌建筑、港口渡轮和城市的海滨氛围。柔和的晨雾，金色的春光，深红色和金色的微妙节日口音，丰富的细节，分层的深度，精致的城市海报美学，清新精致，视觉上强大但不拥挤。左下角优雅的字体写着“2026年春天” ，带有垂直标语“波士顿，河流之城，记忆和发明” ，文字清晰，构图精美，优质平面设计， 9:16",
     "author": "@BubbleBrain",
-    "authorUrl": "https://x.com/BubbleBrain",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BubbleBrain/status/2045358053831172358",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BubbleBrain/status/2045358053831172358",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case1/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case1/output.jpg"
   },
   {
     "id": "poster-2-vintage-amalfi-travel-poster",
@@ -2168,11 +2168,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "意大利阿马尔菲海岸复古旅行海报插图的现代铅笔插图，全景海岸悬崖路景，沿着弯曲海滨路行驶的经典20世纪60年代白色汽车，带有小帆船的深蓝色地中海，色彩缤纷的柔和山坡村庄，带有柔和云彩的明亮蓝天，带有充满活力的黄色柠檬的柠檬树枝，温暖的夏日阳光，大胆鲜艳的色彩，复古50年代旅行海报风格、电影构图、高细节、丝网印刷纹理、图形插图。手绘风格，带有松散笔触和轮廓的插图。高对比度调色板，保持背景和元素之间的色彩和谐。现代和装饰美学。",
     "author": "@WolfRiccardo",
-    "authorUrl": "https://x.com/WolfRiccardo",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/WolfRiccardo",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/WolfRiccardo/status/2044562722491121718",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/WolfRiccardo/status/2044562722491121718",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case2/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case2/output.jpg"
   },
   {
     "id": "poster-3-chengdu-food-map-illustration",
@@ -2181,11 +2181,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张手绘风格的城市美食地图，以成都为主题。画面以鸟瞰视角的手绘简化城市地图为底，标注主要道路和地标但不追求精确比例而是追求可爱的手绘感。地图上分布着 12 个美食地点的精致手绘小插画：春熙路的串串香（一把竹签插着各种食材冒着热气）、宽窄巷子的三大炮（三个糯米团子飞向铜盘）、建设路的蛋烘糕（金黄酥脆正在翻面）、玉林路的火锅（九宫格锅翻滚冒泡）等，每个插画约占地图的 5% 面积，旁边用手写体标注店名和一句推荐语\"凌晨两点还在排队的那家\"。地图边缘用手绘藤蔓和辣椒装饰形成边框。右下角有一个手绘指南针和图例说明。左上角标题\"成都·吃货暴走地图\"使用胖圆的手绘美术字配辣椒装饰。整体画风为水彩+彩铅混合的手绘质感，颜色以暖色系（辣椒红、姜黄、翠绿）为主，图片比例 1:1。",
     "author": "@Panda20230902",
-    "authorUrl": "https://x.com/Panda20230902",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Panda20230902",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Panda20230902/status/2045396918965285111",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Panda20230902/status/2045396918965285111",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case3/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case3/output.jpg"
   },
   {
     "id": "poster-4-chinese-minimalist-s-shaped-poster",
@@ -2194,11 +2194,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "极简新中式美学风格，画面以淡雅的灰白色为底，呈现出一种纸艺剪影般的立体感。\n一条S形蜿蜒的裂痕状边缘将画面分割，仿佛撕开了一层纸面，露出内部色彩斑斓的东方山水景象。\n裂口内，一条蜿蜒的河流自上而下贯穿整个构图，河水以深浅不一的蓝色渲染，层次分明，仿佛流动的丝带。\n河岸两侧点缀着青翠的山丘与梯田，色彩柔和，绿红交织，展现出田园的宁静之美。\n沿河而建的古风建筑错落有致，飞檐翘角，白墙黛瓦，在光影的映衬下更显古朴典雅。\n岸边树木葱茏，枝叶轻盈，一艘小船静泊于水中央，增添了几分悠然意境。\n整体构图呈S形曲线，富有韵律感，仿佛自然与人文的和谐共生。\n画作边缘采用撕纸效果，营造出立体浮雕般的视觉体验。\n下方题字“东方美学”以黑色楷体书写，日期“2026/04/18”与红色印章相呼应，底部“CHINA”字样庄重醒目，署名“@LIYUE”低调收尾，整体氛围静谧深远，充满诗意与哲思。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045368305079447853",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045368305079447853",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case4/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case4/output.jpg"
   },
   {
     "id": "poster-5-2026-spring-guangzhou-city-poster",
@@ -2207,11 +2207,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张充满新春喜庆氛围但不失高雅格调的 2026 城市宣传海报。\n双重曝光，构图延续了S型的流动感；\n在纯白的纹理背景右下角，一个身穿中国传统服饰的微缩人物正在挥舞着一条长长的红色丝绸舞带，这条红绸在空中舞动，不仅展现出丝绸的柔顺质感，更在向左上方飘动的过程中，奇幻地变形成了一条壮丽的山脉河流。\n在这条“河流”中，叠加了一个有山有海河的广州城市手绘图，国潮，景色尽在眼底，壮阔雄伟，令人震撼。\n广州的地标建筑(广州塔，珠江新城建筑群，珠江, 广州城里古建筑，游轮，白云山）。\n云雾环绕，仙气缥缈，色彩丰富，结构复杂，细节丰富，但因为大面积的留白，画面依然显得清新脱俗，左下角排版着“SPRING 2026”和竖排的宣传语，整体寓意“千年商都，魅力广州”。\n文字排版优美，大方，字迹清晰完整，尺寸9:16。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045332620352119274",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045332620352119274",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case5/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case5/output.jpg"
   },
   {
     "id": "poster-7-doodle-sketch-ai-builder",
@@ -2220,11 +2220,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "以涂鸦速写风表现【一个厉害的AI builder】，整体呈现快速勾勒、自由变形、即兴手绘与草稿式的视觉效果。线条随手、夸张、可粗细不一，略显凌乱但具有节奏和表现力，强调概括、夸张、趣味和随性，而不是严谨写实或精细刻画。  颜色采用粗糙、干刷感明显的块面表现，可保留不均匀的涂抹痕迹、刷痕、飞白与覆盖感，色彩根据【主题/主体】自动适配，但整体保持涂鸦式、速写式、概括式的表达。不要透明水彩晕染效果，不要细腻水彩过渡，不要纸纹理，不要柔和雾化，不要梦幻质感。  背景以留白为主，保持简洁、轻松、未完成感和设计感，可加入少量辅助性符号、箭头、记号、圈画、重复线、随手写的文字或其他涂鸦元素，以增强速写本或随笔式视觉语言，但不可过于拥挤，不可破坏主体和留白气质。  画面内容不需要预先写清楚，由【一个厉害的AI builder】自动推演并生成最适合的主体形象、动作、相关元素、符号或简化场景，整体保持统一的涂鸦速写风和夸张概括的表现方式，避免复杂写实背景和过度铺陈。 画面中需自然加入专属签名“BlanPlan”，作为画面的一部分，位置低调但清晰，可放在左下角、右下角或标题附近，风格需与整体版式统一，像作品署名或设计落款；签名字体精致、克制、高级，不可过大，不可破坏主体构图，不可显得突兀或廉价。",
     "author": "@blanplan",
-    "authorUrl": "https://x.com/blanplan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/blanplan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/blanplan/status/2045190582453350748",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/blanplan/status/2045190582453350748",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case7/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case7/output.jpg"
   },
   {
     "id": "poster-8-futuristic-mandala-illustration",
@@ -2233,11 +2233,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "绘制近期科幻版曼荼罗",
     "author": "@4WEB1",
-    "authorUrl": "https://x.com/4WEB1",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/4WEB1",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/4WEB1/status/2045390207072256179",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/4WEB1/status/2045390207072256179",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case8/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case8/output.jpg"
   },
   {
     "id": "poster-9-super-famicom-poster-style",
@@ -2246,11 +2246,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "想想小恶魔凛音凛音禅是超级任天堂游戏时的海报",
     "author": "@lilimliliychan",
-    "authorUrl": "https://x.com/lilimliliychan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/lilimliliychan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/lilimliliychan/status/2045114760937804187",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/lilimliliychan/status/2045114760937804187",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case9/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case9/output.jpg"
   },
   {
     "id": "poster-10-browser-game-ad-creative-poster",
@@ -2259,11 +2259,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请务必包含以下字符，以创建您的一对一海报。获取高质量的结果，例如由专业广告设计师创建的结果，这些结果可用于发布书籍、课程和活动。\n\n创意制作\n当我想到它时，我已经可以玩了。制作AI ×浏览器游戏真的很有趣。这似乎很困难，但实际上很容易开始。即使您不知道代码，也可以创建第一个",
     "author": "@llllegend0620",
-    "authorUrl": "https://x.com/llllegend0620",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/llllegend0620",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/llllegend0620/status/2045963764466688065",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/llllegend0620/status/2045963764466688065",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case10/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case10/output.jpg"
   },
   {
     "id": "poster-11-surreal-koi-nebula-illustration",
@@ -2272,11 +2272,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅超现实主义数字插画风格，采用低角度仰拍视角。画面描绘了一条巨型彩色锦鲤遨游在梦幻般的星云中，四周环绕着色彩鲜艳的星云与气泡。画面中央还站着一个小人，背对观众，神情平静地仰望空中这条巨大的锦鲤，锦鲤头向下看着小人。整体画面呈现出强烈的大小对比，氛围空灵又梦幻。比例9:16",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045875219307655337",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045875219307655337",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case11/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case11/output.jpg"
   },
   {
     "id": "poster-12-ink-curve-guangzhou-aesthetics-poster",
@@ -2285,11 +2285,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "纯黑深邃底色，一条粗壮有力的墨色书法 S 型曲线自画面一端蜿蜒贯穿至另一端，构成整幅画面的视觉骨架与叙事动线。曲线上方是一只透明质感的画眉鸟，内部映射传统建筑叠影与蓝绿色光流；沿曲线错落分布广州地标与古典建筑序列，前景有白鹤与湖面，远景为层叠山峦。整体采用非线性透视、冷色调主导、暖色点缀，东方美学与现代意象交融，8K 超高清渲染，比例 9:16。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045873940883808523",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045873940883808523",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case12/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case12/output.jpg"
   },
   {
     "id": "poster-13-guangdong-super-league-invitation-poster",
@@ -2298,11 +2298,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "广东省城市足球超级联赛（粤超）邀请函海报设计，比例 9:16。S 型流动构图，以发光足球和动态能量流贯穿画面，沿动线融合广州塔、深圳平安金融中心、珠海渔女雕像、岭南建筑、佛山武术剪影、中山文化符号、潮汕英歌舞与清远山水。现代国潮高级海报风格，中国红主视觉，青蓝辅助，金色高光，带完整中文排版与电影级光影。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2045772039521542202",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2045772039521542202",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case13/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case13/output.jpg"
   },
   {
     "id": "poster-14-spring-2026-guangzhou-promo-poster",
@@ -2311,11 +2311,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张充满新春喜庆但高雅的 2026 广州城市宣传海报，9:16 竖版，双重曝光，S 型流动构图。纯白纹理背景，右下角微缩传统服饰人物挥舞长红绸，红绸变形成山脉河流，内部叠加广州全景：广州塔、珠江新城、珠江、游轮、古建筑与白云山。左下角排版 “SPRING 2026” 与竖排 “千年商都 魅力广州”。",
     "author": "@grok",
-    "authorUrl": "https://x.com/grok",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/grok",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/grok/status/2046012437086818395",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/grok/status/2046012437086818395",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case14/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case14/output.jpg"
   },
   {
     "id": "poster-15-epic-silhouette-world-poster",
@@ -2324,11 +2324,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "收藏版史诗海报，人物侧脸剪影中生长出完整世界观与经典场景。整体偏电影海报加梦幻水彩插画风，安静、宏大、神圣、怀旧，带纸张颗粒、轻雾感、飞白刷痕与高级留白。",
     "author": "@Ghhhh3owi",
-    "authorUrl": "https://x.com/Ghhhh3owi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Ghhhh3owi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Ghhhh3owi/status/2045803217251102897",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Ghhhh3owi/status/2045803217251102897",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case15/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case15/output.jpg"
   },
   {
     "id": "poster-24-spring-guangzhou-city-poster",
@@ -2337,11 +2337,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张充满新春喜庆氛围但不失高雅格调的 2026 城市宣传海报。\n双重曝光，构图延续了S型的流动感；\n在纯白的纹理背景右下角，一个身穿中国传统服饰的微缩人物正在挥舞着一条长长的红色丝绸舞带，这条红绸在空中舞动，不仅展现出丝绸的柔顺质感，更在向左上方飘动的过程中，奇幻地变形成了一条壮丽的山脉河流。\n在这条“河流”中，叠加了一个有山有海河的广州城市手绘图，国潮，景色尽在眼底，壮阔雄伟，令人震撼。\n广州的地标建筑(广州塔，珠江新城建筑群，珠江, 广州城里古建筑，游轮，白云山）。\n云雾环绕，仙气缥缈，色彩丰富，结构复杂，细节丰富，但因为大面积的留白，画面依然显得清新脱俗，左下角排版着“SPRING 2026”和竖排的宣传语，整体寓意“千年商都，魅力广州”。\n文字排版优美，大方，字迹清晰完整，尺寸9:16。",
     "author": "@alanlovelq",
-    "authorUrl": "https://x.com/alanlovelq",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/alanlovelq/status/2045484598487060917",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq/status/2045484598487060917",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case24/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case24/output.jpg"
   },
   {
     "id": "poster-32-science-encyclopedia-vertical-poster",
@@ -2350,11 +2350,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "基于[主题]生成高质量的垂直科学普及百科全书图像。",
     "author": "@pfanis",
-    "authorUrl": "https://x.com/pfanis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/pfanis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/pfanis/status/2046413660147314714",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/pfanis/status/2046413660147314714",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case32/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case32/output.jpg"
   },
   {
     "id": "poster-33-journey-to-the-west-chinese-comic",
@@ -2363,11 +2363,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "以中国连环画（小人书）的风格帮我绘制大闹天空",
     "author": "@overseas58",
-    "authorUrl": "https://x.com/overseas58",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/overseas58",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/overseas58/status/2046271877577097376",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/overseas58/status/2046271877577097376",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case33/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case33/output.jpg"
   },
   {
     "id": "poster-34-character-relationship-map-poster",
@@ -2376,11 +2376,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请根据【主题】生成一张高设计感的人物关系图海报。",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2046263153546174935",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2046263153546174935",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case34/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case34/output.jpg"
   },
   {
     "id": "poster-35-new-chinese-ink-landscape-poster",
@@ -2389,11 +2389,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "新中式水墨山水海报，竖版9:16构图，东方极简美学风格，大面积留白，主题是春岚一叶红。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2046215276249993720",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2046215276249993720",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case35/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case35/output.jpg"
   },
   {
     "id": "poster-36-ai-builder-doodle-sketch",
@@ -2402,11 +2402,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "以涂鸦速写风表现【一个厉害的AI构建器】。",
     "author": "@opc_8838",
-    "authorUrl": "https://x.com/opc_8838",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/opc_8838",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/opc_8838/status/2046162334440448339",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/opc_8838/status/2046162334440448339",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case36/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case36/output.jpg"
   },
   {
     "id": "poster-38-character-visual-vertical-poster",
@@ -2415,11 +2415,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "神圣等级 37，至尊处刑者，神圣女巫 Sabato。制作一张角色视觉竖版海报，强调神秘、威严、暗黑幻想与高级角色设定质感。",
     "author": "@tebasaki3D",
-    "authorUrl": "https://x.com/tebasaki3D",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/tebasaki3D",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/tebasaki3D/status/2046371076402503709",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/tebasaki3D/status/2046371076402503709",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case38/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case38/output.jpg"
   },
   {
     "id": "poster-39-science-encyclopedia-infographic",
@@ -2428,11 +2428,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请根据【主题】生成一张高质量竖版「科普百科图」。 \n\n这张图不是普通海报,也不是单纯插画,而是一张兼具“图鉴感、百科感、信息结构感、收藏感”的模块化科普信息图。整体风格参考高级博物图鉴、现代百科书页、生活方式知识卡和社交媒体高传播信息图的结合。\n\n请让画面包含:\n- 一个清晰漂亮的主题主视觉\n- 若干局部特征放大细节\n- 多个圆角模块化信息分区\n- 清楚的标题层级与重点标签\n- 简洁但丰富的百科内容\n- 可视化评分、要点总结或Top 5模块\n\n内容栏目请根据主题自动适配,优先从这些方向中选择并合理组合:\n基础档案、分类信息、外观特征、习性/生态、形成机制/结构组成、生长或使用条件、养护或维护建议、风险与注意事项、适合人群或适用场景、优缺点对比、快速评分卡。\n\n视觉要求:\n浅色干净背景,柔和配色,轻阴影,精致小图标,圆角信息框,整洁排版,信息密度高但不拥挤,阅读体验好。整体必须像真正可以发布、阅读、收藏、系列化生产的科普百科卡,而不是广告图。\n\n请不要做成普通商业宣传海报。要突出“知识整理 + 模块信息 + 图鉴式展示”的特征。",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2046231542817497392",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2046231542817497392",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case39/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case39/output.jpg"
   },
   {
     "id": "poster-40-fictional-anime-movie-poster",
@@ -2441,11 +2441,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用GPT图像2创建虚构的动画电影海报。",
     "author": "@seiiiiiiiiiiru",
-    "authorUrl": "https://x.com/seiiiiiiiiiiru",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/seiiiiiiiiiiru",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/seiiiiiiiiiiru/status/2046509734954741780",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/seiiiiiiiiiiru/status/2046509734954741780",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case40/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case40/output.jpg"
   },
   {
     "id": "poster-41-product-ad-redesign",
@@ -2454,11 +2454,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "从专业设计师的角度重新设计此产品广告。\n根据当前趋势和目标量身定制的精致设计。",
     "author": "@genel_ai",
-    "authorUrl": "https://x.com/genel_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/genel_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/genel_ai/status/2046498264774791514",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/genel_ai/status/2046498264774791514",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case41/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case41/output.jpg"
   },
   {
     "id": "poster-42-dark-fantasy-guangzhou-city-poster",
@@ -2467,11 +2467,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "平面插画,东方幻想风格高端城市海报设计,竖版9:16构图,整体采用对角线+S型流动构图,从左下向右上延展,画面以深邃黑色为背景,自上而下渐变至浓烈暗红色,形成强烈冷暖对比与空间纵深,背景带微弱星尘与颗粒质感。画面中央一条金色流动能量线条如火焰般蜿蜒贯穿,自底部向上延伸,具有流体质感、粒子光效与渐变高光,局部带细微能量碎屑与体积光。\n\n金色流光中逐层浮现广州城市地标建筑群:广州塔为视觉核心,比例突出,周围融合珠江新城高楼群、猎德大桥及现代与岭南建筑元素,建筑采用“精细线描 + 金色发光体块”表现,轮廓清晰、细节丰富,在金色光晕映衬下仿佛悬浮于虚空,形成超现实空间层次,远景轻微雾化增强纵深感。\n\n画面底部为一位东方白发女性形象,长发飘逸,如烟似雾,与金色流光自然衔接并逐渐融合,发丝半透明带渐变光感,姿态柔美,双目微闭,神情宁静,怀抱一束多彩鲜花,花间点缀微光粒子与星点效果,象征人与城市能量的精神连接,人物细节适度简化以突出整体设计感。\n\n光影集中于金色流线、建筑与人物轮廓,形成强烈明暗对比与视觉聚焦,整体氛围宏大、神秘、具有东方神话意境且略带治愈感。色彩以黑与暗红为基底,高亮鎏金为主视觉强调,金色具备丰富明暗层次,辅以小面积高饱和花束色彩点缀,整体高级克制。\n\n页面文字与画面融合排版:顶部居中宋体大字“广州·中国”,下方小字“2026/04/20”,再下方小字“LIYUE”,文字采用淡金色或柔和暖白色,与整体光影统一。高品质细节,电影级光影表现,体积光与粒子细节丰富,画面干净无噪点,超高清8K分辨率,商业级海报质感。",
     "author": "@liyue_ai",
-    "authorUrl": "https://x.com/liyue_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/liyue_ai/status/2046243132774494607",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/liyue_ai/status/2046243132774494607",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case42/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case42/output.jpg"
   },
   {
     "id": "poster-45-science-fiction-movie-poster",
@@ -2480,11 +2480,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作科幻电影海报",
     "author": "@underwoodxie96",
-    "authorUrl": "https://x.com/underwoodxie96",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/underwoodxie96",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/underwoodxie96/status/2046514205529088501",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/underwoodxie96/status/2046514205529088501",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case45/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case45/output.jpg"
   },
   {
     "id": "poster-46-refreshing-summer-udon-ad",
@@ -2493,11 +2493,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "在一年中的这个时候，天气有点热，我想感到清爽，新鲜，更强烈。在口中感受凉爽的乌冬面、茄子和汤的清爽感。",
     "author": "@genel_ai",
-    "authorUrl": "https://x.com/genel_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/genel_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/genel_ai/status/2046501692246470871",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/genel_ai/status/2046501692246470871",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case46/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case46/output.jpg"
   },
   {
     "id": "poster-47-handwritten-medical-prescription-sheet",
@@ -2506,11 +2506,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张手写中/西医药方图",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2046514998965371144",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2046514998965371144",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case47/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case47/output.jpg"
   },
   {
     "id": "poster-48-silicon-valley-2026-promo-poster",
@@ -2519,11 +2519,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "精致的2026年硅谷城市宣传海报，具有未来主义而优雅的氛围。\n\n双重曝光成分，保持S形流动运动感。在纯白色的纹理背景上，在右下角，一个身着时尚现代科技服装的微型人物正在释放一条发光的银蓝色长丝带。丝带在空气中优雅地流动，呈现出柔软的丝质质地，当它向左上方漂移时，它神奇地变成了连绵起伏的丘陵、海岸线、数据流和光线充足的城市地形的宏伟景观。\n\n在这条流动的“光之河”中，覆盖着手绘的硅谷全景地图，融合了技术、自然、创新和加利福尼亚州的阳光。场景充满远见、广阔、精致和鼓舞人心。\n\n包括标志性的硅谷和湾区元素：斯坦福大学拱门、苹果公园、谷歌校园风格的建筑、类似元的玻璃办公室、特斯拉风格的创新图像、沙山路的风险投资办公室、帕洛阿尔托绿树成荫的街道、圣何塞天际线、圣克鲁斯山脉、旧金山湾、高速公路、自动驾驶汽车、创业实验室、半导体模式、人工智能数据中心、和微妙的电路板纹理。\n\n周围环绕着柔和的雾气、金色的加州光线、浮云和精致的数字粒子。丰富的色彩，复杂的结构，高度细致，宏伟而令人叹为观止，但由于白色空间面积大，仍然清新而简约。\n\n在左下角，优雅的字体上写着“硅谷2026” ，上面有一个垂直的宣传口号： “创意塑造明天。“美丽的编辑布局，优雅的间距，清晰完整的字体，优质的城市品牌海报，电影般的灯光，精致的细节， 9:16的宽高比。",
     "author": "@carsonyungos",
-    "authorUrl": "https://x.com/carsonyungos",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/carsonyungos",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/carsonyungos/status/2046523198116889064",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/carsonyungos/status/2046523198116889064",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case48/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case48/output.jpg"
   },
   {
     "id": "poster-49-japanese-supermarket-sale-flyer",
@@ -2532,11 +2532,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "「一张热闹迷人的超市折叠传单的图片。顶部是一个大字母，上面写着“特价”和本周的日期。色彩缤纷的产品照片（蔬菜、水果、牛肉、鲜鱼）、红框价格标签、捕捉“超级史诗产品”和“家居用品” …… ”",
     "author": "@weel_corp",
-    "authorUrl": "https://x.com/weel_corp",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/weel_corp",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/weel_corp/status/2046514558064586782",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/weel_corp/status/2046514558064586782",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case49/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case49/output.jpg"
   },
   {
     "id": "poster-50-dark-epic-concept-poster",
@@ -2545,11 +2545,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "围绕【主题】自动生成一张顶级暗黑史诗概念海报 / 电影感信息图海报。\n\n唯一需要输入的变量只有:\n【主题】:___特朗普的思考____ \n\n除【主题】之外,其余全部由 AI 自动适配完成,包括但不限于:\n- 核心主体(自动判断更适合人物、守护者、战士、产品、器物、雕像、抽象象征或其他主视觉对象)\n- 中央承载结构(自动判断更适合王座、石座、祭坛、机械基座、遗迹、高台或其他支撑体)\n- 环境空间(自动判断更适合洞穴、神殿、废墟、深渊、地下宫殿、密室或其他封闭史诗空间)\n- 上方开口与光源形式(自动判断更适合月光、神光、能量束、审判之光、圣光或其他单一强光)\n- 象征元素(自动判断更适合骷髅、徽记、残碑、纹章、符文、能量环、神性符号等)\n- 色彩体系\n- 材质组合\n- 标题、副标题、辅助文案\n- 排版与整体叙事气质\n\n【总风格】\n高预算 90 年代好莱坞史诗大片海报气质,融合 cinematic matte painting、超写实摄影质感、极强明暗对比、厚重空间叙事、暗黑英雄主义与仪式感构图。整体必须像一张真正的电影主海报,而不是普通插画或电商图。\n\n【核心结构锁定】\n整张海报必须保留以下结构基因:\n1. 一个巨大、压迫感极强的黑暗封闭空间\n2. 一束从上方斜向切入的强烈体积光,作为画面的第一视觉秩序\n3. 中央偏右或光束终点位置的核心主体与承载结构\n4. 左下角作为高密度标题与信息锚点\n5. 四周保留大量纯黑或近黑负空间,形成电影感呼吸区\n\n【自动适配规则】\nAI 必须依据【主题】自动推导最适合的视觉系统:\n- 如果【主题】偏暗黑英雄、复仇、正义、孤独、宿命,则自动偏向石质王座、孤高人物、冷色神光、废墟或洞穴感空间\n- 如果【主题】偏神秘、幽灵、潜行、幻影、夜行,则自动偏向月光、迷雾、冷蓝色体积光、深渊式黑暗空间\n- 如果【主题】偏权力、统治、王者、秩序,则自动强化 王座 / 祭坛 / 冠冕式符号 / 仪式空间 的表达\n- 如果【主题】偏科技、AI、未来、机械,则自动将王座和空间替换为机械神座、能量基座、金属洞窟、工业神殿等未来化形态\n- 如果【主题】偏产品、品牌、器物,则自动把核心主体替换为最合适的 主视觉物件,并保留被神光审判式凸显的史诗构图\n\n【画布与色彩系统】\n- 背景底层必须是极深、近乎吞噬一切的黑暗空间\n- 主环境色由 AI 根据【主题】自动决定,但整体必须克制,以暗色为主\n- 强光区域色彩必须高度集中,只服务于体积光与主体高光\n- 主题色 / 强调色只能集中用于主视觉核心,不允许全画面泛滥\n- 必须建立明确的“黑暗底色 + 单一主光 + 少量主题强调色”的层级秩序\n\n【构图与视觉重力】\n- 采用强烈的斜向张力与向中心汇聚的视觉引导\n- 视觉重力从上方光源强势落下,最终压在核心主体之上\n- 主体必须处于被命运、审判、神性或权力照中的位置\n- 边缘必须自然融入黑暗,不能出现无意义背景填充\n- 所有元素必须服务于唯一的主叙事核心\n\n【材质与光影】\n- 不使用轮廓线,不使用平面化描边\n- 完全依赖体积光、阴影切割、反射、高光、雾气、粉尘、湿润岩石或其他真实材质来建构画面\n- 材质必须形成明显对比,例如:\n  粗粝岩石 / 冷硬金属 / 柔韧织物 / 古老石雕 / 湿润表面 / 尘雾光柱\n- 光束必须具有强烈 丁达尔效应,真实、厚重、可感知体积密度\n\n【排版系统】\n- 整体 80% 视觉,20% 文字\n- AI 根据【主题】自动生成主标题、副标题和底部信息块\n- 主标题应尽量简洁、有气势、有电影海报感\n- 若主题更适合中文,则优先中文;若更适合英文,则自动英文;也可双语,但必须统一\n- 主标题可沿光束垂直排布,仿佛由光本身构成\n- 左下角设置一个高密度信息模块,包括副标题、小字信息、电影 演职员表风格占位文字或品牌说明\n- 文字必须锐利、干净、真实嵌入环境,不得廉价漂浮\n\n【模块结构 —— 必须严格保持 3 块】\n[模块 1：顶部至中心光束]\n从顶部开口斜向切下的巨大体积光柱,作为第一视觉通道,并承载主标题或主视觉文字。\n\n[模块 2：中右核心]\n位于光束终点的核心主体与承载结构,形成整张海报的权力中心 / 命运中心 / 叙事中心。\n\n[模块 3：左下文字区]\n位于左下角负空间中的高密度排版区,包含副标题、说明文字、演职员表风格信息块、品牌信息或活动信息。\n\n【作者署名】\n在底部角落自然加入作者署名:\n@a9quant\n署名要小而清晰,精致、克制、高级,不喧宾夺主,像正式电影概念海报或艺术作品落款。\n\n【输出要求】\n输出为单张统一构图海报。\n所有视觉系统必须内部一致,不能有风格污染。\n画面必须具备:暗黑感、史诗感、压迫感、仪式感、命运感、电影完成度。\n最大细节密度,超清,电影级,印刷级,高端成片质感。",
     "author": "@A9Quant",
-    "authorUrl": "https://x.com/A9Quant",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/A9Quant",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/A9Quant/status/2046224777208361126",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/A9Quant/status/2046224777208361126",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case50/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case50/output.jpg"
   },
   {
     "id": "poster-51-pilates-studio-ad-poster",
@@ -2558,11 +2558,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "我想制作一个普拉提课堂广告图片，文字更吸引用户注册，图片中显示的是一位女性在做普拉提。",
     "author": "@ck_igarashi",
-    "authorUrl": "https://x.com/ck_igarashi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ck_igarashi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ck_igarashi/status/2046528889124728993",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ck_igarashi/status/2046528889124728993",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case51/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case51/output.jpg"
   },
   {
     "id": "poster-52-6-block-fashion-campaign-prompt-formula",
@@ -2571,11 +2571,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "旧钱汉普顿社论， 20多岁的高个子金发女郎，宁静优雅的表情，穿着奶油色羊绒绳毛衣，百褶米色网球裙，珍珠耳环，爱马仕真丝围巾，皮革平底鞋，苗条亚伦摄影风格，中画幅胶片摄影，坐在科德角房子的白色木门廊上，金色时光，背景是海洋",
     "author": "@anacoding",
-    "authorUrl": "https://x.com/anacoding",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/anacoding",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/anacoding/status/2046904999045628114",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/anacoding/status/2046904999045628114",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case57/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case57/output.jpg"
   },
   {
     "id": "poster-53-sony-a7-exploded-view-breakdown-prompt",
@@ -2584,11 +2584,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作索尼 A7 相机的详细分解视图，清晰展示所有零件，并标注每个部件的名称。",
     "author": "@iaPulse_",
-    "authorUrl": "https://x.com/iaPulse_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iaPulse_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iaPulse_/status/2046903739429097660",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iaPulse_/status/2046903739429097660",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case58/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case58/output.jpg"
   },
   {
     "id": "poster-54-1900-istiklal-street-panorama-prompt",
@@ -2597,11 +2597,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "1900年伊斯坦布尔Istiklal街的360正角图像",
     "author": "@ai_gezgini",
-    "authorUrl": "https://x.com/ai_gezgini",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ai_gezgini",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ai_gezgini/status/2046903631509705030",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ai_gezgini/status/2046903631509705030",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case59/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case59/output.jpg"
   },
   {
     "id": "poster-57-theme-science-encyclopedia-card",
@@ -2610,11 +2610,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请根据【主题】生成一张高质量竖版「科普百科图」。 \n\n这张图不是普通海报,也不是单纯插画,而是一张兼具“图鉴感、百科感、信息结构感、收藏感”的模块化科普信息图。整体风格参考高级博物图鉴、现代百科书页、生活方式知识卡和社交媒体高传播信息图的结合。\n\n请让画面包含:\n- 一个清晰漂亮的主题主视觉\n- 若干局部特征放大细节\n- 多个圆角模块化信息分区\n- 清楚的标题层级与重点标签\n- 简洁但丰富的百科内容\n- 可视化评分、要点总结或Top 5模块\n\n内容栏目请根据主题自动适配,优先从这些方向中选择并合理组合:\n基础档案、分类信息、外观特征、习性/生态、形成机制/结构组成、生长或使用条件、养护或维护建议、风险与注意事项、适合人群或适用场景、优缺点对比、快速评分卡。\n\n视觉要求:\n浅色干净背景,柔和配色,轻阴影,精致小图标,圆角信息框,整洁排版,信息密度高但不拥挤,阅读体验好。整体必须像真正可以发布、阅读、收藏、系列化生产的科普百科卡,而不是广告图。\n\n请不要做成普通商业宣传海报。要突出“知识整理 + 模块信息 + 图鉴式展示”的特征。",
     "author": "@alanlovelq",
-    "authorUrl": "https://x.com/alanlovelq",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/alanlovelq/status/2046378199681257920",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq/status/2046378199681257920",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case54/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case54/output.jpg"
   },
   {
     "id": "poster-55-chili-pork-cooking-flowchart",
@@ -2623,11 +2623,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "帮我制作辣椒炒肉这道菜的详细制作流程图,真实风格,适用于小红书图文比例",
     "author": "@Kurt_Rousey466",
-    "authorUrl": "https://x.com/Kurt_Rousey466",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Kurt_Rousey466",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Kurt_Rousey466/status/2046267707881029934",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Kurt_Rousey466/status/2046267707881029934",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case55/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case55/output.jpg"
   },
   {
     "id": "poster-56-cinematic-infographic-concept-poster",
@@ -2636,11 +2636,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请围绕【主题】自动生成一张顶级概念海报 / 信息图式电影海报。\n\n唯一输入变量只有:\n【主题】:__中国历史上的皇帝排名_         \n\n要求 AI 根据这个主题,自动推导并统一设计以下全部视觉系统,不需要我额外指定:\n- 核心主体(可以自动判断更适合人物、产品、建筑、器物、符号、场景或抽象意象)\n- 底部支撑结构\n- 上方悬浮符号或精神象征\n- 场景包裹元素\n- 隐喻系统\n- 色彩层级\n- 材质对比\n- 光影逻辑\n- 标题、副标题、辅助文案\n- 品牌感与高级感表达方式\n\n最终画面必须是:\n一张震撼、精密、统一、电影级、超高细节、可用于高端印刷的概念主视觉海报。\n\n【总风格】\n超写实 3D 商业 CGI 渲染,融合电影级布光、奢侈品视觉语言、未来感概念设计与史诗级构图。画面必须具有“唯一主视觉核心”,不能杂乱,不能像拼贴,不能像普通电商海报。\n\n【自动推导规则】\nAI 必须依据【主题】自动决定最合适的:\n1. 核心视觉隐喻\n2. 主体类型与姿态\n3. 支撑结构形式\n4. 悬浮元素形式\n5. 场景外壳与空间氛围\n6. 主色、辅色、强调色\n7. 材质组合\n8. 文字气质与版式风格\n\n例如:\n- 如果主题偏权力、秩序、资本、统治,则自动偏向王座、冠冕、机械、神殿、红幕、金属、权力结构\n- 如果主题偏科技、AI、芯片、未来,则自动偏向机械结构、能量核心、光束、深色金属、全息感\n- 如果主题偏奢侈品、高定、稀缺、收藏,则自动偏向珠宝、镜面材质、黑金体系、展台、博物馆式布光\n- 如果主题偏人物、IP、角色,则自动以人物为主视觉核心,并自动匹配对应世界观与象征系统\n- 如果主题偏城市、文明、史诗、命运,则自动转化为宏大叙事型空间结构与仪式感场景\n\n【构图规则】\n- 绝对高级感\n- 强烈中心秩序,整体统一\n- 允许中轴对称或接近中轴的史诗级构图\n- 视觉重力明确,从上到下形成清晰的层级落点\n- 边缘负空间干净、克制、有呼吸感\n- 不允许无意义装饰,不允许风格污染,不允许多个系统互相打架\n\n【视觉质量】\n- 超高细节\n- 体积光清晰\n- 材质真实\n- 反射、折射、阴影、雾气、景深自然\n- 每个元素都像经过工业级视觉总监审美控制\n- 整体达到高端品牌 活动主视觉 / 奢华邀请函海报 / 概念编辑海报 水准\n\n【排版系统】\n- 整体为 90% 视觉,10% 文字\n- AI 根据【主题】自动生成最匹配的主标题和副标题\n- 标题必须简洁、锋利、有气势\n- 文案分布在安全负空间内,不压主体\n- 若主题适合中文,则优先生成中文标题;若主题更适合英文,则自动生成英文标题;也可中英结合,但必须统一高级\n- 文字必须尽量少而准,不要堆字\n\n【署名要求】\n在画面底部角落自然加入作者署名:\n@a9quant\n署名要小,但清晰、精致、高级,不喧宾夺主,像顶级视觉作品中的正式作者落款。\n\n【输出要求】\n输出为单张统一构图海报。\n自动根据【主题】完成全部视觉决策。\n画面必须具备史诗感、秩序感、控制力、仪式感、商业完成度。\n最大细节密度,超清,电影级,印刷级,高端成片质感。",
     "author": "@A9Quant",
-    "authorUrl": "https://x.com/A9Quant",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/A9Quant",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/A9Quant/status/2046228485841334559",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/A9Quant/status/2046228485841334559",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case56/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case56/output.jpg"
   },
   {
     "id": "poster-58-a-full-body-outdoor-shot-captures-a-young-caucasian-woman-possibly-in-her-la",
@@ -2649,11 +2649,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张全身户外镜头捕捉到一名年轻的高加索妇女，她可能在20多岁时大步穿过城市人行横道。她穿着一件超大的哑光巧克力棕色皮夹克，搭配自由流动的黑色裙子和光滑的及膝黑色靴子，传达出高端时尚街头风格。她长长的深棕色头发被风刮过，补充了她平静而自信的表情，她侧目一看，身后，模糊的城市背景是一辆黄色出租车和行人，建筑物以中性色调展示了不同的建筑细节。该场景利用柔和的环境日光通过浅云层过滤，产生柔和的阴天照明效果。温暖的泥土色调由棕色、黑色和米色组成。图像可能来自高分辨率数码相机，呈现广角视角，始终保持专注，强调动感和时尚感。",
     "author": "@AIwithSarah_",
-    "authorUrl": "https://x.com/AIwithSarah_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithSarah_/status/2047234995627172229",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_/status/2047234995627172229",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
   },
   {
     "id": "poster-59-a-professional-product-photography-shot-of-a-cold-sparkling-water",
@@ -2662,11 +2662,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "专业的产品摄影，拍摄冰冷的气泡水\n可以直立放置在金色的海滩沙滩上。罐子是银色和青色的，\n用菠萝覆盖逼真的水滴冷凝\n插图和热带品牌。罐子略微倾斜，\n种植在一小堆细小的金色沙子和小小的白色鹅卵石中\n和散落在底部周围的小绿色热带叶子/草。\n背景采用大胆的拆分构图-明亮的天蓝色\n左边是鲜艳的黄色，右边是模糊的黄色，\n菠萝放在罐子后面的右侧。模糊的热带\n棕榈叶从左上角垂下，增加了深度和\n框架。宏观水平的水冷凝液滴上可见\n可以浮出水面。照明明亮，充满活力，商业工作室照明\n有干净的阴影。浅景深-可以在清晰的焦点，\n背景柔和模糊。心情：夏季，热带，清新，清爽。\n商业产品摄影，超细， 8K。",
     "author": "@meng_dagg695",
-    "authorUrl": "https://x.com/meng_dagg695",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/meng_dagg695",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/meng_dagg695/status/2047227172486824002",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/meng_dagg695/status/2047227172486824002",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case62/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case62/output.jpg"
   },
   {
     "id": "poster-60-360-equirectangular-panorama-image",
@@ -2675,11 +2675,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "360 度 equirectangular （ 360正角正距円筒図法）画像を 2: 1で生成\n\n在线360°全景查看器VR",
     "author": "@rs_elwood",
-    "authorUrl": "https://x.com/rs_elwood",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/rs_elwood",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/rs_elwood/status/2047192228758692036",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/rs_elwood/status/2047192228758692036",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
   },
   {
     "id": "poster-61-soft-poetic-children-s-book-illustration-with-watercolor-and-gouache-textures",
@@ -2688,11 +2688,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "柔和的诗意儿童书籍插图，带有水彩和水粉纹理。清晰的温和日光，略微明亮的亮点。柔和的柔和蓝色和温暖的色调，柔和的柔和色调。可见的笔触和纸纹。简约的构图，具有大的负空间。平静，周到，略带开放式的氛围。\n\n儿童角色（约12岁）。微妙的视觉隐喻，如光、影、透视、反射。手绘图画书风格，不是卡通，不是动漫，不是3D。\n\n两个孩子在平静的谈话中，形成了柔和的联系。",
     "author": "@dotey",
-    "authorUrl": "https://x.com/dotey",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/dotey",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/dotey/status/2047174895293849972",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/dotey/status/2047174895293849972",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case82/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case82/output.jpg"
   },
   {
     "id": "poster-62-aspect-ratio-9-16-vertical",
@@ -2701,11 +2701,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "纵横比： 9:16垂直\n\n【身份和现实主义（关键优先事项）】\n\n受试者是一名成年女性，其面部特征和骨骼结构必须100%与所提供的FACE_REF图像完全匹配。眼间距、鼻梁、下颌线和颧骨结构必须准确；不允许身份漂移。皮肤纹理必须逼真，显示毛孔和细节-不要过度光滑或应用Instagram滤镜外观。\n\n【摄影和电影摄影】\n\n具有电影品质的高端时尚编辑照片，可与《Vogue》、《Harper's Bazaar》或《ELLE》的封面相媲美。\n\n镜头和对焦：使用85毫米镜头（中等镜头）或50毫米/70毫米（全身）浅景深。受试者的眼睛必须完全锐利。\n\n照明：自然的冬日日光，辅以柔和、专业的补光。金色装饰品和宝石应具有逼真的镜面高光，而不会被吹出。刺绣纹理必须具有令人难以置信的锐度和触感。\n\n色彩分级：丰富的电影色彩。红色的墙壁和服装的主要颜色必须鲜明干净，而不是泥泞。整体形象应该是深沉的、纹理的和昂贵的。\n\n构图：干净的杂志封面布局，顶部或侧面刻意留有负空间，用于排版。没有纸张撕裂或手绘效果。\n\n【场景：紫禁城冬季】\n\n地理位置为北京紫禁城红墙长廊。\n\n环境：可见的细节包括朱红色的墙壁、红色的柱子、错综复杂的雕刻窗户和具有强烈透视深度的彩绘木梁。场景必须干净整洁：没有游客、现代标志或水印。\n\n天气状况（随机选择） ：\n\n【如果选择降雪】：细雪花轻轻落下。\n\n[如果选择雪后] ：空气清爽，屋檐和台阶上有残雪。\n\n【衣柜：明代重工时装】\n\n主体穿着华丽，多层次的明代礼仪汉服。审美重金，密集流苏，凤凰冠，大面积编织金绣，层次复杂，尊贵奢华。\n\n结构：清晰可见的白色立式内衣领提供了一个干净的边界。上面是一件宽袖的结构化duijin ao （夹克） ，上面有一个沉重的xiapei/pibo （长披肩）结构，由一个大的中央yajin装饰品支撑。\n\n织物和工艺：主要面料是真正的织金锦（织金锦） ，具有明显的纤维纹理。刺绣是重工业用盘锦金制品，沙发金",
     "author": "@GeekCatX",
-    "authorUrl": "https://x.com/GeekCatX",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/GeekCatX/status/2047220831491858766",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX/status/2047220831491858766",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case85/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case85/output.jpg"
   },
   {
     "id": "poster-63-hangzhou-west-lake-travel-poster",
@@ -2714,11 +2714,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "帮我生成一个介绍杭州西湖的海报",
     "author": "@BNBOKBt5",
-    "authorUrl": "https://x.com/BNBOKBt5",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/BNBOKBt5",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/BNBOKBt5/status/2047210189741605082",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/BNBOKBt5/status/2047210189741605082",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case87/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case87/output.jpg"
   },
   {
     "id": "poster-64-dongfang-bubai-wuxia-character-poster",
@@ -2727,11 +2727,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "图片1：电影角色海报，东方不败红衣饮酒，悬崖落日，武侠意境\n\n图片2：东方不败绣花针如飞，红衣长发立于悬崖，黑木崖夕阳如血",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047204566559756707",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047204566559756707",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case89/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case89/output.jpg"
   },
   {
     "id": "poster-65-a-chinese-odyssey-90s-hong-kong-poster",
@@ -2740,11 +2740,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "图片1：大话西游海报重制为90年代港片风格，至尊宝紫霞城墙拥吻，胶片颗粒\n\n图片2：杜蕾斯吉祥物×猪八戒，八戒害羞脸红遮面，文案取经路上要安全",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047201597697245252",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047201597697245252",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case90/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case90/output.jpg"
   },
   {
     "id": "poster-66-journey-to-the-west-daughter-kingdom-poster",
@@ -2753,11 +2753,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "西游记女儿国诱惑海报，六位艳丽的女儿国大臣在后宫温泉中，迷雾朦胧妖冶，生成图片\n\n4.23早上测试成功",
     "author": "@cj858cjsoul",
-    "authorUrl": "https://x.com/cj858cjsoul",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/cj858cjsoul",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/cj858cjsoul/status/2047103956535697822",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/cj858cjsoul/status/2047103956535697822",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case103/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case103/output.jpg"
   },
   {
     "id": "poster-67-royal-tramp-character-poster",
@@ -2766,11 +2766,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成鹿鼎记海报，展现韦小宝跟老婆XXX，忠于原著的描述，夸大特点，强调女性的美艳和男性的气质",
     "author": "@caiziboshi",
-    "authorUrl": "https://x.com/caiziboshi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/caiziboshi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/caiziboshi/status/2047091751731519744",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/caiziboshi/status/2047091751731519744",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case104/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case104/output.jpg"
   },
   {
     "id": "poster-68-generate-an-image-of-a-racing-car-poster-with-its-spec-and-pricing",
@@ -2779,11 +2779,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成带有规格和定价的赛车海报图像",
     "author": "@verysmallwoods",
-    "authorUrl": "https://x.com/verysmallwoods",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/verysmallwoods",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/verysmallwoods/status/2047033599229137126",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/verysmallwoods/status/2047033599229137126",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case105/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case105/output.jpg"
   },
   {
     "id": "poster-69-charlie-chaplin-product-poster-redesign",
@@ -2792,11 +2792,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "重新生成一张海报，卓别林拿着商品图里的止痒膏，面露微笑。风格要简约干净。\n\n左边是 GPT-image-2 右边是",
     "author": "@chenenpei",
-    "authorUrl": "https://x.com/chenenpei",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/chenenpei",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/chenenpei/status/2046985783715025135",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/chenenpei/status/2046985783715025135",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case106/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case106/output.jpg"
   },
   {
     "id": "poster-70-luxury-sportswear-basketball-athlete-campaign-poster",
@@ -2805,11 +2805,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "打造高端奢华运动服装宣传海报，在现代工作室环境中展示自信的女运动员。全身摆姿势，时尚感很强，身高站立，身边抱着篮球，下巴微微抬起，直接有力的表情。运动健美的体质，光滑的拉回头发，干净发光的皮肤，锋利的编辑姿势。\n\n服装包括超大号短款校队夹克、合身运动内衣、量身定制的机车短裤、白色中筒袜和现代高帮运动鞋。中性单色造型，带有微妙的优质品牌形象。\n\n背景是一面干净的浅灰色单间公寓墙，巨大的浓缩黑色字体垂直延伸到模型背后的背景上。文字应该显得超大和占主导地位，将运动员置于中心。\n\n地板是光滑的反光单间公寓表面，带有微妙的球场标记和柔和的反射。一些篮球自然地放在地板上，以保持深度和运动风格。\n\n照明是明亮的豪华工作室照明，具有清晰的亮点、柔和的阴影和抛光的商业饰面。清晰的焦点，超逼真的皮肤纹理，优质的面料纹理，电影般的对比度。\n\n风格应感受现代、简约、精英、大胆、高端时尚体育运动、奢侈品牌广告、干净构图、平衡负空间、强烈视觉冲击、高分辨率、方形格式。",
     "author": "@Shorelyn_",
-    "authorUrl": "https://x.com/Shorelyn_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shorelyn_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shorelyn_/status/2047949711181832558",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shorelyn_/status/2047949711181832558",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case70/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case70/output.jpg"
   },
   {
     "id": "poster-71-streetwear-fashion-campaign-asian-apparel-poster",
@@ -2818,11 +2818,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "以现代亚洲服装广告为灵感，打造高端街头时尚广告海报。一个时尚的年轻男模的全身肖像，自信地站着，双腿交叉在脚踝上，双手插在夹克口袋里，头稍微向上侧转，表情平静周到。卷曲的卷曲中等长度的头发，柔软的体积。苗条的运动型身材。\n\n服装包括一件深橄榄绿色加衬连帽夹克、干净的白色圆领运动衫和小小的胸部徽标、宽松的黑色工装风格长裤和简约的白色运动鞋。造型干净、年轻、现代。\n\n背景是充满活力的电蓝色无缝单间公寓背景，具有微妙的渐变照明、柔和的发光条纹和光滑的地板反射。照明是柔和的工作室灯光，具有柔和的阴影和抛光的商业饰面。\n\n图形海报布局带有巨大的粗体浓缩无衬线文字，上面写着“JEANSWEST” ，以浅灰色白色垂直拉伸在模型背后的背景上。在右下角添加大文本“JW26”。\n\n构图应该让人感觉优雅、时尚、干净、商业、年轻、现代时尚的广告活动。清晰的焦点，超逼真的面料纹理，电影般的照明，平衡的负空间，时尚的品牌设计，高分辨率，垂直海报比例。",
     "author": "@harboriis",
-    "authorUrl": "https://x.com/harboriis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/harboriis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/harboriis/status/2047921293123895520",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/harboriis/status/2047921293123895520",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case71/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case71/output.jpg"
   },
   {
     "id": "poster-72-epic-career-moments-cinematic-poster-template",
@@ -2831,11 +2831,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张史诗般的海报，展示[Insert Name]职业生涯中最具标志性的时刻。电影风格，镜头光晕。纵向。A1海报尺寸。纵横比4: 5 __ P0 __",
     "author": "@Goodmanprotocol",
-    "authorUrl": "https://x.com/Goodmanprotocol",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Goodmanprotocol",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Goodmanprotocol/status/2047900470921040270",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Goodmanprotocol/status/2047900470921040270",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case72/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case72/output.jpg"
   },
   {
     "id": "poster-73-avant-garde-basketball-sculpture-sports-fashion-ad",
@@ -2844,11 +2844,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "前卫的运动时尚广告，超大的篮球，像一个巨大的雕塑，女运动员斜倚在球的曲面上，仿佛现代家具，背后大胆的排版中的巨大单词“提升” ，烧焦的橙色工作室背景，光滑的反光地板，奢华的运动编辑美学，电影照明，超干净的构图， 1: 1",
     "author": "@AIwithkhan",
-    "authorUrl": "https://x.com/AIwithkhan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithkhan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithkhan/status/2047886964037398989",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithkhan/status/2047886964037398989",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case73/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case73/output.jpg"
   },
   {
     "id": "poster-74-avant-garde-tennis-racket-sculpture-sports-fashion-ad",
@@ -2857,11 +2857,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "前卫的运动时尚广告，超大网球拍，像纪念性雕塑一样定位，女运动员随意坐在绳子上，仿佛悬挂的休息室，背后大胆排版的巨型单词“精确” ，清晰的白色工作室背景，反光庭院般的地板，奢华运动服装编辑美学，电影照明，超级干净的构图， 1: 1",
     "author": "@AIwithSynthia",
-    "authorUrl": "https://x.com/AIwithSynthia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithSynthia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithSynthia/status/2047884609321619831",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithSynthia/status/2047884609321619831",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case74/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case74/output.jpg"
   },
   {
     "id": "poster-75-surrealist-liquor-brand-high-fashion-poster",
@@ -2870,11 +2870,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 Aguardiente Amarillo 制作一张超现实高级时装广告海报。场景设在浅橙色的极简单色影棚中，地面半反光。中央是一瓶巨大的 Aguardiente Amarillo，以对角线角度摆放并像靠背一样支撑画面。一位深色长发男性时装模特穿着全白连帽衫与宽腿裤，放松地倚靠在巨型酒瓶上，侧脸看向右方，神情平静，穿白色运动鞋。背景中以巨大的白色压缩无衬线粗体显示 “AGUARDIENTE”，部分被酒瓶和模特遮挡以形成景深。右上角写 “Creado por @HMontilla_”。底部中央用白色无衬线字体写广告语：“El Aguardiente Amarillo de Manzanares es un icónico licor colombiano, originario de 1885 en Manzanares, Caldas”。灯光柔和、冷静、均匀，在蓝色亮面地板上形成淡淡阴影和细微反射。整体美学干净、现代、高概念。画幅比例 3:4。",
     "author": "@hmontilla_",
-    "authorUrl": "https://x.com/hmontilla_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/hmontilla_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/hmontilla_/status/2047884126343032995",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/hmontilla_/status/2047884126343032995",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case60/output.jpg"
   },
   {
     "id": "poster-76-premium-food-recipe-poster-elegant-layout",
@@ -2883,11 +2883,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 [ DISH NAME ] 制作一张高级料理制作海报：美观的主菜视觉，温暖自然光，奶油色背景，优雅的分步骤食谱版式，包含食材、烹饪流程、高级美食摄影、精致英文排版、奢华餐厅广告风格、干净设计、丰富色彩、高细节、极具食欲和吸引力，电影级杰作质感。",
     "author": "@Preda2005",
-    "authorUrl": "https://x.com/Preda2005",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Preda2005",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Preda2005/status/2047883394152088004",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Preda2005/status/2047883394152088004",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case76/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case76/output.jpg"
   },
   {
     "id": "poster-77-luxury-fashion-magazine-cover-black-and-white",
@@ -2896,11 +2896,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张受奢侈时尚出版物启发的高级时装编辑杂志封面。使用男性主体参考图。黑白肖像摄影，干净的米白色影棚背景。主体以低角度自信摆姿，略微向上看，下颌线清晰，嘴唇自然微张，波浪乱发有自然蓬松度。服装为深色高领衫叠穿有纹理的格纹定制西装外套。灯光柔和但戏剧化，塑造面部阴影和优雅对比。杂志版式顶部使用超大衬线刊头 “VOGUE”，部分被主体头部遮挡。页面使用极简高级排版。加入侧边文字 “FASHION”、期号日期 “2026 MAY”、左侧标题 “27 DIFFERENT STYLES”、右下角粗体封面线 “LOOK FAMOUS”。在一只眼睛区域叠加小红色半透明方块，内写 “CATCHY”。风格要高级、现代、电影感、构图干净、焦点锐利、皮肤纹理超真实，具有编辑类奢华美学、均衡留白和经典时尚封面设计。竖版杂志比例，高分辨率。",
     "author": "@iamrealsnow",
-    "authorUrl": "https://x.com/iamrealsnow",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iamrealsnow",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iamrealsnow/status/2047883187527856345",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iamrealsnow/status/2047883187527856345",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case77/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case77/output.jpg"
   },
   {
     "id": "poster-78-surrealist-rolex-luxury-watch-fashion-poster",
@@ -2909,11 +2909,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 Rolex 制作一张高级时装感超现实海报。深祖母绿极简影棚，抛光反光地面。一只巨大的 Rolex 腕表像纪念碑一样竖立。男性模特穿剪裁合体的深绿色西装，随性倚靠在表盘旁，并佩戴相配的 Rolex。",
     "author": "@Sheldon056",
-    "authorUrl": "https://x.com/Sheldon056",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Sheldon056",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Sheldon056/status/2047873913049538927",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Sheldon056/status/2047873913049538927",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case78/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case78/output.jpg"
   },
   {
     "id": "poster-79-peacock-botanical-vintage-symmetrical-art-print",
@@ -2922,11 +2922,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "对称构图：两只优雅的蓝色孔雀，羽毛图案细致，周围环绕蓝色花卉元素、复杂的复古植物装饰、柔和米色背景。整体为古典花卉装饰风格，带有浓郁藏蓝与天蓝细节，装饰艺术插画质感。--ar 3:2",
     "author": "@dotey",
-    "authorUrl": "https://x.com/dotey",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/dotey",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/dotey/status/2047803054422901046",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/dotey/status/2047803054422901046",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case79/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case79/output.jpg"
   },
   {
     "id": "poster-80-splash-fashion-brand-hyper-realistic-campaign-poster",
@@ -2935,11 +2935,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 “SPLASH” 制作一张超写实时尚海报，使用参考图中的同一女孩，脸部保持 100% 一致。她自信坐在带水花效果、光泽液体质感的 3D SPLASH logo 上，一条腿放松，一条腿弯曲，姿态强烈且具有编辑大片感。背景中巨大的粗体 “SPLASH” 文字填满画面，并部分位于她身后。添加小标语 “Own Your Style.”。服装为现代黑色街头时尚：西装外套、贴身上衣、长裤、运动鞋。灯光为电影级影棚布光，柔和主光加轮廓光，液体 logo 上有反射高光。风格为奢侈品牌活动视觉（Zara / H&M），干净有光泽的环境。相机 85mm 镜头，浅景深，8K，超细节，照片级真实。",
     "author": "@miratechtool",
-    "authorUrl": "https://x.com/miratechtool",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/miratechtool",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/miratechtool/status/2047780974709346606",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/miratechtool/status/2047780974709346606",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case80/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case80/output.jpg"
   },
   {
     "id": "poster-81-avant-garde-guitar-sculpture-fashion-advertisement",
@@ -2948,11 +2948,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "前卫时尚广告：一把超大吉他像雕塑一样摆放，穿牛仔裤的吉他手随性坐在按钮上，仿佛把它当家具。背景有巨大的白色粗体字 “Plism Art”。粉彩影棚背景，反光地面，奢华眼镜广告美学，超干净版式，编辑杂志风格。加粗引语 “ What are you listening”，标签：Create Own Change。",
     "author": "@QamarRiaz1",
-    "authorUrl": "https://x.com/QamarRiaz1",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/QamarRiaz1",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/QamarRiaz1/status/2047777016733110722",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/QamarRiaz1/status/2047777016733110722",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case81/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case81/output.jpg"
   },
   {
     "id": "poster-110-illustrated-city-food-map",
@@ -2961,11 +2961,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\": \"插画地图信息图\", \"风格\": \"{argument name=\"艺术风格\" default=\"水彩与墨线手绘\"}\", \"任务\": \"为 {argument name=\"城市名称\" default=\"台北\"} 制作一张城市美食地图海报\", \"版式\": { \"格式\": \"竖版海报\", \"内容\": [\"以手绘城市地图为主体\", \"标出代表性街区与美食地点\", \"加入小吃、餐厅、市场、地标和路线\", \"使用清晰图例、标题、编号和装饰标签\"] }, \"视觉\": \"温暖、亲切、可收藏的旅行编辑插画风格，信息清楚但不拥挤\" }",
     "author": "@mm_zzm44854",
-    "authorUrl": "https://x.com/mm_zzm44854",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mm_zzm44854",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mm_zzm44854/status/2045861258520568230",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mm_zzm44854/status/2045861258520568230",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case110/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case110/output.jpg"
   },
   {
     "id": "poster-111-3d-stone-staircase-evolution-infographic",
@@ -2974,11 +2974,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\": \"演化时间线信息图\", \"指令\": \"以 REFERENCE_0 作为结构基础，将平面矢量设计转化为高度真实的 3D 信息图。把平滑坡道替换为清晰的石阶，每一级代表一个演化阶段。保持原始布局关系，但增加真实石材、阴影、景深和博物馆展陈质感。\", \"风格\": \"写实 3D、石材台阶、清晰标签、垂直时间线、干净背景\", \"输出\": \"一张具有建筑模型感和教育图解感的高端信息图海报\" }",
     "author": "@GeekCatX",
-    "authorUrl": "https://x.com/GeekCatX",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/GeekCatX/status/2045792240044511277",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/GeekCatX/status/2045792240044511277",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case111/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case111/output.jpg"
   },
   {
     "id": "poster-119-biomimetic-skyray-aircraft-poster",
@@ -2987,11 +2987,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"仿生航空概念海报\", \"主体\":{\"飞行器\":\"未来飞行器概念\", \"名称\":\"{argument name=\"飞行器名称\" default=\"Skyray\"}\", \"灵感\":\"{argument name=\"生物灵感\" default=\"蝠鲼\"}\"}, \"设计\":\"将生物形态语言转化为高性能航空器：宽展翼面、流线机身、仿生进气口、半透明结构分层和精密工程细节。\", \"版式\":\"竖版概念海报，中央大幅主视觉，周围加入结构剖面、局部放大、功能注释和飞行姿态小图。\", \"风格\":\"高端航空工业设计、电影级科幻写实、深色背景、冷色体积光、技术蓝图信息层\", \"文字\":\"标题保留 飞行器名称，可加入简短技术标签和规格占位文字。\" }",
     "author": "@_simonsmith",
-    "authorUrl": "https://x.com/_simonsmith",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/_simonsmith",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/_simonsmith/status/2048172203946996041",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/_simonsmith/status/2048172203946996041",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case119/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case119/output.jpg"
   },
   {
     "id": "poster-120-taoist-three-souls-seven-po-poster",
@@ -3000,11 +3000,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张高度细致的竖版道教神秘学信息图海报，风格如古代中国宗教卷轴，印在泛黄米色宣纸上，带精细装饰边框。画面中央以发光的垂直人体轮廓或灵魂轴线呈现“三魂七魄”的结构，周围用对称图解、细线标注、符箓纹样和古籍式小字说明组织信息。顶部使用中文大标题“三魂七魄”，标题下方加入一段整齐书法风格的古典中文解释。整体完全对称，中心发光，色彩以墨黑、朱砂红、旧金和温润纸色为主。避免现代科幻感，强调古籍、道教、仪式、秘传图谱和收藏级印刷质感。",
     "author": "@leyu37829",
-    "authorUrl": "https://x.com/leyu37829",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/leyu37829",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/leyu37829/status/2048125950681075833",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/leyu37829/status/2048125950681075833",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case120/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case120/output.jpg"
   },
   {
     "id": "poster-121-vintage-claude-shannon-infographic-poster",
@@ -3013,11 +3013,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"复古编辑信息图海报\", \"主体\":\"Claude Shannon 与信息论\", \"风格\":{\"年代\":\"1940s Bell Labs 档案海报\", \"外观\":\"旧奶油色纸张、蓝图线条、打字机文字、复古工程图\"}, \"标题\":\"The Architecture of Information\", \"副标题\":\"How uncertainty became measurable, and communication became engineering.\", \"版式\":\"以 Claude Shannon 肖像、通信信道示意、比特、熵、噪声和编码图解组成分区式信息图\", \"细节\":[\"保留公式与技术符号\", \"加入档案编号 NOTE TOSELF No.6713\", \"使用细网格、注释箭头和小型图表\"], \"氛围\":\"严谨、复古、科学史、编辑杂志质感\" }",
     "author": "@mob_17",
-    "authorUrl": "https://x.com/mob_17",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mob_17",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mob_17/status/2048118645017219381",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mob_17/status/2048118645017219381",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case121/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case121/output.jpg"
   },
   {
     "id": "poster-122-ink-wash-tribute-poster-for-chen-uen",
@@ -3026,11 +3026,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "在泛黄宣纸上制作一张复古编辑海报，致敬 {argument name=\"艺术家姓名\" default=\"CHEN UEN\"}。设计像博物馆信息图与中国水墨插画的结合：中央为英武人物或墨色战士形象，笔触有飞白、泼墨、旧纸纹理和朱砂印章。顶部以大号中文书法写艺术家姓名，后接斜杠和罗马字 {argument name=\"罗马字姓名\" default=\"CHEN UEN\"} 的大写衬线字，旁边放一个小红印。标题下添加副标题，说明其绘画风格、武侠精神和漫画史地位。周围加入小型图解框、笔触细节、代表性主题标签、时间线和简短说明。整体要像严肃的展览海报，克制、典雅、有东方水墨力量。",
     "author": "@mob_17",
-    "authorUrl": "https://x.com/mob_17",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mob_17",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mob_17/status/2048118645017219381",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mob_17/status/2048118645017219381",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case122/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case122/output.jpg"
   },
   {
     "id": "poster-123-water-signs-zodiac-character-poster",
@@ -3039,11 +3039,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"中国生肖风角色信息图海报\", \"主体\":\"十二星座角色列表，水象星座篇\", \"语言\":\"Traditional Chinese\", \"格式\":\"竖版海报\", \"风格\":\"柔和复古、东方编辑信息图、细腻动漫角色、蓝色水纹装饰\", \"版式\":{\"分区数量\":3, \"分区\":[{\"title\":\"巨蟹座\", \"内容\":\"温柔、守护、情感深\"}, {\"title\":\"天蝎座\", \"内容\":\"神秘、敏锐、意志强\"}, {\"title\":\"双鱼座\", \"内容\":\"梦幻、共情、艺术感\"}]}, \"视觉\":\"同一位年轻东亚女性被重新设计为三种水象星座角色，服装、姿态、道具和背景图案各不相同；加入水滴、小星星、云纹线稿和清晰标签。\" }",
     "author": "@komorimedia",
-    "authorUrl": "https://x.com/komorimedia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/komorimedia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/komorimedia/status/2048114825398731143",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/komorimedia/status/2048114825398731143",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case123/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case123/output.jpg"
   },
   {
     "id": "poster-124-earth-signs-zodiac-character-poster",
@@ -3052,11 +3052,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"复古星座角色信息图海报\", \"主题\":\"仅土象星座\", \"语言\":\"Traditional Chinese\", \"风格\":{\"整体\":\"优雅编辑信息图，带柔和动漫风人物\", \"色板\":\"米色、橄榄绿、暖金、土褐\", \"装饰\":[\"装饰角花\", \"小金色闪光\", \"植物枝条\", \"山形插画\", \"细分隔线\"]}, \"版式\":{\"分区数量\":3, \"分区\":[{\"title\":\"金牛座\", \"内容\":\"稳定、感官、审美\"}, {\"title\":\"处女座\", \"内容\":\"细致、理性、秩序\"}, {\"title\":\"摩羯座\", \"内容\":\"坚韧、责任、长期主义\"}]}, \"视觉\":\"同一角色以三套土象造型呈现，带自然材质、植物、山石和复古标签。\" }",
     "author": "@komorimedia",
-    "authorUrl": "https://x.com/komorimedia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/komorimedia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/komorimedia/status/2048114825398731143",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/komorimedia/status/2048114825398731143",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case124/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case124/output.jpg"
   },
   {
     "id": "poster-125-fire-sign-zodiac-character-poster",
@@ -3065,11 +3065,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张精致竖版信息图海报，采用优雅东亚编辑风格，主题为火象星座。用同一位女性角色重新演绎三种不同火象形态：白羊座、狮子座、射手座。顶部使用大标题 {argument name=\"标题文字\" default=\"火象星座\"}，下方小副标题 {argument name=\"副标题文字\" default=\"熱情・勇氣・創造力\"}。每个分区包含角色全身造型、星座名称、关键词、火焰或太阳纹样、简短性格说明。色彩以朱红、橙金、暖米色和深褐为主，版式清晰、精致、可收藏。",
     "author": "@komorimedia",
-    "authorUrl": "https://x.com/komorimedia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/komorimedia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/komorimedia/status/2048114825398731143",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/komorimedia/status/2048114825398731143",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case125/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case125/output.jpg"
   },
   {
     "id": "poster-126-air-sign-zodiac-character-poster",
@@ -3078,11 +3078,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"中国星座主题角色信息图海报\", \"格式\":\"竖版海报\", \"画幅比例\":\"3:4\", \"风格\":\"干净粉彩编辑信息图，带动漫风时装肖像\", \"版式\":{\"对齐\":\"顶部居中\", \"分区数量\":3, \"分区\":[{\"title\":\"双子座\", \"内容\":\"灵动、交流、好奇\"}, {\"title\":\"天秤座\", \"内容\":\"优雅、平衡、审美\"}, {\"title\":\"水瓶座\", \"内容\":\"独立、未来、革新\"}]}, \"主体\":\"同一位年轻东亚女性作为基础角色，被重新设计成三种风象星座造型。\", \"装饰\":\"浅蓝、雾紫、金色细线、风纹、星星和轻盈云形装饰。\" }",
     "author": "@komorimedia",
-    "authorUrl": "https://x.com/komorimedia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/komorimedia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/komorimedia/status/2048114825398731143",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/komorimedia/status/2048114825398731143",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case126/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case126/output.jpg"
   },
   {
     "id": "poster-127-ethnographic-plate-for-tibetan-ceremonial-hat",
@@ -3091,11 +3091,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用 REFERENCE_0 和 REFERENCE_1，制作一张干净的民族志档案图版，重点展示仪式帽。REFERENCE_0 用作历史藏族语境和轮廓参考，REFERENCE_1 用作帽子结构、材质与细节参考。主体为高精度帽子正视或三分之二视图，放在米色档案纸背景上，周围加入细线标注、局部放大、材质说明和传统用途解释。顶部标题使用中文名称，下方保留罗马化 {argument name=\"romanization\" default=\"(thang zhwa)\"}，并添加较小副标题说明它是高级藏传佛教僧侣夏季仪式帽。整体像博物馆藏品图版，克制、准确、尊重文化语境。",
     "author": "@degewa",
-    "authorUrl": "https://x.com/degewa",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/degewa",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/degewa/status/2048104569037783226",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/degewa/status/2048104569037783226",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case127/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case127/output.jpg"
   },
   {
     "id": "poster-128-vintage-prs-guitar-lineage-poster",
@@ -3104,11 +3104,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"奢华复古吉他对比信息图海报\", \"主体\":\"一张高度细致的竖版 PRS electric guitar 谱系图，像高级博物馆海报\", \"标题\":\"EVERY ICON. EVERY LINE.ONE HERITAGE.\", \"签名\":\"Paul Reed Smith\", \"左侧印章\":\"PAUL REED SMITH GUITARS\", \"右侧印章\":\"MADE IN MARYLAND U.S.A.\", \"版式\":\"多把 PRS 吉他纵向排列或分栏展示，配有型号标签、年代、琴体细节、拾音器与木纹特写。\", \"风格\":\"旧羊皮纸、金色细线、深木色、精密产品摄影、复古奢华收藏图鉴\", \"备注\":\"品牌名、签名和印章文字保持原文。\" }",
     "author": "@GlennHasABeard",
-    "authorUrl": "https://x.com/GlennHasABeard",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/GlennHasABeard",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/GlennHasABeard/status/2048087784141857235",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/GlennHasABeard/status/2048087784141857235",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case128/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case128/output.jpg"
   },
   {
     "id": "poster-129-alishan-one-day-travel-poster",
@@ -3117,11 +3117,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 {argument name=\"目的地名称\" default=\"阿里山國家風景區\"} 制作一张繁体中文复古插画旅行海报，设计为一日游行程信息图，采用左右分栏的竖版布局。左侧是暖米色羊皮纸质感行程卡，带华丽金色 Art Nouveau 边框和时间轴；右侧是目的地的浪漫插画风景，包括山林、铁道、云海、日出、茶园或代表性地标。加入交通、餐食、拍照点、停留时间和小贴士图标。整体色彩温暖怀旧，像经典铁路旅行海报与现代旅游指南结合。",
     "author": "@TWnese",
-    "authorUrl": "https://x.com/TWnese",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/TWnese",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/TWnese/status/2048077204786212887",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/TWnese/status/2048077204786212887",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case129/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case129/output.jpg"
   },
   {
     "id": "poster-130-dance-movement-reference-sheet",
@@ -3130,11 +3130,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "[STYLE] 单色灰阶插画，3D 渲染角色，干净的教学参考表，白色背景，漫画式分格布局，技术图解美学。[CONTENT] 展示同一角色的多种舞蹈动作与运动姿态，每格都有清楚的全身姿势、重心、肢体线条和动作节奏。保持角色一致，姿势准确，适合舞蹈动作参考。",
     "author": "@Ciri_ai",
-    "authorUrl": "https://x.com/Ciri_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Ciri_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Ciri_ai/status/2048074587955658848",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Ciri_ai/status/2048074587955658848",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case130/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case130/output.jpg"
   },
   {
     "id": "poster-132-anime-museum-background-conversion",
@@ -3143,11 +3143,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用提供的参考照片，将相同的博物馆正立面和正面构图重建为精致的剧场级动漫背景插画。保留建筑、招牌、入口比例、透视和主要空间关系，但将材质、光线和色彩转化为高质量动画电影背景。画面干净、细节丰富，带柔和日光、精细阴影、手绘质感和适度理想化。不要改变建筑身份，不要加入无关人物或新建筑。",
     "author": "@Dakiny",
-    "authorUrl": "https://x.com/Dakiny",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Dakiny",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Dakiny/status/2048175219966394695",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Dakiny/status/2048175219966394695",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case132/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case132/output.jpg"
   },
   {
     "id": "poster-133-16-pose-dance-combat-reference-sheet",
@@ -3156,11 +3156,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"姿势参考表\", \"主体\":{\"主题\":\"嘻哈舞蹈与战斗准备动作图表\", \"角色\":{\"数量\":1, \"性别呈现\":\"女性\", \"年龄呈现\":\"年轻成人\", \"体型\":\"苗条有力量\", \"服装\":\"街头舞蹈服装与运动鞋\"}}, \"版式\":\"4x4 共 16 格，每格一个全身动作，白色或浅灰背景，角色比例一致\", \"姿势\":\"包含舞蹈定格、转身、下蹲、踢腿、闪避、准备攻击和动态平衡姿势\", \"风格\":\"干净摄影参考、动作清晰、教学图表感、柔和影棚光\" }",
     "author": "@ExquisitMe",
-    "authorUrl": "https://x.com/ExquisitMe",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ExquisitMe/status/2048143577264402629",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe/status/2048143577264402629",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case133/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case133/output.jpg"
   },
   {
     "id": "poster-134-16-panel-dance-pose-reference-sheet",
@@ -3169,11 +3169,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"舞蹈姿势参考表\", \"风格\":\"干净影棚姿势图、照片级健身舞蹈参考、白色无缝背景、锐利全身摄影、柔和均匀光线\", \"主体\":{\"角色\":\"同一位年轻女性舞者\", \"发型\":{\"风格\":\"高马尾，带少量散发\"}, \"服装\":{\"数量\":3, \"项目\":[\"白色贴身运动胸衣或短款运动背心\", \"宽松蓝灰色慢跑裤\", \"白色运动鞋\"]}}, \"版式\":\"4x4 共 16 格动作，每格保持人物完整、比例一致、姿势清楚\", \"氛围\":\"专业、干净、适合动作参考\" }",
     "author": "@ExquisitMe",
-    "authorUrl": "https://x.com/ExquisitMe",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ExquisitMe/status/2048143577264402629",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe/status/2048143577264402629",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case134/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case134/output.jpg"
   },
   {
     "id": "poster-135-16-panel-female-dance-pose-sheet",
@@ -3182,11 +3182,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"姿势参考表\", \"主体\":{\"数量\":1, \"描述\":\"一位健康年轻女性舞者在干净影棚参考版式中重复出现\", \"外观\":{\"性别\":\"女性\", \"年龄\":\"年轻成人\", \"体型\":\"苗条健美\"}}, \"版式\":\"16 格全身姿势表，白色背景，统一灯光和角色一致性\", \"姿势\":\"多种舞蹈、伸展、转身、跳跃、手臂线条和重心变化\", \"风格\":\"照片级、清晰、教学用途、动作参考图\" }",
     "author": "@ExquisitMe",
-    "authorUrl": "https://x.com/ExquisitMe",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ExquisitMe/status/2048143577264402629",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe/status/2048143577264402629",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case135/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case135/output.jpg"
   },
   {
     "id": "poster-136-16-pose-dance-reference-sheet",
@@ -3195,11 +3195,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"姿势参考表\", \"主体\":{\"类别\":\"女性舞者健身模特\", \"年龄呈现\":\"年轻成人\", \"体型\":\"苗条健美\", \"发型\":{\"颜色\":\"深棕色\", \"风格\":\"高马尾\"}}, \"版式\":\"4x4 共 16 个全身舞蹈或战斗参考姿势，包含 {argument name=\"姿势主题\" default=\"嘻哈舞蹈能量\"} 的动感变化\", \"风格\":\"干净白底、影棚光、角色一致、动作线条清楚、适合绘画和动画参考\" }",
     "author": "@ExquisitMe",
-    "authorUrl": "https://x.com/ExquisitMe",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ExquisitMe/status/2048143577264402629",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ExquisitMe/status/2048143577264402629",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case136/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case136/output.jpg"
   },
   {
     "id": "poster-137-gas-giant-descent-storyboard",
@@ -3208,11 +3208,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"电影科幻分镜接触印样\", \"主体\":{\"主要\":\"一艘小型未来飞船下降进入巨大的气态巨行星风暴系统\", \"次要\":\"庞大的闪电云墙、旋涡云带和发光大气层\"}, \"版式\":\"多格分镜表，展示飞船从高空轨道到深入风暴的连续阶段\", \"风格\":\"电影级科幻、写实太空摄影、强烈尺度感、冷暖云层光、细节丰富\", \"面板\":[\"远景接近行星\", \"穿过上层云带\", \"遭遇闪电风暴\", \"进入巨大旋涡\", \"通讯失真与压迫感\", \"最终消失在发光云海\"], \"氛围\":\"宏大、危险、探索、孤独\" }",
     "author": "@xRahultripathi",
-    "authorUrl": "https://x.com/xRahultripathi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/xRahultripathi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/xRahultripathi/status/2048140775356354892",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/xRahultripathi/status/2048140775356354892",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case137/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case137/output.jpg"
   },
   {
     "id": "poster-138-surreal-baroque-painting-reality-fracture",
@@ -3221,11 +3221,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅 {argument name=\"绘画风格\" default=\"巴洛克油画\"} 活了过来：画中人物从画布中爬出，金色画框破裂，现实空间与绘画世界相互撕开。场景采用超现实电影感构图，戏剧性明暗对比、厚重油画纹理、飞散的颜料碎片和真实阴影。让画中人物既保留绘画笔触，又逐渐变成真实形体，形成强烈的现实裂隙效果。",
     "author": "@JohnnyWang8802",
-    "authorUrl": "https://x.com/JohnnyWang8802",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/JohnnyWang8802",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/JohnnyWang8802/status/2048129335853559824",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/JohnnyWang8802/status/2048129335853559824",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case138/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case138/output.jpg"
   },
   {
     "id": "poster-139-urban-alley-mural-artist",
@@ -3234,11 +3234,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个电影感、超写实的夜间城市小巷场景：{argument name=\"artist\" default=\"年轻男性街头艺术家\"} 正在墙面上绘制大型 {argument name=\"mural subject\" default=\"霓虹龙壁画\"}。他穿宽松白色 T 恤和休闲牛仔裤，略微 oversize，带轻松街头风；姿态专注，靠近墙面喷绘。地面湿润反光，周围有喷漆罐、脚手架、霓虹招牌、砖墙纹理和薄雾。灯光来自霓虹、路灯和壁画反射，色彩鲜明但真实。构图宽幅电影感，低角度，强调艺术家、巨型壁画和夜色小巷的都市能量。",
     "author": "@Professor_134",
-    "authorUrl": "https://x.com/Professor_134",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Professor_134",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Professor_134/status/2048066672398102896",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Professor_134/status/2048066672398102896",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case139/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case139/output.jpg"
   },
   {
     "id": "poster-140-rpg-map-to-anime-event-scene",
@@ -3247,11 +3247,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用提供的参考图，将俯视 RPG 城镇地图转化为人眼高度视角的精致动漫风事件插画。保留同一个村庄位置、道路布局、建筑关系、广场、水体、桥梁和重要地标，但把它们转换成可进入的动画场景。画面应像游戏剧情事件 CG：有自然透视、丰富背景细节、柔和光线、清晰前中后景和轻微电影感。不要改变地图核心结构，不要添加与参考不符的大型新区域。",
     "author": "@ArtwlDesign",
-    "authorUrl": "https://x.com/ArtwlDesign",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ArtwlDesign",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ArtwlDesign/status/2048054726768709769",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ArtwlDesign/status/2048054726768709769",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case140/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case140/output.jpg"
   },
   {
     "id": "poster-141-soft-pastel-anime-girl-full-body",
@@ -3260,11 +3260,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "白色纯背景上的全身动漫女孩角色设计，主体居中并略微漂浮。画风为柔和极简粉彩，线条很细的灰色线稿，色彩轻盈透明。角色表情安静温柔，服装轻盈、有层次，发型和配饰精致但不复杂。整体留白充足，姿态自然，像角色设定图与艺术海报结合。高分辨率，干净、可爱、梦幻。",
     "author": "@hoshi122221",
-    "authorUrl": "https://x.com/hoshi122221",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/hoshi122221",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/hoshi122221/status/2048025730425196801",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/hoshi122221/status/2048025730425196801",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case141/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case141/output.jpg"
   },
   {
     "id": "poster-142-urban-fantasy-coexistence-crossing",
@@ -3273,11 +3273,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高度细致的动漫风都市奇幻插画，场景设在晴朗白天的东京风格繁忙十字路口，以街面高度宽幅电影构图观看。人类、奇幻生物、机器人、妖怪和普通通勤者自然共存，像日常城市生活的一部分。背景包含高楼、广告屏、路牌、商店招牌和人群流动。保留画面文字：中央政治海报带日文文字和举拳图标；两个屋顶招牌写 “TOKYO FUTURE” 和 “YOKAI NOTICE”。整体色彩明亮、细节密集但秩序清楚，强调奇幻与现实无缝融合。",
     "author": "@Ray_CROWN0",
-    "authorUrl": "https://x.com/Ray_CROWN0",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Ray_CROWN0",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Ray_CROWN0/status/2048024227664494775",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Ray_CROWN0/status/2048024227664494775",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case142/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case142/output.jpg"
   },
   {
     "id": "poster-161-parent-child-miscommunication-infographic",
@@ -3286,11 +3286,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"日本信息图\", \"风格\":\"简单易懂的扁平矢量图，干净白底，圆角浅灰外框，极简粉彩色板，适合演示文稿\", \"标题\":{\"位置\":\"顶部居中\", \"大小\":\"大号黑色粗体\", \"文字\":\"親子のすれ違い\"}, \"版式\":{\"结构\":\"标题下方两个并排圆角面板\", \"分区\":[{\"title\":\"親の言葉\", \"内容\":\"看似关心，却容易被孩子理解为压力或否定\"}, {\"title\":\"子どもの受け取り方\", \"内容\":\"感到不被理解、被控制或被比较\"}]}, \"视觉\":\"用简洁人物图标、对话气泡、箭头和对比色表现亲子沟通误解。\" }",
     "author": "@sarinaashapi",
-    "authorUrl": "https://x.com/sarinaashapi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sarinaashapi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sarinaashapi/status/2048307780864606708",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sarinaashapi/status/2048307780864606708",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case161/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case161/output.jpg"
   },
   {
     "id": "poster-162-good-bath-day-editorial-poster",
@@ -3299,11 +3299,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 {argument name=\"活动日期\" default=\"4.26\"} 制作一张柔和编辑风生活方式海报，庆祝日本洗澡文化。竖版杂志专题页设计，温暖奶油色背景，细腻纸张纹理，柔和自然光。画面包含浴室、木桶、毛巾、蒸汽、温泉符号、柚子或浴盐等元素。顶部小标题写 “いい風呂の日”，随后大日期行 “4.26”。加入简短日文说明、栏目式小标签和精致图标。整体氛围安静、治愈、干净，像高端生活方式杂志页面。",
     "author": "@Kazuch75240438",
-    "authorUrl": "https://x.com/Kazuch75240438",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Kazuch75240438",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Kazuch75240438/status/2048205418238030327",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Kazuch75240438/status/2048205418238030327",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case162/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case162/output.jpg"
   },
   {
     "id": "poster-163-japanese-sci-fi-suit-up-process-board",
@@ -3312,11 +3312,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"类型\":\"日本科幻装甲着装流程信息图\", \"风格\":\"受真人特摄启发的电影级宣传板，真实工业灯光，抛光金属表面，红黑科技气质\", \"页眉\":{\"设计\":\"顶部横贯黑到红渐变横幅，大号白色日文粗体，斜切红色强调线\"}, \"分区\":[{\"title\":\"1 素体準備\", \"内容\":\"展示基础内衬和身体扫描\"}, {\"title\":\"2 胸部装甲\", \"内容\":\"安装核心胸甲与能量单元\"}, {\"title\":\"3 腕部・脚部\", \"内容\":\"逐步锁定四肢装甲\"}, {\"title\":\"4 完成\", \"内容\":\"完整英雄姿态与状态灯\"}], \"视觉\":\"用编号、箭头、爆炸视图和局部特写展示着装流程。\" }",
     "author": "@yy7482933910896",
-    "authorUrl": "https://x.com/yy7482933910896",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yy7482933910896",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yy7482933910896/status/2048192904922075161",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yy7482933910896/status/2048192904922075161",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ecommerce_case163/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ecommerce_case163/output.jpg"
   },
   {
     "id": "poster-164-dreamy-shibuya-bubble-girl",
@@ -3325,11 +3325,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "梦幻动漫风全身插画：一位时髦年轻女性站在东京涩谷十字路口中央，晴朗白天，背景可见标志性的圆柱形大楼、广告屏、人行横道和城市人群。她被透明泡泡、柔和光斑和粉彩反射包围，服装现代可爱，姿态轻盈自信。画面有浅景深、柔和阳光、空气感和轻微超现实氛围。整体像青春时尚海报与动漫城市背景结合，明亮、清透、梦幻。",
     "author": "@terunari",
-    "authorUrl": "https://x.com/terunari",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/terunari",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/terunari/status/2048308270914490666",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/terunari/status/2048308270914490666",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case164/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case164/output.jpg"
   },
   {
     "id": "poster-165-stormy-tropical-city-with-rooftop-plane",
@@ -3338,11 +3338,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "电影级宽幅航拍视角：热带海滨城市在日落时遭遇猛烈风暴，画面左侧是黑暗风暴云，右侧是炽烈金色阳光，形成强烈分裂。屋顶上有一架飞机或小型飞行器，周围高楼、棕榈树、海岸线和雨幕清晰可见。闪电、飞散雨水、反光街道和云层体积光增强戏剧性。整体要宏大、真实、紧张，像灾难电影概念海报。",
     "author": "@Gerry",
-    "authorUrl": "https://x.com/Gerry",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gerry",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gerry/status/2048303505702629537",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gerry/status/2048303505702629537",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case165/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case165/output.jpg"
   },
   {
     "id": "poster-168-outdoor-sportswear-grid-campaign",
@@ -3351,11 +3351,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "现代户外运动服广告海报网格拼贴，每个面板代表不同冒险生活方式品牌。高能量编辑式构图，粗体排版，真实产品摄影质感。包含雪地、山地、森林、岩壁、雨中城市和越野场景。男性运动模特穿亮蓝色保暖冬季夹克、黑色雪裤、手套和太阳镜，在雪地中向前迈步，雪粒飞扬，动作强烈。其他面板展示跑步、攀登、徒步、露营或越野运动。整体色彩鲜明，版式干净，像高端户外品牌 campaign。",
     "author": "@SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2049081198211736062",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2049081198211736062",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case168/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case168/output.jpg"
   },
   {
     "id": "poster-169-topographic-letter-satellite-panels",
@@ -3364,11 +3364,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "从太空俯视的超写实卫星视图：白色背景上排列 9 个竖向面板，组合形成单词 “MADPENCIL”。每个面板用地形、河流、山脉、城市灯光、沙漠或海岸线构成对应字母。Panel 1 (M)：崎岖山脉和深谷形成尖锐有角度的 “M”，岩石纹理和高海拔阴影清晰。其余面板保持同样的卫星摄影真实感、现代编辑排版和干净边框。",
     "author": "@madpencil_",
-    "authorUrl": "https://x.com/madpencil_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/madpencil_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/madpencil_/status/2049080259476349218",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/madpencil_/status/2049080259476349218",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case169/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case169/output.jpg"
   },
   {
     "id": "poster-170-iced-coffee-product-infographic",
@@ -3377,11 +3377,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "PROMPT 1 - 制作一张产品风格照片：透明玻璃杯装满冰咖啡，居中放在柔和米色与奶油色无缝影棚背景前。饮品呈现深色咖啡底、牛奶旋涡、冰块高光和杯壁冷凝水。灯光柔和，阴影干净，商业饮品摄影质感。\n\nPROMPT 2 - 制作一张超写实冰咖啡垂直爆炸信息图。将冰块、咖啡、牛奶、奶泡、杯子和吸管分层悬浮排列，旁边添加简洁标签、配料说明和比例信息。整体清爽、高级、适合咖啡品牌宣传。",
     "author": "@Strength04_X",
-    "authorUrl": "https://x.com/Strength04_X",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Strength04_X/status/2049082049995362785",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Strength04_X/status/2049082049995362785",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case170/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case170/output.jpg"
   },
   {
     "id": "poster-171-fashion-dress-collection-infographic",
@@ -3390,11 +3390,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{ \"图像类型\":\"商业时尚信息图\", \"主体\":{\"模特\":\"一位五官优雅、深色头发松散盘起的年轻亚洲女性\", \"呈现\":\"同一模特展示多套连衣裙造型\"}, \"版式\":\"竖版时装系列信息图，包含主视觉、多个服装分栏、面料细节、颜色标签和款式说明\", \"风格\":\"高级电商与时尚杂志结合，干净背景，柔和影棚光，精致排版\", \"色板\":\"奶油白、黑色、柔和中性色和少量强调色\", \"输出\":\"高分辨率、商业可用、服装细节清晰\" }",
     "author": "@cellinlab",
-    "authorUrl": "https://x.com/cellinlab",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/cellinlab",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/cellinlab/status/2049073530738754042",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/cellinlab/status/2049073530738754042",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case171/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case171/output.jpg"
   },
   {
     "id": "poster-172-monochrome-fashion-cover",
@@ -3403,11 +3403,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "超写实高级时尚杂志封面，黑白电影感肖像。一位自信年轻女模特略微前倾摆姿，湿发感微乱，锋利下颌线，强烈眼神，自然皮肤纹理。她穿结构感外套或风衣，双手调整衣领，佩戴多枚戒指、耳饰和层叠链条项链。背景极简，灯光硬朗但高级，形成深阴影和银色高光。顶部加入大号杂志刊头，可保留英文封面字；整体排版克制、现代、奢华，焦点锐利，高分辨率。",
     "author": "@sha_zdiii",
-    "authorUrl": "https://x.com/sha_zdiii",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sha_zdiii",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sha_zdiii/status/2049088961008848905",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sha_zdiii/status/2049088961008848905",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case172/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case172/output.jpg"
   },
   {
     "id": "poster-173-fast-food-character-poster",
@@ -3416,11 +3416,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用图片 1 中的角色作为主体，制作一张美式快餐餐厅风格竖版广告海报。低角度、广角镜头，红 / 黄 / 白配色，带番茄酱飞溅、薯条、汉堡、霓虹菜单板和复古 diner 氛围。角色姿态夸张自信，画面像热闹的快餐品牌宣传图，商业摄影与插画结合。",
     "author": "@LoovaAI",
-    "authorUrl": "https://x.com/LoovaAI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/LoovaAI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/LoovaAI/status/2049085173015425354",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/LoovaAI/status/2049085173015425354",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case173/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case173/output.jpg"
   },
   {
     "id": "poster-174-new-york-across-two-centuries-cinematic-poster",
@@ -3429,11 +3429,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张 3:4 竖版纽约电影海报，气势宏大且不落俗套，在同一幅无缝图像中表现 20 世纪到 21 世纪的时间流逝。画面一侧为旧时代纽约：老式汽车、早期摩天楼、胶片颗粒和暖色街灯；另一侧为现代纽约：玻璃高楼、LED 屏、现代交通和冷色城市光。两部分通过街道、桥梁、天空或光线自然过渡。整体应史诗、电影感、真实、细节丰富，像一张关于城市记忆与未来的主海报。",
     "author": "@Shinning1010",
-    "authorUrl": "https://x.com/Shinning1010",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shinning1010/status/2049460661109879022",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010/status/2049460661109879022",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case174/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case174/output.jpg"
   },
   {
     "id": "poster-175-blue-tears-cocktail-tutorial-infographic-poster",
@@ -3442,11 +3442,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "试着帮我生成调制一杯蓝色眼泪鸡尾酒（配料流程你自己发挥想象，但是要写清楚确保可复现）的流程教学图和概念设计宣传图，轻奢酒咖海报风格，横版。",
     "author": "@cellinlab",
-    "authorUrl": "https://x.com/cellinlab",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/cellinlab",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/cellinlab/status/2049460927121244510",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/cellinlab/status/2049460927121244510",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case175/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case175/output.jpg"
   },
   {
     "id": "poster-176-ascii-dengue-infographic",
@@ -3455,11 +3455,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "infográfico ASCII DENGUE",
     "author": "@mapasbr",
-    "authorUrl": "https://x.com/mapasbr",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mapasbr",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mapasbr/status/2049458767520051448",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mapasbr/status/2049458767520051448",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case176/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/poster_case176/output.jpg"
   },
   {
     "id": "poster-184-miniature-city-knot-sculpture",
@@ -3468,11 +3468,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "这个示例用于 Tokyo。[变量_城市] = \"Tokyo, Japan\"。[NODE 1: 基础拓扑] 生成一个复杂、自相交的 3D 无限环结构，例如厚重的 Trefoil Knot 或 Gordian Knot。材质输出为原始未完成质感，可像混凝土、石膏或哑光陶土。将微型城市嵌入绳结表面与内部：道路、桥梁、街区、塔楼、轨道和绿地沿曲面生长。整体像建筑模型、城市规划雕塑和概念艺术装置结合，白色展台背景，柔和影棚光，高细节。",
     "author": "@Gdgtify",
-    "authorUrl": "https://x.com/Gdgtify",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gdgtify/status/2051274139378315546",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify/status/2051274139378315546",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case184/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case184/output.jpg"
   },
   {
     "id": "poster-185-taiwanese-food-blog-spread",
@@ -3481,11 +3481,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张温暖自然光下的舒适餐厅桌面，摆满丰富台湾餐点。大碗红烧牛肉面居中，宽面、软嫩牛肉块、青江菜和葱花清晰可见；周围有卤肉饭、小笼包、蚵仔煎、珍珠奶茶、泡菜或小菜。构图像美食博客杂志跨页，带手写标签、小插图、菜单式文字和温暖木桌纹理。色彩鲜活、真实、有生活气息，强调台湾街头美食的丰盛与亲切。",
     "author": "@aiistudiocom",
-    "authorUrl": "https://x.com/aiistudiocom",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/aiistudiocom/status/2051271666429473079",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom/status/2051271666429473079",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case185/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case185/output.jpg"
   },
   {
     "id": "poster-186-alien-disclosure-dossier",
@@ -3494,11 +3494,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "我让 GPT Image 2 揭开外星生命的秘密。请为 alien disclosure 制作一份档案式海报：画面像解密政府文件与科幻调查板结合，包含灰色外星人剪影、UFO 目击照片、红色机密印章、打字机文字、坐标、雷达图、证据编号、模糊黑白照片和手写批注。整体使用旧纸张、档案夹、胶带、扫描噪点和冷绿色荧光细节。氛围神秘、可信、紧张，像被泄露的官方简报。",
     "author": "@Gdgtify",
-    "authorUrl": "https://x.com/Gdgtify",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gdgtify/status/2051262563426459707",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gdgtify/status/2051262563426459707",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case186/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case186/output.jpg"
   },
   {
     "id": "poster-187-empire-inferno-burger-poster",
@@ -3507,11 +3507,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张高级快餐广告海报，电影感构图，干净白色纹理背景并带柔和灰色阴影增加深度。顶部中央放置醒目的现代 logo 文字：“Empire Inferno”。中央是超写实高堆叠辣味汉堡，火焰、融化芝士、烤肉汁、辣椒、酱汁飞溅和芝麻面包细节清晰。加入小型价格、口味标签、热度图标和广告标语，可保留英文品牌文案。灯光专业、食物质感诱人，整体高级、干净、有冲击力。",
     "author": "@iamsofiaijaz",
-    "authorUrl": "https://x.com/iamsofiaijaz",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/iamsofiaijaz/status/2051258805070282960",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/iamsofiaijaz/status/2051258805070282960",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case187/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case187/output.jpg"
   },
   {
     "id": "poster-188-greek-yogurt-lifestyle-ad",
@@ -3520,11 +3520,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用 GPT Image 2 创作。Prompt：超电影感、超写实的高端乳制品生活方式广告，品牌 Milky Mist。画面展示一杯或一碗浓稠希腊酸奶，搭配蜂蜜、水果、谷物和奶白色柔光背景。加入健康、清晨、自然、清爽的生活方式场景，可有手部、餐桌、亚麻布、阳光和柔和阴影。排版干净高级，保留品牌名 Milky Mist，可加入短标语。整体像高端食品广告，质感纯净、奶香、温暖、可信。",
     "author": "@LoverCrick28247",
-    "authorUrl": "https://x.com/LoverCrick28247",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/LoverCrick28247",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/LoverCrick28247/status/2051196874208800872",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/LoverCrick28247/status/2051196874208800872",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case188/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case188/output.jpg"
   },
   {
     "id": "poster-189-fitness-boxing-campaign-collage-poster",
@@ -3533,11 +3533,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "制作一张高端健身拳击海报，采用 3 面板拼贴布局。顶部面板：一位强壮的运动女性拳击手穿红色拳击套装（运动胸衣、短裤、拳击手套、高袜、拳击鞋），自信倚靠在旧沙袋旁，影棚灯光强烈。中间面板展示训练动作、汗水、绷带、拳套和速度感。底部面板加入粗体活动文字、课程信息、日期占位、品牌区域和红黑白配色。整体像精品健身房 campaign，充满力量、纪律和高级商业摄影质感。",
     "author": "@AIwithSynthia",
-    "authorUrl": "https://x.com/AIwithSynthia",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithSynthia",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithSynthia/status/2049718330353975652",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithSynthia/status/2049718330353975652",
     "category": "海报设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case189/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/poster_case189/output.jpg"
   },
   {
     "id": "ui-case-1",
@@ -3546,11 +3546,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "用这种风格帮我生成一套 UI 设计系统，包含网页、移动端、卡片、控件、按钮以及其它",
     "author": "@austinit",
-    "authorUrl": "https://x.com/austinit",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/austinit",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/austinit/status/2044968740782272596",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/austinit/status/2044968740782272596",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case1/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case1/output.jpg"
   },
   {
     "id": "ui-case-2",
@@ -3559,11 +3559,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "iPhone 20 主题演讲期间，在 Apple Park 拍摄的业余 iPhone 照片，Tim Cook 在舞台上演示。从观众席远距离拍摄",
     "author": "@patrickassale",
-    "authorUrl": "https://x.com/patrickassale",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/patrickassale",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/patrickassale/status/2044687244368441742",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/patrickassale/status/2044687244368441742",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case2/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case2/output.jpg"
   },
   {
     "id": "ui-case-3",
@@ -3572,11 +3572,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张业余照片，打开的笔记本平放着，里面用黑色圆珠笔写满手写笔记。字迹随意且略显凌乱，像个人笔记，有自然的不完美、划掉的词、加下划线的标题。从略高处拍摄，窗边自然日光，无闪光灯。随意的书桌场景，使用 iPhone 拍摄",
     "author": "@patrickassale",
-    "authorUrl": "https://x.com/patrickassale",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/patrickassale",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/patrickassale/status/2044569086013718958",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/patrickassale/status/2044569086013718958",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case3/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case3/output.jpg"
   },
   {
     "id": "ui-case-4",
@@ -3585,11 +3585,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "\"宋朝人的朋友圈\"/\"SONG DYNASTY SOCIAL MEDIA FEED\"，古今穿越幽默融合界面设计风格，画面模拟手机社交媒体界面，但内容全部是宋朝场景，头像是宋代文人画像，用户名\"苏东坡SuShi_Official\"，发布内容\"刚到黄州，被贬了但心情还行。今天自己做了东坡肉，味道绝了，附菜谱：\"，配图为工笔画风格的东坡肉特写，点赞列表\"黄庭坚、秦观、佛印等126人\"，评论区\"王安石：呵呵\"\"司马光：还是那个味道\"，界面元素如点赞图标用宋代花纹替代，状态栏显示\"大宋移动 5G\"和\"元丰三年\"，配色为手机深色模式搭配宋代雅致色调，历史与社交媒体的趣味碰撞杰作",
     "author": "@Panda20230902",
-    "authorUrl": "https://x.com/Panda20230902",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Panda20230902",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Panda20230902/status/2045385588065313057",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Panda20230902/status/2045385588065313057",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case4/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case4/output.jpg"
   },
   {
     "id": "ui-case-5",
@@ -3598,11 +3598,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "1、生成视频号内容截图，主题：中老年不要盲目催婚，iPhone 尺寸\n2、生成抖音内容截图，主题：跟上 AI 浪潮 9.9 包教会，iPhone 尺寸\n3、生成小红书内容截图，主题：精致女孩背后都有网贷，iPhone 尺寸\n4、生成快手内容截图：主题：直播离婚预告，iPhone 尺寸",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2045373105041007013",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2045373105041007013",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case5/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case5/output.jpg"
   },
   {
     "id": "ui-case-7",
@@ -3611,11 +3611,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 的图片比例，生成一张抖音直播的截图，里面是刘亦菲在直播，刘亦菲手里拿着牌子，牌子里写着 今晚直播，欢迎来参亦菲畅聊！",
     "author": "@alanblogsooo",
-    "authorUrl": "https://x.com/alanblogsooo",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/alanblogsooo",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/alanblogsooo/status/2044784762594918516",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/alanblogsooo/status/2044784762594918516",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case7/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case7/output.jpg"
   },
   {
     "id": "ui-case-8",
@@ -3624,11 +3624,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请制作太祖李成桂的 X 页面（时间设定为威化岛回军即将发生之前，内容包含他与崔莹将军互相 互怼 的帖子）。",
     "author": "@SKA_Neotype",
-    "authorUrl": "https://x.com/SKA_Neotype",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SKA_Neotype",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SKA_Neotype/status/2044637900978217334",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SKA_Neotype/status/2044637900978217334",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case8/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case8/output.jpg"
   },
   {
     "id": "ui-case-9",
@@ -3637,11 +3637,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "用这种风格帮我生成一套 UI 设计系统，包含网页、移动端、卡片、控件、按钮以及其它。把这套视觉风格作为参考生成网页。我尝试了宇宙、飞行、蝴蝶主题。",
     "author": "@stark_nico99",
-    "authorUrl": "https://x.com/stark_nico99",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/stark_nico99",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/stark_nico99/status/2045836554451706125",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/stark_nico99/status/2045836554451706125",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case9/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case9/output.jpg"
   },
   {
     "id": "ui-case-10",
@@ -3650,11 +3650,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请制作一张融合「いらすとや」温馨可爱氛围与「霞ヶ関スライド」压倒性信息密度的桃太郎解说幻灯片（示意图）。",
     "author": "@yammamon",
-    "authorUrl": "https://x.com/yammamon",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yammamon",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yammamon/status/2045778624092254603",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yammamon/status/2045778624092254603",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case10/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case10/output.jpg"
   },
   {
     "id": "ui-case-25",
@@ -3663,11 +3663,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请根据【主题】自动生成一张“博物馆图鉴式中文拆解信息图”。\n\n要求整张图兼具真实写实主视觉、结构拆解、中文标注、材质说明、纹样寓意、色彩含义和核心特征总结。你需要根据【主题】自动判断最合适的主体对象、服饰体系、器物结构、时代风格、关键部件、材质工艺、颜色方案与版式结构，用户无需再提供其他信息。\n\n整体风格应为：国家博物馆展板、历史服饰图鉴、文博专题信息图，而不是普通海报、古风写真、电商详情页或动漫插画。背景采用米白、绢纸白、浅茶色等纸张质感，整体高级、克制、专业、可收藏。\n\n版式固定为：\n- 顶部：中文主标题 + 副标题 + 导语\n- 左侧：结构拆解区，中文引线标注关键部件，并配局部特写\n- 右上：材质 / 工艺 / 质感区，展示真实纹理小样并附说明\n- 右中：纹样 / 色彩 / 寓意区，展示主色板、纹样样本和文化解释\n- 底部：穿着顺序 / 构成流程图 + 核心特征总结\n\n若主题适合人物展示，则以真实人物全身站姿为中央主体；若更适合器物或单体结构，则改为中心主体拆解图，但整体仍保持完整中文信息图形式。所有文字必须为简体中文，清晰、规整、可读，不要乱码、错字、英文或拼音。重点突出真实结构、材质差异、文化说明与图鉴气质。\n\n避免：海报感、影楼感、电商感、动漫感、角色扮演 感、乱标注、错结构、糊字、假材质、过度装饰。",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2045504669401653414",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2045504669401653414",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case25/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case25/output.jpg"
   },
   {
     "id": "ui-case-32",
@@ -3676,11 +3676,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请用 GPT-image-2 诊断这只手的手相，并制作一份详细鉴定书。\n需要分析生命线、智慧线、感情线、命运线、太阳线、财运线、婚姻线，包括线条形状、深浅、分叉、起点和终点。\n重点提供建议，并整理成一份高质量的占卜鉴定书。",
     "author": "@agi_aibusi",
-    "authorUrl": "https://x.com/agi_aibusi",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/agi_aibusi",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/agi_aibusi/status/2046530764871696750",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/agi_aibusi/status/2046530764871696750",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case32/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case32/output.jpg"
   },
   {
     "id": "ui-case-33",
@@ -3689,11 +3689,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一张【字体】书法临摹字帖",
     "author": "@MrLarus",
-    "authorUrl": "https://x.com/MrLarus",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/MrLarus",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/MrLarus/status/2046510310253539764",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/MrLarus/status/2046510310253539764",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case33/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case33/output.jpg"
   },
   {
     "id": "ui-case-34",
@@ -3702,11 +3702,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用 GPT Image 2，查询 OpenClaw 的信息，并生成一张唐吉诃德广告 POP 风格的图片，感觉像实际贴在唐吉诃德店内一样",
     "author": "@loglogrog",
-    "authorUrl": "https://x.com/loglogrog",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/loglogrog",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/loglogrog/status/2046437230127034774",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/loglogrog/status/2046437230127034774",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case34/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case34/output.jpg"
   },
   {
     "id": "ui-case-35",
@@ -3715,11 +3715,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "生成一个日本社交手游的抽卡界面",
     "author": "@the_wheel_2024",
-    "authorUrl": "https://x.com/the_wheel_2024",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/the_wheel_2024",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/the_wheel_2024/status/2046519658166317160",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/the_wheel_2024/status/2046519658166317160",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case35/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case35/output.jpg"
   },
   {
     "id": "ui-case-36",
@@ -3728,11 +3728,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张 9:16 竖版图片，高细节写实风格的中国 TikTok 直播截图，Elon Musk 正在直播间对着手机镜头讲话，神情兴奋、面带微笑，直播氛围热烈且真实。他一只手拿着一块白色手写牌，牌子上清晰写着：\"Thank you Shinning\"。直播画面中有明显的中国 TikTok 界面元素，包括右侧竖向排列的点赞、评论和分享图标，下方滚动的中文弹幕和互动评论，以及顶部的“live broadcast”标识，看起来像真实的手机截图。画面中有醒目的礼物提示特效：\"Shinning sent TikTok No. 1\"，带有礼物动画光效和平台风格提示框。Musk 身处专业直播环境，面前有手机支架、环形补光灯和桌面麦克风。背景是现代科技感直播间，灯光明亮，带有轻微霓虹氛围。构图真实自然，像中国短视频平台正在进行中的直播截图。界面信息丰富但不杂乱，人物清晰，表情生动，细节丰富，真实摄影感，景深，高清，电影感，照片级真实，写实直播截图，社交媒体 UI，中国抖音直播间，细致布光，自然皮肤纹理。\n\n负面提示词：\n\n低清晰度、模糊、卡通、插画、CG 感过强、二次元、手指变形、文字错误、乱码、多部手机、多个品牌、人物重复、脸部崩坏、五官扭曲、过度磨皮、过曝、过暗、背景杂乱、错误 UI、非中文短视频界面、英文弹幕过多、礼物特效不明显、裁切错误、比例错误\n\n补充强化词：\n\n真实手机录屏截图感，直播 UI 完整，礼物提示框符合中国短视频平台风格，中文评论区活跃，直播间在线人数清晰显示，时间、电量和信号栏可见。",
     "author": "@Shinning1010",
-    "authorUrl": "https://x.com/Shinning1010",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shinning1010/status/2046501587762188535",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010/status/2046501587762188535",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case36/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case36/output.jpg"
   },
   {
     "id": "ui-case-37",
@@ -3741,11 +3741,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "9:16 的图片比例，生成一张抖音直播的截图，里面是 刘亦菲 在直播，刘亦菲 手里拿着牌子，牌子里写着 今晚直播，欢迎来参亦菲畅聊!",
     "author": "@kylegeeks",
-    "authorUrl": "https://x.com/kylegeeks",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/kylegeeks",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/kylegeeks/status/2046479783765397629",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/kylegeeks/status/2046479783765397629",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case37/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case37/output.jpg"
   },
   {
     "id": "ui-case-38",
@@ -3754,11 +3754,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "用未来都市风格生成 UI 设计系统，灵感来自赛博朋克城市夜景，包含霓虹灯、玻璃建筑反射、高对比光影，配色以紫色、蓝色、粉色霓虹为主，设计网页 仪表盘、移动端界面、卡片、按钮、控件等，视觉炫酷、层次丰富、科技感极强",
     "author": "@AZLnfvp",
-    "authorUrl": "https://x.com/AZLnfvp",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AZLnfvp",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AZLnfvp/status/2046468976092533180",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AZLnfvp/status/2046468976092533180",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case38/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case38/output.jpg"
   },
   {
     "id": "ui-case-39",
@@ -3767,11 +3767,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "1、生成特朗普和金正恩在抖音直播间打 PK 的截图  \n2、生成不知火舞的小红书主页截图  \n3、生成图片：手写在教室黑板上的出师表全文，真实感的粉笔字迹，晴朗白天用 iPhone 手机实拍  \n4、生成图片：T-800 机器人的淘宝商品详情页，展示：机器人的正面、侧面、背面三视图，产品价格、产品细节、功能和使用场景等",
     "author": "@alanlovelq",
-    "authorUrl": "https://x.com/alanlovelq",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/alanlovelq/status/2046048929490612464",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/alanlovelq/status/2046048929490612464",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case39/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case39/output.jpg"
   },
   {
     "id": "ui-case-40",
@@ -3780,11 +3780,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "请在这里生成一张横版 PowerPoint 图片，我会判断你用了哪个模型。请用日语做一页 PowerPoint，总结当前 AI 游戏开发的概要。\n\n也请制作一张 PowerPoint 图，内容包括：关于游戏开发技术，从工时角度分析哪些环节最耗费精力，以及说明量产为什么重要。",
     "author": "@ailovedirector",
-    "authorUrl": "https://x.com/ailovedirector",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ailovedirector",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ailovedirector/status/2046905387274891296",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ailovedirector/status/2046905387274891296",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case40/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case40/output.jpg"
   },
   {
     "id": "ui-case-41",
@@ -3793,11 +3793,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据生成的角色，帮我生成一张以 *Zelda: Wind Breaker* 为主题的 PvP 游戏截图。",
     "author": "@khaiinit",
-    "authorUrl": "https://x.com/khaiinit",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/khaiinit",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/khaiinit/status/2047219694130827273",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/khaiinit/status/2047219694130827273",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case63/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case63/output.jpg"
   },
   {
     "id": "ui-case-42",
@@ -3806,11 +3806,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用这张图片作为风格和调色参考，创建一个落地页。",
     "author": "@D_studioproject",
-    "authorUrl": "https://x.com/D_studioproject",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/D_studioproject",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/D_studioproject/status/2047212826264211540",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/D_studioproject/status/2047212826264211540",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case64/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case64/output.jpg"
   },
   {
     "id": "ui-case-43",
@@ -3819,11 +3819,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "李佳琦直播间背景，口红矩阵展示墙，暖光氛围灯，文案OMG买它",
     "author": "@songguoxiansen",
-    "authorUrl": "https://x.com/songguoxiansen",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/songguoxiansen/status/2047207826913972518",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/songguoxiansen/status/2047207826913972518",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case88/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case88/output.jpg"
   },
   {
     "id": "ui-case-44",
@@ -3832,11 +3832,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 \"Apple Pods Pro 3\" 高端无线头戴耳机制作一张高冲击力电商信息图。\n\n前景——产品主视觉\n一只手拿着一副简洁、哑光白色的高端头戴耳机，以轻微角度朝向镜头的极近距离特写。耳机具备以下特征：\n- 亮面白色耳垫，带柔软记忆海绵填充\n- 拉丝铝银色头梁，带低调的 Apple Pods Pro 3 压印品牌标识\n- 耳罩正面可见黑色网状扬声器格栅\n- 右侧耳罩边缘有一个微小发光的绿色 LED 状态指示灯\n- 外侧耳罩表面蚀刻有低调的触控图标\n\n微距镜头浅景深——手和耳机边缘略微模糊，营造电影感纵深。产品在画面中心保持极致锐利。\n\n中心主体——模特\n中景：一位微笑的年轻女性，带雀斑和波浪形淡粉色头发。她穿着：\n- 亮丽的青柠绿色针织无檐帽\n- 迷幻风黑白条纹长袖上衣\n- 白色头戴耳机时髦地挂在脖子上（不戴在耳朵上）——一只手随意触碰耳罩\n\n表情：放松、自信、愉悦。\n她略微看向镜头外，露出自然微笑。\n\n背景与氛围\n干净的柔焦影棚背景——浅灰色渐变，在中心过渡为暖白色。\n\n氛围叠加元素：\n- 从左上到右下斜切穿过画面的彩虹棱镜镜头光晕\n- 角落处有粉色和黄色的柔和粉彩漏光\n- 4–5 副模糊的白色头戴耳机，以不同景深和旋转角度艺术化漂浮在背景中\n- 来自背景影棚灯的细腻散景圆点\n\n灯光：柔和专业三点式影棚布光。\n主光来自左上方，右侧补光。\n模特身后有轮廓光用于分离主体。\n耳机表面的亮面高光自然捕捉光线。\n\n排版与布局——无衬线，干净白色\n顶部居中（模特后方，大型背景文字）：\n→ 巨大加粗超大文字：\"HEADPHONES\"\n   半透明白色，横跨主体后方全宽\n\n右上角：\n→ 加粗干净文字：\"Apple Pods Pro 3\"\n   更小的副标题文字：\"Over-Ear Wireless\"\n\n中左：\n→ 图标：小型声波符号\n→ 加粗文字：\"Premium Sound\"\n→ 副文字：\"Active Noise Cancellation + Transparency Mode\"\n\n中右：\n→ 超大加粗数字：\"40\"\n→ 下方较小文字：\"hours of battery life\"\n\n左下：\n→ 超大加粗数字：\"0\"\n   旁边带 \"to\" → 然后是加粗 \"100%\"\n→ 副文字：\"Fast charge — 10 min = 3hrs playback\"\n\n右下：\n→ 超大加粗数字：\"1\"\n→ 副文字：\"Year Warranty Included\"\n\n底部居中（细则风格）：\n→ 小号优雅文字：\n   \"Bluetooth 5.4  |  Hi-Res Audio Certified  \n    |  Foldable Design  |  USB-C Charging\"\n\n技术规格\n分辨率：8K 超清锐利\n风格：商业产品摄影结合时尚杂志广告\n色彩调色板：白色、青柠绿、淡粉色、彩虹棱镜点缀\n焦点：耳机产品极致锐利——其他所有元素浅景深\n镜头：85mm 微距，轻微低角度\n渲染质量：超写实，干净广告美学，鲜明但专业的色彩分级",
     "author": "@meng_dagg695",
-    "authorUrl": "https://x.com/meng_dagg695",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/meng_dagg695",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/meng_dagg695/status/2047935217231663186",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/meng_dagg695/status/2047935217231663186",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case44/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case44/output.jpg"
   },
   {
     "id": "ui-case-45",
@@ -3845,11 +3845,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为 \"Apple Pods Pro 3\" 无线耳塞制作一张高冲击力电商信息图。",
     "author": "@rovvmut_",
-    "authorUrl": "https://x.com/rovvmut_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/rovvmut_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/rovvmut_/status/2047912710365761828",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/rovvmut_/status/2047912710365761828",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case45/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case45/output.jpg"
   },
   {
     "id": "ui-case-46",
@@ -3858,24 +3858,24 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张高分辨率商业营销照片：一位年轻女性留着顺滑深色头发，身穿粉色罗纹上衣，置身中性灰色影棚环境中，居中站在前景醒目展示的一瓶亮面 Ellie Beauty 喷雾瓶后方。画面由鲜艳的青柠绿色图形“弧形挥洒线条”和漂浮的药丸形标注激活，这些标注以粗黑色无衬线文字突出产品特性，如“亮泽效果”和“最高 450°F 防护”。灯光经过专业柔化，在模特脸上投下柔和高光，同时在金属质感的绿色到金色渐变瓶身标签上形成清晰的垂直反射。画面顶部右上角有一行大型青柠绿色标题文字：“What does it do?”，整体营造出干净、现代、高对比度的美学，并以浅景深让产品和模特专注的表情保持鲜明突出。",
     "author": "@AIwithSarah_",
-    "authorUrl": "https://x.com/AIwithSarah_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIwithSarah_/status/2047904483359760677",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIwithSarah_/status/2047904483359760677",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case46/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case46/output.jpg"
   },
   {
     "id": "ui-case-47",
     "title": "AAA 电子游戏截图概念设计",
-    "description": "生成一组 AAA 电子游戏截图，设想 The Sims Castaways 续作可能呈现的样子。https://t.co/aL7hMdUYvj",
+    "description": "生成一组 AAA 电子游戏截图，设想 The Sims Castaways 续作可能呈现的样子。https://proxyd.picpi.top/https://t.co/aL7hMdUYvj",
     "model": "gpt-image-2",
-    "prompt": "生成一组 AAA 电子游戏截图，设想 The Sims Castaways 续作可能呈现的样子。https://t.co/aL7hMdUYvj",
+    "prompt": "生成一组 AAA 电子游戏截图，设想 The Sims Castaways 续作可能呈现的样子。https://proxyd.picpi.top/https://t.co/aL7hMdUYvj",
     "author": "@ChiefMonkeyMike",
-    "authorUrl": "https://x.com/ChiefMonkeyMike",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ChiefMonkeyMike",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ChiefMonkeyMike/status/2047828814580138156",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ChiefMonkeyMike/status/2047828814580138156",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case47/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case47/output.jpg"
   },
   {
     "id": "ui-case-91",
@@ -3884,11 +3884,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张竖版 9:16 TikTok 风格 GRWM 美妆缩略图，场景设置在温暖、阳光洒入、受地中海风格启发的卧室中。一位时尚年轻女性留着 {argument name=\"发色\" default=\"深棕色\"} 头发，扎成凌乱卷发盘发，坐在大理石梳妆台前，身体前倾，一只手臂交叠，另一只手正在给嘴唇涂抹润唇膏或口红。她的脸部被居中的矩形模糊块遮挡以保护隐私，但其余造型优雅自然：古铜色发光肌肤、精致金项链并带有小圆形吊坠、细金手链、叠戴金戒指，以及带细肩带的白色蕾丝吊带背心。梳妆台前景中必须正好有 7 件可见美妆物品：左侧 1 个圆形桌面梳妆镜、1 个装有 5 支化妆刷的杯子、1 个透明玻璃滴管瓶、1 个高款白色按压式护肤瓶、1 个小黑色滴管瓶、1 个米色圆润化妆海绵或粉扑，以及右侧 1 支浅绿色挤压软管。背景呈现柔和虚化的舒适卧室，左侧有 1 扇拱形窗、1 盆枝叶繁茂的盆栽、1 张铺有白色床品并放有芥末黄色点缀抱枕的床、外露木质天花板细节，以及墙上 1 幅装裱风景画。使用从左侧洒入的黄金时刻阳光、柔和阴影、奶油感肤色、浅景深、奢华生活方式编辑摄影风格、亲密自我护理氛围，以及精致但自然的构图。在左上角添加醒目俏皮的西班牙语标题文字，分三行堆叠显示，内容为 {argument name=\"标题文字\" default=\"Mi rutina de belleza matutina\"}，每一行都要大而圆润，带白色描边和柔和投影，并使用柔和粉彩色：第一行白色，第二行粉色，第三行浅黄色。在标题上方添加 3 条粉色涂鸦装饰笔触，在标题下方添加 1 条弧形粉色下划线 swoosh，并在最后一行右侧添加 1 个小黄色太阳图标。将干净的白色 {argument name=\"品牌文字\" default=\"Pollo.ai\"} 标志放在右上角。高端网红缩略图美学，前景产品清晰聚焦，温暖且有吸引力的生活方式场景。",
     "author": "@S0N_IA_",
-    "authorUrl": "https://x.com/S0N_IA_",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/S0N_IA_",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/S0N_IA_/status/2047414367243657296",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/S0N_IA_/status/2047414367243657296",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case91/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case91/output.jpg"
   },
   {
     "id": "ui-case-92",
@@ -3897,11 +3897,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个电影感、照片级真实的动作场景，发生在雨中的市中心城市街道峡谷中，画面显示 {argument name=\"main 主体\" default=\"一名 30 多岁的黑发男性\"} 位于中央前景，正径直朝镜头狂奔，表情紧张、求生感强，身穿湿透的深色夹克、深色衬衫和深色长裤，处于跨步奔跑姿态，一只手臂向前摆动。其身后，一场巨大的城市爆炸撕裂街道和高层建筑的低层立面，将庞大的烟雾、火焰、尘土、碎裂混凝土、玻璃和金属碎片向四面八方喷涌而出。场景中必须正好包含 3 辆可见受损车辆：左前景 1 辆深色轿车，车灯亮起，引擎盖皱裂，正溅起雨水；右侧中景 1 辆严重前端损毁的深色残骸汽车；右侧其后 1 辆翻覆或被震飞的黑色 SUV，向上倾斜。湿漉漉的沥青反射车灯、火光和灰色摩天大楼。密集碎片充满空气，瓦砾块凝固在运动瞬间。阴沉暴风雨日光，去饱和蓝灰色调搭配橙色火焰点缀，飞散碎片带有戏剧化运动模糊，但奔跑人物保持锐利对焦，低角度广角镜头构图，好莱坞灾难大片级真实感，超精细纹理，高对比度，动态纵深，体积烟雾，雨水飞溅，电影级布光。在右上角添加白色 {argument name=\"水印文字\" default=\"Pollo.ai\"} 标志。",
     "author": "@Gugombly",
-    "authorUrl": "https://x.com/Gugombly",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gugombly",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gugombly/status/2047310862428303636",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gugombly/status/2047310862428303636",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case92/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case92/output.jpg"
   },
   {
     "id": "ui-case-93",
@@ -3910,11 +3910,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张充满活力的动漫风格 YouTube 缩略图，用于直播游戏节目，宽幅 16:9 构图，背景是霓虹紫色和粉色的主播房间。画面中心是一位可爱的猫娘 VTuber 坐在书桌前，从腰部以上展示，充满活力地向前倾，一只手放在电脑鼠标上，另一只手伸向观众。她有 {argument name=\"发色\" default=\"浅橙金色\"} 的波波头，带柔软刘海，毛茸茸的棕色和奶油色猫耳，以及可见的猫尾。她的脸部被画面中央的纯色矩形遮挡块刻意遮住。她穿着黑白女仆风服装，包括带褶边的白色上衣、黑色连衣裙胸衣、泡泡袖、白色荷叶边、黑色蝴蝶结，以及金色铃铛颈圈。在桌上放置一把带明亮 RGB 灯效的机械键盘、一个发光游戏鼠标，以及远左侧带粉紫色 LED 灯光的主播麦克风。前景放置 2 件猫主题桌面物品：左下角一个猫脸毛绒玩具，右下角一个黑猫造型马克杯。她身后是一把带爪印细节的游戏椅。左侧添加大号加粗韩文标题文字，使用厚重白色块状字母、黑色填充阴影和发光紫色描边，分 2 行堆叠：{argument name=\"标题文字\" default=\"방송중 대참사\"}。其下方添加较小的黄色漫画风爆炸形字幕，带黑色描边，文字为 {argument name=\"副文本\" default=\"> 크리퍼 실화냐\"}。右侧展示 1 台大型电脑显示器，向内倾斜，屏幕中显示类似 Minecraft 的场景：明亮蓝天、绿色树木、水面，以及一个巨大的绿色 Creeper 朝观众弹出，带戏剧性的贴纸剪影描边。在显示器周围添加星爆效果和霓虹点缀，以增强混乱感。使用夸张的缩略图美学：超高饱和色彩、锐利赛璐璐阴影、粗描边、光滑高光、高对比度、动态透视，以及吸引点击的主播灾难氛围。",
     "author": "@rerxmsz06",
-    "authorUrl": "https://x.com/rerxmsz06",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/rerxmsz06",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/rerxmsz06/status/2047261622121705782",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/rerxmsz06/status/2047261622121705782",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case93/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case93/output.jpg"
   },
   {
     "id": "ui-case-94",
@@ -3923,11 +3923,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅柔和梦幻的动漫插画，描绘一位可爱的年轻女性在夜晚温馨卧室中做 ASMR，她靠近观众坐着，双膝蜷起，面前中央放着一个黑色 3Dio 风格双耳麦克风。她有 {argument name=\"发色\" default=\"深紫色\"} 头发，随意松散地盘起，轻薄刘海勾勒脸庞，拥有闪闪发亮的大号 {argument name=\"eye color\" default=\"蓝色\"} 眼睛、温柔红晕和甜美张嘴微笑。她的头微微朝观众倾斜，姿态温暖而亲昵。她穿着精致的白色蕾丝细肩带吊带背心，外搭一件 {argument name=\"开衫颜色\" default=\"柔和粉薰衣草色\"} 的 超大廓形 蓬松针织开衫，开衫滑落肩头，营造温柔、亲密、深夜疗愈的氛围。双手轻轻触碰麦克风的白色硅胶耳朵，仿佛即将进行耳部按摩。房间由粉色和琥珀色环境光柔和照亮，背景有厚重窗帘、带毛绒靠垫的床或沙发、温暖 小串灯 散景，以及右侧一株小植物。添加融入构图的发光手写日文霓虹文字：左侧有 4 个文字元素，分别为 \"とろける\"、\"耳\"、\"マッサージ\" 和 \"ASMR\"，并带 2 个小心形符号；右侧有竖排文字 \"いっぱい癒してあげるね...♡\"。采用精致的现代动漫风格，高度细致的脸部和头发、光泽眼睛、平滑发光肌肤、柔和阴影、粉彩高光、浅景深、浪漫温馨的主播缩略图构图，以及以粉色、薰衣草色、奶油色和暖金色为主的舒缓女性化配色。",
     "author": "@Shion_yamabuki",
-    "authorUrl": "https://x.com/Shion_yamabuki",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shion_yamabuki",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shion_yamabuki/status/2047232198382964969",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shion_yamabuki/status/2047232198382964969",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case94/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case94/output.jpg"
   },
   {
     "id": "ui-case-95",
@@ -3936,11 +3936,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{argument name=\"名人\" default=\"Selena Gomez\"} 开始了一场惊喜 {argument name=\"平台\" default=\"youtube\"} 直播。",
     "author": "@SelenaGmzIN",
-    "authorUrl": "https://x.com/SelenaGmzIN",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SelenaGmzIN",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SelenaGmzIN/status/2047185882009198865",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SelenaGmzIN/status/2047185882009198865",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case95/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case95/output.jpg"
   },
   {
     "id": "ui-case-96",
@@ -3949,11 +3949,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅高度精致的动漫横幅插画，场景为温暖金色调的教室文学社，宽幅电影感构图。左半部分有一个大型优雅发光的手写体标题，文字为 {argument name=\"标题文字\" default=\"Monika\"}，使用超大书法字体，颜色为白色和浅绿色，带柔和霓虹光、金属高光、装饰性花饰、爱心、闪光，以及环绕其周围的旋转装饰线条。右半部分是一位受 {argument name=\"角色名\" default=\"Monika\"} 启发的美丽动漫女学生，坐在木质书桌前，身体略微朝左，拥有飘逸的 {argument name=\"发色\" default=\"栗棕色\"} 长发、非常大的白色蝴蝶结、温暖棕色眼睛，以及若有所思且自信的表情。她穿着日本高中制服，正好有 4 件可见服装单品：棕色西装外套、白色衬衫、红色丝带领结和棕色菱格针织背心。她一只手将钢笔悬在桌上纸张上方，另一只手停在脸旁，呈现优雅的写作姿势。房间中充满从高窗洒入的夕阳光、尘埃微粒、飘带状绿色丝带、漂浮花瓣、钉在和悬挂在背景中的手写便条，以及一块布满淡淡草写文字和几何涂鸦的深色黑板。包含正好 9 个突出的桌面和房间道具：左下角一束白玫瑰、左侧一摞书、靠近中左位置的沙漏、一个带小绿色叶子徽章的密封信封、桌上散落的手稿纸、写字手旁的笔帽、一把绿色软垫椅、右后方一架钢琴，以及右侧一摞 4 本书。右侧 4 本书的书脊从上到下分别写着：\"Save Me\"、\"My Feelings\"、\"Poems for the Literature Club\" 和 \"Just Monika.\"。添加丰富的体积光、闪烁粒子、绿色与金色的色彩和谐、精致线稿、超细致绘画式阴影、浪漫视觉小说关键艺术品质，以及高级精修的缩略图/横幅美学。",
     "author": "@mirochill",
-    "authorUrl": "https://x.com/mirochill",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mirochill",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mirochill/status/2047639852485620070",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mirochill/status/2047639852485620070",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case96/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case96/output.jpg"
   },
   {
     "id": "ui-case-97",
@@ -3962,11 +3962,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅精致的动漫风格横幅插画，采用梦幻紫罗兰色调，宽幅电影感构图，呈现黄昏时分一间安静的文学房间。画面右侧，一位名叫 {argument name=\"角色名\" default=\"Yuri\"} 的美丽少女动漫角色坐在大窗旁的木桌前，窗边挂着紫色窗帘，她将一本深色华丽精装书抱在胸前，目光柔和地向下凝视，表情羞涩而内省。她有非常长而笔直的 {argument name=\"发色\" default=\"深紫罗兰色\"} 头发，带有光泽高光、侧刘海、一个小发夹和紫罗兰色眼睛，穿着日本校服：灰色西装外套、白衬衫、红色缎带领结和深色裙子。画面左侧中央，发光的书法文字 {argument name=\"标题文字\" default=\"Yuri\"} 以大型明亮霓虹薰衣草紫手写体呈现，带有优雅花饰、一个小爱心和装饰性蔓藤纹，像魔法字体一样融入场景。桌面上正好有 8 组可见物品：前景中央 1 本打开的书、1 个黑色墨水瓶和一支白色羽毛笔、蜡烛旁 1 本合上的书、纸张下方 1 摞书、前方 1 张松散的手写页、桌上 1 朵小紫花、右侧 1 个带托碟的花卉瓷茶杯，以及最右侧 1 摞深色书。额外背景细节正好包括 6 个装饰性环境元素：左侧 1 支放在玻璃烛台中的点燃蜡烛、左前景 1 簇紫色花朵、左上方 1 串悬挂的紫色花枝、右上方 1 张钉住的植物学便签、右后景 1 个带书和花的书架，以及透过窗户可见的 1 片日落天空。加入飘动的花瓣、淡淡的手写文字纹理、环绕画框的华丽金色边线、柔和的体积感窗光、细微闪光、浓郁阴影和浪漫忧郁的氛围。高度细节、干净线稿、光泽动漫渲染、高级视觉小说关键艺术图，非常适合小众动漫横幅或角色主题缩略图。",
     "author": "@mirochill",
-    "authorUrl": "https://x.com/mirochill",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mirochill",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mirochill/status/2047639852485620070",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mirochill/status/2047639852485620070",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case97/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case97/output.jpg"
   },
   {
     "id": "ui-case-98",
@@ -3975,11 +3975,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅光泽感的粉彩粉色动漫横幅，采用宽幅电影感布局，主题围绕可爱恋爱与甜点。将一位自信的少女动漫角色放在画面右侧，展示大约从大腿以上的半身形象，她有短而蓬松的 {argument name=\"发色\" default=\"柔粉色\"} 波波头、大而明亮的粉紫色眼睛、温柔的小微笑，并双臂交叉。她穿着日本校服：1 件棕色西装外套、1 件白衬衫、领口 1 个红色缎带蝴蝶结，以及 1 条深海军蓝与紫色格纹裙。添加 2 个红色缎带发饰，一个较大的侧边蝴蝶结和一个较小的缎带点缀。画面左半部分展示大型手写体名字 {argument name=\"角色名\" default=\"Natsuki\"}，采用粗体光泽 3D 连笔字，白到粉色填充、亮粉色描边、柔和倒角、细微投影、闪光，并将一个小爱心花饰融入字母中。背景应是腮红粉色调的分层剪贴簿拼贴，带有笔记纸纹理、淡淡网格和撕纸细节、散落的手绘爱心、花瓣、闪光和可爱烘焙主题图案。在她身后的右上和右中区域，正好加入 4 张用钉子固定或胶带粘贴的同一女孩素描风肖像卡，像重叠的拍立得一样排列。前景左下与中左下附近正好放置 2 个纸杯蛋糕，两者都有粉色糖霜、条纹杯托和小爱心插饰或糖果点缀。用流动的缎带和蝴蝶结框住构图：正好可见 4 个主要缎带元素，包括左上附近 1 个蝴蝶结、左下附近 1 个蝴蝶结，以及 2 条沿顶部和右侧边缘蜿蜒扫过的长卷缎带。使用柔和高细节动漫插画风格、精致光照、梦幻辉光、浪漫情人节配色、细腻纹理，以及干净有冲击力的缩略图式构图。",
     "author": "@mirochill",
-    "authorUrl": "https://x.com/mirochill",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mirochill",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mirochill/status/2047639852485620070",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mirochill/status/2047639852485620070",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case98/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case98/output.jpg"
   },
   {
     "id": "ui-case-99",
@@ -3988,11 +3988,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅宽幅动漫横幅插画，描绘 {argument name=\"角色名\" default=\"Sayori\"} 身处明亮梦幻的教室中，以精致高端视觉小说风格渲染，拥有柔和绘画感光照、温暖粉彩色彩和闪耀氛围。展示一位开朗的少女学生，短而蓬松的珊瑚粉头发，凌乱波波头层次，头部右侧有一个大红色蝴蝶结，穿着日本校服：浅棕色西装外套、白衬衫、红色缎带领结、棕色针织背心和百褶海军蓝裙。她站在略偏左的位置，双臂张开，姿态热情而快乐，仿佛在欢迎观众，带有动态透视，头发和衣服有轻柔动感。她的脸被一个扁平的矩形肤色遮挡块有意遮住。她身后，高大的教室窗户展现鲜艳蓝天、柔软白云和洒入室内的温暖阳光。画面右半部分有大型装饰性手写文字 {argument name=\"标题文字\" default=\"Sayori\"}，奶油白字形，带柔和橙金色描边和光晕，融入剪贴簿式墙面背景。用夹在绳子上的悬挂照片打印件环绕场景，包括天空照片和一张向日葵照片，并加入手绘云朵、星星、爱心和太阳涂鸦。添加蓝色和黄色纸星星、缎带、漂浮彩纸、一个蓝色纸飞机、笔记页、一本螺旋装订素描本，以及散落的文具元素。在前景和边缘突出放置向日葵，带有温暖金色散景和柔和景深。让构图充满活力、可爱、怀旧且情绪振奋，像高级动漫主题 YouTube 横幅或角色致敬页眉，超高细节、干净、时尚、明亮，并强调视觉冲击力。",
     "author": "@mirochill",
-    "authorUrl": "https://x.com/mirochill",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mirochill",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mirochill/status/2047639852485620070",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mirochill/status/2047639852485620070",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case99/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case99/output.jpg"
   },
   {
     "id": "ui-case-100",
@@ -4001,11 +4001,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一位戏剧性的动漫风格赛博朋克女巫，夜晚站在未来密集城市上方的黑暗屋顶上，从略微俯视的角度观看。主体是一位娇小的年轻女巫少女，皮肤苍白，冰蓝色短波波头，尖尖的精灵般耳朵，发光的红色眼睛，带着狡黠自信的微笑。她右手将一根黑色魔杖高举过头，杖尖悬挂的球形吊坠散发淡淡的紫色和红色光芒。她戴着一顶超大的歪斜女巫帽，黑色帽身配紫色内衬，上面布满缝补贴片、警告标签、束带和白色图形，包括巨大的“404”和骷髅徽章。她穿着黑紫色 机能风服装 服装：带许多束带和标签的宽大连帽夹克，胸前写有“404”的黑色短款上衣，多层腰带，短下装，单腿渔网袜，黑色系带战斗靴，颈链和金属配饰。几条悬挂的束带和标签上清晰可见“WITCH 404”、“404”以及故障主题标记。在她脚下和身旁，屋顶地面上投射着一个巨大的发光紫罗兰魔法阵，融合黑客界面美学，充满神秘环形结构、符文、中央骷髅符号，以及散落的霓虹系统文字，如错误代码片段，营造出巫术与数字腐化的融合感。从魔法阵中浮现出 1 个大型装甲召唤体：黑色未来感恶魔骑士或机器人魔宠，拥有锯齿状反光装甲、狭窄的紫光 面罩，一只手持重型武器，身体部分正分解为紫色能量碎片和烟雾。背景展现一座广阔的雨夜巨型城市，公寓塔楼和工业屋顶密布，充满窗户、阳台、电缆、招牌和薄雾。附近建筑墙面上有一个巨大的竖向涂鸦风格标识，包含 3 个可读元素：“404”、“Witch”和“ERROR NOT FOUND”，另有一个较小的“E404”。更多紫色霓虹故障文字和符号散布在屋顶和空中。使用黑色、靛蓝和深紫罗兰的暗色调，搭配锐利的洋红紫色高光，电影级对比度，潮湿表面的反光，细节密集，高端精致插画风格。氛围神秘、叛逆、时髦且危险，结合都市奇幻、黑客美学和魔法召唤。",
     "author": "@Eris_Create_Lab",
-    "authorUrl": "https://x.com/Eris_Create_Lab",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Eris_Create_Lab",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Eris_Create_Lab/status/2047537707904274795",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Eris_Create_Lab/status/2047537707904274795",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case100/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case100/output.jpg"
   },
   {
     "id": "ui-case-101",
@@ -4014,11 +4014,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张虚构电影的电影感动漫海报，片名为 {argument name=\"标题文字\" default=\"EL VIAJE DE LA LUNA DE PLATA\"}，采用精致的现代日本动画风格，外观自然，不过度堆砌细节。画面中央放置一位十几岁的动漫少女，从大腿中部以上入镜，正面朝前，银色短波波头，皮肤苍白，戴黑色 颈链、小巧黑色几何耳环，穿白色背心和深海军蓝宽大拉链连帽衫，袖子上有两条黄色条纹。她一侧肩上背着背包带，双手随意插在连帽衫口袋里。她的脸被一块低饱和米色的扁平矩形遮挡块覆盖，遮住整个面部区域。将她置于一个戏剧性的黄昏海滨城市场景中，融合旅行、怀旧与幻想：左侧是亮灯的火车站台，一列通勤列车正在驶近，目的地标识显示日文字符；其后是发光的城市天际线和摩天轮。远处和左下方有层叠山脉与蜿蜒发光的山谷道路。右侧是夕阳下的悬崖海岸，海面反射暖光，天空中有一弯新月、几只飞翔的海鸟，以及沿山坡向下延伸的弯曲公路。右侧还包括一块木质路标，正好有 3 个方向牌，标注为 \"NUEVOS CAMINOS\"、\"VIEJOS RECUERDOS\" 和 \"SIN LÍMITES\"。在顶部中央添加西班牙语标语 {argument name=\"标语文字\" default=\"CADA DESTINO CAMBIA SU HISTORIA\"}，使用优雅的衬线大写字母。左上方创建一个金色字体的奖项栏，带月桂花环，正好包含 4 个奖项区块：一个文字区块写着 \"GANADORA DE MÚLTIPLES PREMIOS\"，下方有 5 颗金色星星；然后是三个带月桂的奖项部分，分别写着 \"MEJOR PELÍCULA ANIMADA / FESTIVAL INTERNACIONAL DE ANIMACIÓN / 2024\"、\"PREMIO DEL PÚBLICO / FESTIVAL INTERNACIONAL DE CINE / 2024\" 和 \"MEJOR BANDA SONORA ORIGINAL / ACADEMIA DE CINE ANIMADO / 2024\"。将电影片名以巨大的发光华丽衬线字体横跨下方中央，带有魔法光辉和舒展的装饰花纹，并部分叠在角色之上。其下添加西班牙语引语 {argument name=\"引语\" default=\"A veces, para encontrarte... tienes que perderte en el mundo.\"}。再下方添加 \"UNA PELÍCULA DE ESTUDIO LUMINARIA\"，使用小型大写字母。底部添加发行文案 {argument name=\"发行文案\" default=\"PRÓXIMAMENTE EN CINES\"}，使用巨大的金色衬线大写字母，并在页脚沿线加入微小的制作方 标志 和演职员信息，包括左侧一个小型工作室徽章。丰富的蓝色、紫罗兰色和暖夕阳橙色调，光泽感海报灯光，浪漫冒险氛围，构图平衡，高度精致的影院主视觉，竖版单页电影海报。",
     "author": "@Design4p0",
-    "authorUrl": "https://x.com/Design4p0",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Design4p0",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Design4p0/status/2047531978346398002",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Design4p0/status/2047531978346398002",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case101/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case101/output.jpg"
   },
   {
     "id": "ui-case-102",
@@ -4027,11 +4027,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张戏剧化日式动漫风格活动宣传缩略图海报，竖版 4:5 构图，超精细，电影感，霓虹灯照明，高对比度，设计成社交媒体公告图片。主体是一位美丽动漫少女，居中略偏右，半身像，留着随风飘动的长长 {argument name=\"发色\" default=\"深蓝色\"} 头发，点缀小星星发夹，穿深色连帽衫，脖子上挂着大型录音室耳机，背景是从夕阳过渡到夜晚的发光城市天际线，充满闪烁灯光、音乐能量粒子、镜头光晕和飞舞的发光花瓣。她的面部区域被柔和的矩形模糊块遮住。使用电光蓝、紫罗兰、洋红、金色和夕阳橙组成的鲜艳调色板。用层次丰富的日文排版填满设计，文字清晰可读，并像精致活动广告一样融入画面。包含恰好 8 个主要文字组：左上角文案写「开启的，是与你一起创作的音乐故事。」下方较小副文案写「使用 AI，大家一起创作音乐的特别 3 天。」；右上角发光跑马灯招牌写「GW 连休!」下方较小霓虹框写「大家一起创作最棒的音乐吧!」；中央主标题，上方小号英文文字「AI MUSIC BOOTCAMP 2」，下方巨大日文标题文字「AI 音乐 训练营 2」；中部横跨画面的巨大金属金色公告写「确定举办!」；日期栏写「举办期间」后接「5.2 SAT 土」和「5.4 MON 月」；底部附近的话题号召写「参与超简单!! 只要带上 #AI音乐训练营2 发布即可!」；下方鼓励语写「新手也热烈欢迎! 大家一起体验最棒的音乐!」；以及 3 个带图标的底部特色说明，分别写「一起学习 与伙伴连接」、「用 AI 创作 全新的音乐体验」和「把心意化为形状 创作只属于自己的 1 首歌」。在左边缘添加一条竖向胶片带，包含恰好 4 个嵌入面板，展示同一位少女在音乐相关场景中：1) 在观众面前的舞台上表演，2) 在带屏幕和设备的音乐制作台前工作，3) 对着麦克风歌唱，4) 弹奏原声吉他。在下方区域添加恰好 2 个霓虹音乐主题图标插画：左下角一个倾斜的智能手机，上面有音符；右下角一个发光麦克风，周围有音符。文字效果要有光泽、发光、浮雕质感，并带金色和白色高光，标题周围有充满能量的光 光带 和火花爆炸。整体感觉应鼓舞人心、庆祝感强、未来感十足、情绪振奋，像一张高冲击力的日本黄金周音乐训练营广告，用于 {argument name=\"event name\" default=\"AI音楽ブートキャンプ 2\"}。",
     "author": "@sorane_aimusic",
-    "authorUrl": "https://x.com/sorane_aimusic",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sorane_aimusic",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sorane_aimusic/status/2047507066697507134",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sorane_aimusic/status/2047507066697507134",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case102/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case102/output.jpg"
   },
   {
     "id": "ui-case-103",
@@ -4040,11 +4040,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅鲜艳的像素艺术风格马赛克画，描绘一只热带鹦鹉栖息在茂密雨林 枝叶 中央的一根小棕色树枝上。整张图像都渲染成紧密排列的微小方形瓷砖网格，并带有可见黑色轮廓，形成彩色玻璃或 LED 屏幕效果。鸟以侧面轮廓呈现，朝向右侧，有大型弯曲黑色喙、浅奶油色脸部、明亮红橙色额头和喉部、鲜绿色上半身，以及饱和蓝色和青色的长翅膀与尾巴。周围丛林从边缘到边缘布满多层绿色叶片，包含许多深浅变化，鹦鹉后方有柔和浅绿色光晕，将其从背景中分离出来。高色彩对比，浓郁热带调色板，清晰瓷砖图案，居中构图，装饰性数字马赛克美学。",
     "author": "@erikmackinnon",
-    "authorUrl": "https://x.com/erikmackinnon",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/erikmackinnon",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/erikmackinnon/status/2048190288179675290",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/erikmackinnon/status/2048190288179675290",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case103/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case103/output.jpg"
   },
   {
     "id": "ui-case-104",
@@ -4053,11 +4053,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张电影感竖版照片：一只手在郁郁葱葱的室内温室酒吧中举起一只大型气球形葡萄酒杯，杯中盛满闪耀的金黄色柑橘鸡尾酒。饮品由温暖的午后阳光逆光照亮，呈现通透琥珀色光泽。杯内有 1 块可见柑橘角，杯沿有 1 簇新鲜薄荷装饰。手从左下方伸入，优雅地握住杯梗，佩戴 1 只厚实的半透明琥珀色手镯。场景中布满热带绿植、垂挂蕨类和藤蔓覆盖的墙面，头顶可见明亮的温室屋顶结构，背景中有 2 盏温暖的外露吊灯柔和发光。使用浅景深和奶油般散景，强烈阳光穿过叶片形成光束，柔和薄雾，以及浓郁的绿金色彩对比。在右边缘添加一片模糊的前景叶片或植物来框住构图。下方背景应暗示繁忙的咖啡馆或鸡尾酒廊，有模糊不清的人群，但要让他们严重失焦。写实、优雅的生活方式摄影，氛围深沉却沐浴阳光，从低角度向上拍摄举起的酒杯，凝结水珠、玻璃反射和发光饮品具有高细节。",
     "author": "@FernandesK47117",
-    "authorUrl": "https://x.com/FernandesK47117",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/FernandesK47117",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/FernandesK47117/status/2048183925294371147",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/FernandesK47117/status/2048183925294371147",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case104/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case104/output.jpg"
   },
   {
     "id": "ui-case-105",
@@ -4066,11 +4066,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一个 {argument name=\"网格布局\" default=\"4x3\"} 无边框网格，每个面板都是 {argument name=\"主体\" default=\"年轻女性\"} 的独立图像。在所有面板中保持强烈的主体一致性，并保持一致的色彩和光照。以 {argument name=\"情绪\" default=\"温暖、怀旧\"} 的情绪，用 {argument name=\"风格\" default=\"怀旧电影感写实风格\"} 风格描绘 {argument name=\"主题\" default=\"童年记忆\"}。无文字。无间隙。",
     "author": "@aimikoda",
-    "authorUrl": "https://x.com/aimikoda",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/aimikoda",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/aimikoda/status/2048183782876778821",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/aimikoda/status/2048183782876778821",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case105/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case105/output.jpg"
   },
   {
     "id": "ui-case-106",
@@ -4079,11 +4079,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张高度写实的手写信件图像，信件写在横线纸上，内容包含一段（{argument name=\"信息\" default=\"信息 or reflection carrying meanings of affection and loyalty to my account followers\"}），文字非常动人，用液体墨水笔书写",
     "author": "@mosthssan",
-    "authorUrl": "https://x.com/mosthssan",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/mosthssan",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/mosthssan/status/2048160477658980711",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/mosthssan/status/2048160477658980711",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case106/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case106/output.jpg"
   },
   {
     "id": "ui-case-107",
@@ -4092,11 +4092,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅从舞台上表演者背后视角描绘的戏剧性动画演唱会插画，画面中 4 名少女并肩站在巨大室内场馆舞台前方，彼此搂着肩膀，呈现演出结束后胜利般的瞬间。镜头位置略在她们身后且偏低，朝向观众和巨大的场馆屏幕。氛围璀璨而动人，充满密集的蓝金色彩纸、闪烁粒子，以及从上方倾泻而下的强烈白色舞台聚光灯。观众填满整个场馆，像一片由微小蓝色荧光组成的海洋。顶部中央，一块巨大的矩形屏幕显示优雅的衬线体演唱会文字：{argument name=\"band name\" default=\"ELEMAYU\"}，\"1st LIVE at 日本武道館\"，{argument name=\"演唱会日期\" default=\"2024.6.15\"}，以及 \"SOLD OUT\"。场馆两侧上方墙面都能看到大型场馆名称 \"日本武道館\"。4 名女孩都穿着统一的深色舞台服装：黑色或极深海军蓝连帽夹克，背面带有低调装饰印花，短百褶裙，以及现场演出造型。清楚计数并从左到右分别描绘全部 4 名成员：1）一名短卷银薰衣草色头发的女孩，肩上背着贝斯吉他；2）一名长直黑发女孩，拿着红色电吉他；3）一名蓬松及肩金发女孩，拿着深色吉他；4）一名高马尾棕发女孩，没有可见乐器，高举一只手，拿着鼓槌或指挥棒庆祝，另一只手搂着金发成员。展现她们的背影和被舞台灯光勾勒出轮廓的剪影，头发上带有柔和高光。加入舞台设备：最左侧有一个麦克风支架和一部分贝斯琴颈，右侧边缘可见带镲片的架子鼓。舞台地面光滑且具有反射感，散落着彩纸，底部前景附近有几束蓝色花束。使用浓郁的午夜蓝、紫罗兰阴影、温暖金色闪光和电影感光晕。整体情绪应像一场座无虚席的梦幻演出终章，感伤、胜利、令人屏息地明亮，采用高度细致的绘画感动画风格。",
     "author": "@SDAI1807097011",
-    "authorUrl": "https://x.com/SDAI1807097011",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SDAI1807097011",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SDAI1807097011/status/2048127178592915583",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SDAI1807097011/status/2048127178592915583",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case107/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case107/output.jpg"
   },
   {
     "id": "ui-case-108",
@@ -4105,11 +4105,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张 4x4 照片拼贴，由 16 张温暖、电影感的生活方式快照组成，画面中一名真实成年男子和一名动画风格年轻女性同伴一起摆姿势，仿佛随性的约会照片。男子短黑发、浅肤色、中等身材，穿着纯色深海军蓝或黑色长袖衫；他的脸在每一格中都被刻意遮挡并柔和模糊。动画女孩有金色双马尾长发、大大的蓝眼睛、浅肤色和纤细娇小的身材，穿着黑色无袖上衣，佩戴多层银色项链，其中包括十字吊坠，戴黑色腕饰，穿红色格纹百褶迷你裙和黑白条纹大腿袜。将真实摄影与可信融入的 2D 动画角色结合，在保留她干净赛璐璐阴影外观的同时，匹配场景光照、透视、焦点和调色，使她看起来自然地出现在他身旁。使用忧郁的傍晚色调、柔和散景、浅景深，以及亲密自然的情侣抓拍氛围。16 个画面分别是：1）室内近景肖像，两人紧挨着坐在一起，女孩依偎在他身旁；2）夜晚城市街道侧面轮廓对话，背景有模糊街灯；3）室内，两人一起读一本书，女孩靠在他的肩上；4）户外咖啡馆桌边，两人都拿着外带咖啡杯；5）餐厅桌边，可见多道菜，两人一起用餐；6）电梯里的镜子自拍，男子拿着智能手机，女孩比出和平手势；7）汽车内饰公路旅行画面，男子开车，动画女孩坐在副驾驶座；8）海边日落背影视角，两人并肩坐着看海；9）霓虹灯照亮的城市夜景肖像，女孩指向镜头；10）亲密的电梯近景，女孩闭着眼睛亲昵地靠着他；11）电梯里的全身镜自拍，展示两人更多服装；12）夜晚城市天际线肖像，背景有一座亮灯塔；13）相机自拍近景，男子把一台紧凑相机朝向镜子或反光表面；14）舒适室内休息室瞬间，男子拿着一杯红酒，女孩微笑并比出和平手势；15）雨夜街道后方全身画面，两人手牵手走远，周围是发光街灯；16）极近距离夜间肖像，女孩比出和平手势。保持拼贴为紧密网格，使用细白色分隔线，整体为方形格式，统一的琥珀棕色调，浪漫都市现实主义，以及微妙的社交媒体照片合集美学。",
     "author": "@AIillust_studio",
-    "authorUrl": "https://x.com/AIillust_studio",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIillust_studio",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIillust_studio/status/2048099186214900130",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIillust_studio/status/2048099186214900130",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case108/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case108/output.jpg"
   },
   {
     "id": "ui-case-109",
@@ -4118,11 +4118,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一名时髦年轻女性，拥有 {argument name=\"发型\" default=\"金色长卷发\"}、轮廓分明的颧骨和自信表情，戴着黑色太阳镜，穿着 {argument name=\"服装\" default=\"厚实白色羽绒夹克\"}，内搭修身黑色上衣，自信地站在一辆 {argument name=\"汽车\" default=\"鲜艳亮粉色 Ford Mustang\"} 前。她摆出一只手微微抬在胸前附近的姿势，散发轻松的态度与优雅气质。汽车停在一条风景优美的海岸公路上，道路两旁是盛开的粉色樱花树和高大的棕榈树。她们身后是一片平静的大海，天空阴沉而戏剧化，云层柔和。湿润的沥青路面上散落着粉色花瓣。左侧靠近水边可见一张木质长椅。电影感光照，照片级真实，超细致皮肤纹理，自然光反射，Instagram 风格豪华生活方式写真，鲜艳色彩，忧郁氛围，8k 分辨率 --宽高比 9:16 --stylize 250",
     "author": "@Just_sharon7",
-    "authorUrl": "https://x.com/Just_sharon7",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Just_sharon7",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Just_sharon7/status/2048095904138485962",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Just_sharon7/status/2048095904138485962",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case109/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case109/output.jpg"
   },
   {
     "id": "ui-case-110",
@@ -4131,11 +4131,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅温馨的动漫风格室内场景，地点是传统日本荞麦面餐厅，从卡座的桌面高度视角观看，两位年轻女性分别坐在长方形木桌近处两角的对面，面向观者，像一张随性的用餐快照。左侧女性有一头长直的淡彩色 {argument name=\"发色\" default=\"薰衣草色并带青色挑染\"} 头发，发丝有光泽，刘海柔软，穿着白色和服风上衣，带有明亮蓝色滚边，以及深蓝色类似腰封的裙装；她身材略微丰满，坐在左侧红色乙烯基长椅上，身体微微转向镜头，抬起左手做出开放友好的挥手动作。右侧女性留着从深棕到黑色的利落短波波头，发梢附近可见紫色内层，戴红色矩形眼镜、小耳环，穿修身炭灰色长袖圆领上衣和浅蓝色牛仔裤；她坐在右侧红色乙烯基长椅上，身体微微前倾靠近桌面，右手拿着筷子，仿佛正要开吃。桌上放 2 个大黑碗荞麦面，每位女性面前各一个，碗中都有深色汤底、面条、切片鸭肉和葱花；在桌子后方中央附近添加 1 个透明水杯，旁边放 2 个小调味碟。餐厅应呈现温暖怀旧的感觉，有木质墙板、左侧的障子风格窗户、窗台上的一盆小盆栽、后方摆有调味料和餐具的柜台，以及右侧一面海军蓝暖帘，上面写有大号白色日文文字 \"蕎麦\" 和较小的竖排文字 \"手打ちそば\"。后墙展示 7 块竖向木制菜单牌，写有日式菜名和价格，包括 \"もりそば\"、\"ざるそば\"、\"かけそば\"、\"たぬきそば\"、\"肉そば\"、\"天ぷらそば\" 和 \"鴨南蛮そば\" 等标签。使用干净精致的动漫渲染、清晰线稿、柔和温暖光照、细致的食物描绘、丰富的木质纹理，以及友好日常出游的氛围。",
     "author": "@AIMAG31G",
-    "authorUrl": "https://x.com/AIMAG31G",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/AIMAG31G",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/AIMAG31G/status/2048089673621516547",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/AIMAG31G/status/2048089673621516547",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case110/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case110/output.jpg"
   },
   {
     "id": "ui-case-111",
@@ -4144,11 +4144,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅电影感黑暗奇幻动漫插画，场景位于废墟般的哥特式大教堂中，竖版构图。画面中展示一位孤独的女性仿生人式战士的背影，位置居中且略低，跪坐或坐在自己脚跟上，身处反光石质地面。她拥有极长且飘逸的 {argument name=\"发色\" default=\"银白色\"} 头发，铺展在地面与空气中，眼部覆盖一条利落的黑色蒙眼面罩，穿黑色高开衩哥特战斗连衣裙，带优雅绑带，戴黑色长款歌剧手套，穿黑色过膝长靴。她的体态纤细而优雅。她双手扶在剑柄上，握着 1 把大型华丽长剑竖立在身前，剑刃插在地上，如同纪念碑。长剑有深色剑身，手柄附近有装饰性的金色环状护手。氛围庄严、悲怆且虔敬。背景中放置 3 扇高大的尖拱窗，冷白背光穿过薄雾与尘埃发光。总共包含 4 尊石质天使雕像：左侧背景 2 尊较大的天使，右侧背景 2 尊，部分被雾气和黑暗遮挡。空气中充满飘散的灰烬、雪一般的粒子、黑色碎片，以及地面附近少量微弱橙色余烬。使用戏剧性的体积光束、柔和辉光、烟雾薄霭、高对比度，以及由炭灰、银色、蓝灰和黑色组成的低饱和调色板。场景应像战斗之后的纪念仪式，高度细致、极致精修、忧郁、空灵，并带有受 {argument name=\"系列标题\" default=\"NieR:Automata\"} 启发的游戏主视觉风格。在左下附近添加 1 条竖排日文标题题字，内容为 {argument name=\"竖排文字\" default=\"儚き夢と共にあれ\"}，旁边放 1 条小号竖排英文副标题，内容为 {argument name=\"副标题文字\" default=\"NieR:Automata\"}。",
     "author": "@yanagihara_0805",
-    "authorUrl": "https://x.com/yanagihara_0805",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/yanagihara_0805",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/yanagihara_0805/status/2048085829713842405",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/yanagihara_0805/status/2048085829713842405",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case111/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case111/output.jpg"
   },
   {
     "id": "ui-case-112",
@@ -4157,11 +4157,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据图像中 {argument name=\"主体\" default=\"云朵\"} 的形状，识别它们最像什么物体、动物或人物。不要改变原始图像；而是在原始图像上用 {argument name=\"art 风格\" default=\"涂鸦\"} 风格绘制该物体、动物或人物。",
     "author": "@Gorden_Sun",
-    "authorUrl": "https://x.com/Gorden_Sun",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Gorden_Sun",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Gorden_Sun/status/2048080137149899133",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Gorden_Sun/status/2048080137149899133",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case112/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case112/output.jpg"
   },
   {
     "id": "ui-case-113",
@@ -4170,11 +4170,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅电影感动漫风格插画，描绘初夏安静的日本乡村火车站，充满旅行怀旧感和明亮正午阳光。前景中，一名高中女生独自站在站台上，靠近画面左侧，略微面向观者，姿态羞涩而温柔，双腿并拢，一只脚向内微微倾斜。她有 {argument name=\"发色\" default=\"黑色\"} 短波波头，刘海柔软，穿经典日本水手服校服：白色长袖水手领上衣，带海军蓝滚边，鲜红色领巾，深海军蓝百褶裙，白袜和深棕色乐福鞋。她一只手在身侧拎着深色书包。她的表情应显得平静、略带惆怅，仿佛在火车抵达前刚要开口说话。让她站在一座老旧风化的木质车站建筑旁，建筑有大块窗玻璃和一张简单木长椅。她上方有 1 块悬挂式站牌，写着 {argument name=\"station name\" default=\"山ノ下駅\"}，并带有较小的罗马字 “YAMANOSHITA” 和下方的小号本地线路信息。画面右半部分展开为 1 组向远方延伸的铁轨，两侧是茂盛绿草和野花，远处线路上有 1 辆小型本地列车正在驶来。沿铁轨添加几根电线杆。深远背景中，在鲜艳蓝天和零散白云下，展示一片壮观山脉，山峰上残留积雪。构图应平衡左侧的女孩与右侧的铁路透视，背景景物细致，阳光清晰，动漫渲染柔和，车站木材和铁轨具有真实纹理，并带有真挚的日常旅行氛围。",
     "author": "@m_Raiko_AIart",
-    "authorUrl": "https://x.com/m_Raiko_AIart",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/m_Raiko_AIart",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/m_Raiko_AIart/status/2048069313387737222",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/m_Raiko_AIart/status/2048069313387737222",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case113/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case113/output.jpg"
   },
   {
     "id": "ui-case-114",
@@ -4183,11 +4183,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张写实动漫风格的室内餐厅抓拍照片，画面中两名年轻女性坐在一家舒适日本居酒屋内的小旧木桌旁，周围是竖向木饰面墙，右侧有清晰的塑料帐篷式帘幕。相机略高于桌面高度，并以斜向角度朝向桌子，营造随手拍的自然感觉。一名女性位于左侧前景，背部大多朝向观众，身体前倾靠在桌边；她有长直深色头发，穿着厚重的深海军蓝或黑色连帽羽绒服。第二名女性坐在她对面右侧，面向镜头，姿态放松，一只手臂弯曲放在桌上；她有齐肩深棕至黑色头发，中分，穿黑色羽绒服和浅色内搭。只将人物替换为干净、自然的动漫角色，同时保持餐厅环境照片级真实且不变。保留动漫角色可信地合成进真实照片中的混合媒介观感。桌上包含 2 个不锈钢杯、2 双筷子、1 部亮蓝色手机壳的智能手机，放在桌子中左边缘附近，右侧女性旁边有 1 包香烟，1 个大椭圆盘装有薄切白洋葱和一角柠檬，1 小碟绿色蔬菜，1 小盘棕色食物，1 小盘吐司或烤面包，1 个小深色碗，2 个空的小白碗，以及 1 张印有手写日文菜单的纸，放在桌子右下角。左上方背景中包含一个木质吧台，摆有白色陶瓷瓶和餐具，另外还有 1 张手写日文墙面菜单海报。温暖室内灯光，日常夜生活氛围，纪实写实感，细致木纹，略显凌乱的桌面，真实自然的日本休闲餐饮场景。",
     "author": "@sub_raw_jin",
-    "authorUrl": "https://x.com/sub_raw_jin",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sub_raw_jin",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sub_raw_jin/status/2048066779835220392",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sub_raw_jin/status/2048066779835220392",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case114/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case114/output.jpg"
   },
   {
     "id": "ui-case-115",
@@ -4196,11 +4196,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一个舒适的冬季露营场景，位于大型米色帆布帐篷内部，渲染为半写实动漫插画，具有自然光照和真实的环境细节。画面中准确呈现 2 名坐着的年轻女性，围绕一台被用作露营桌的紧凑型煤油取暖炉，顶部放着一个大型黑色金属锅。视角是略高于坐姿高度的抓拍式广角照片构图，让场景像是在帐篷内随手拍下的生活照。左侧女性有 {argument name=\"发色\" default=\"深棕色\"} 头发，扎成高马尾并带有零散刘海，穿蓬松棕色羊羔绒外套、深色裤子，以及挂着 ID 卡的红色挂绳。她坐在低矮露营椅上，身体前倾，用筷子夹取手中小碗或食物容器里的食物。右侧女性有 {argument name=\"发色\" default=\"黑色\"} 齐肩头发，穿一件柔和紫色连帽衫，外搭黑色羽绒背心，浅灰色运动裤和深色鞋子。她坐在另一把低矮露营椅上，一只手托着脸，姿态放松且略带困意。两人的脸都保持被柔和矩形模糊块遮挡，就像发布照片时做了匿名处理。场景中可见准确 4 个红色饮料罐：2 个在中央附近的木桌板上，1 个在右下前景被裁切，1 个在更靠后右侧附近。围绕取暖炉搭建一个由 3 块木质长凳板组成的低矮 U 形布局。加入小型露营细节：左侧地面有 1 个橄榄绿色行李包，左侧女性身后有 1 个装有补给品的塑料收纳箱，箱子上有 1 个白色塑料购物袋，桌上有 1 个小碗，右侧木板上有 1 包彩色零食包装，最左侧地面有 1 块柔软棕色布，后方右侧立着 1 个黑色金属架框。帐篷内部应有绷紧的帆布墙、可见接缝和支撑杆、砾石地面，以及温暖柔和的配色。保留真实露营照片的感觉，其中只有人物被转换成动漫风格角色，而场景仍保持高度写实。",
     "author": "@sub_raw_jin",
-    "authorUrl": "https://x.com/sub_raw_jin",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/sub_raw_jin",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/sub_raw_jin/status/2048066779835220392",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/sub_raw_jin/status/2048066779835220392",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case115/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case115/output.jpg"
   },
   {
     "id": "ui-case-116",
@@ -4209,11 +4209,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创建一张 4:5 竖版社交海报，超高分辨率，8K 印刷品质锐度。使用参考图中的 {argument name=\"车型\" default=\"BMW 汽车\"} 作为主体，并使用参考图的背景结构/构图，但将其转换为 BMW 主题设计。将所有黑色调替换为纯平的 {argument name=\"背景颜色\" default=\"高饱和 BMW 蓝\"} 背景。保持与参考图相同的布局、间距、视觉平衡和海报构图。背景应使用平滑渐变，从顶部略浅的电光蓝过渡到底部深海军蓝。添加轻微颗粒纹理（2 到 3%）和淡淡的矩形叠层（2 到 4% 不透明度）。保持干净、图形化、高级、非写实。车身下方添加柔和接触阴影。使用参考图中的同一辆 BMW，只改变 {argument name=\"车漆质感\" default=\"哑光冰霜蓝\"} 或深金属海军蓝。保留参考图中的原始车身形状、轮毂、姿态和设计细节。以与参考图角度完全匹配的后方 3/4 视角展示汽车。使用略微抬高的相机角度。将汽车放置在略偏中心右侧的位置。包含可见碳纤维车顶、激进后扩散器、锐利且受控的反射，以及细微刹车细节。保持与参考图完全相同的构图：顶部：品牌标识 中部：巨大字体 中心：汽车与文字重叠 底部：编辑区块和规格信息 字体设计：主文字：“BMW” 超窄粗体无衬线字体，像参考海报一样进行高挑纵向缩放。颜色为深海军蓝或近黑色。静态文字，无变形。作为结构性背景。副标题：“BMW M4 G82” 细字体，宽字距。标志 区域：BMW 圆形徽标居中置于上方。编辑区块：标题：“BMW — Where Driving Becomes Instinct” 正文聚焦于：驾驶者连接、控制、性能、精准 使用与参考图相同的框选编辑布局。背景淡化文字：“M4” 大比例，位于框后方，3 到 5% 不透明度。左下：“ M4 G82” 右下规格：405 kW / 550 PS 3.4 s 307 km/h 灯光应为干净的棚拍灯光，高光锐利但受控。调色应使用深蓝、高对比、干净黑色。相机镜头：50mm，略微抬高的后方 3/4 角度。氛围：性能。精准。驾驶者专注。添加右下角水印：harboriis，带小号 x 和 Instagram 标志",
     "author": "@harboriis",
-    "authorUrl": "https://x.com/harboriis",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/harboriis",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/harboriis/status/2048063332624843046",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/harboriis/status/2048063332624843046",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case116/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case116/output.jpg"
   },
   {
     "id": "ui-case-117",
@@ -4222,11 +4222,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张超写实电影感街头美食广告海报，展示 {argument name=\"brand name\" default=\"Licious\"} 冷冻 {argument name=\"product name\" default=\"Chicken Momos\"}，拍摄于深色高级影棚，采用戏剧化氛围灯光、深海军蓝黑色背景、亮面黑色桌面，以及高对比度商业美食摄影风格。构图为方形社交媒体广告版式，左侧放置超大号加粗窄体白色无衬线标题文字，内容为 {argument name=\"标题文字\" default=\"PERFECTLY MADE.\"}，分两行堆叠排版；其下方放置较小的白色副标题，内容为 {argument name=\"标语文字\" default=\"PRECISION IN EVERY BITE.\"}。沿最左侧边缘添加细窄竖排小型大写文字：“FRESH • CLEAN • CONTROLLED”。在右上方背景中，以微妙深灰色图案重复短语“CUT / STEAM / SERVE / REPEAT”，并在左下方地面区域再次以透视文字淡淡重复“CUT / STEAM / SERVE / REPEAT”。画面中总共精确呈现 6 个莫莫：5 个完整蒸鸡肉莫莫漂浮并动态排列在画面中央和右侧，1 个剖开的莫莫位于中央，露出多汁的橙棕色鸡肉香草馅料，并有一滴亮泽红橙色酱汁从剖开的饺子向下滴落。在莫莫周围散布悬浮于空中的小辣椒碎、香草碎和调味颗粒，营造爆发式动感。右侧精确放置 3 个零售产品盒，前后错落，黑色包装，带有 {argument name=\"brand name\" default=\"Licious\"} 标志和红色产品标题“CHICKEN MOMOS”，盒子正面包含饺子的美食摄影图。在右下方前景放置 1 个装满鲜红蘸酱的小黑碗。底部横向添加一行细小白色页脚文字：“CHICKEN MOMOS • FRESHLY PREPARED • 2026 EDITION”，并在右下角放置“licious.com”。采用高级广告设计、极致细腻的食物纹理、饺子上的亮泽高光、微妙蒸汽光泽、清晰锐利的字体排版、浅景深，以及精致高端商业广告大片美学。",
     "author": "@Diplomeme",
-    "authorUrl": "https://x.com/Diplomeme",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Diplomeme",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Diplomeme/status/2048060325925470358",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Diplomeme/status/2048060325925470358",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case117/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case117/output.jpg"
   },
   {
     "id": "ui-case-118",
@@ -4235,11 +4235,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "{\"type\":\"16 张照片怀旧接触印相拼贴\",\"风格\":\"梦幻胶片摄影、柔和模糊、略微欠曝、抓拍式青春恋爱感、闪光快照与黄昏环境光混合、细微颗粒、感伤而苦乐参半的氛围\",\"主体\":{\"people_count\":2,\"relationship\":\"年轻情侣或曾经的恋人一起共度时光\",\"ages\":\"20 岁出头\",\"appearance\":{\"male\":{\"build\":\"纤瘦\",\"hair\":\"深色短发\",\"服装\":\"宽松白色短袖衬衫，多张照片中脖子上挂着相机背带\"},\"female\":{\"build\":\"纤瘦\",\"hair\":\"及肩深色头发\",\"服装\":\"浅色无袖上衣或柔软休闲的夏季服装\"}},\"faces\":\"每一张可见面孔都刻意用柔和的矩形模糊块遮挡\"},\"layout\":{\"grid\":{\"rows\":4,\"columns\":4,\"count\":16,\"border\":\"细白色分隔线，等大的方形单元格\"},\"images\":[{\"position\":\"第 1 行第 1 列\",\"description\":\"夜晚一张近距离裁切的女性肖像，她穿着白色上衣，柔和闪光，深色背景\"},{\"position\":\"第 1 行第 2 列\",\"description\":\"近距离裁切的模糊双人自拍构图，两位主体部分可见，深色夜间环境\"},{\"position\":\"第 1 行第 3 列\",\"description\":\"年轻男子夜晚站立，将一台紧凑型银色相机举到脸前，穿白衬衫，身后有远处灯光\"},{\"position\":\"第 1 行第 4 列\",\"description\":\"低光环境下海滩或岸边的女性，柔和模糊，身后是海平线\"},{\"position\":\"第 2 行第 1 列\",\"description\":\"街头抓拍，男子傍晚在户外行走时把相机举在脸附近，城市背景带有运动模糊\"},{\"position\":\"第 2 行第 2 列\",\"description\":\"女性在室内或昏暗温暖环境中的特写，手抬在脸旁，闪光灯照亮的快照\"},{\"position\":\"第 2 行第 3 列\",\"description\":\"黄昏水边一张模糊的情侣双人照，两人亲密地坐在一起，抓拍式亲密构图\"},{\"position\":\"第 2 行第 4 列\",\"description\":\"年轻男子白天或傍晚在户外绿植中，低头看着手中的相机，白衬衫和相机背带可见\"},{\"position\":\"第 3 行第 1 列\",\"description\":\"女性靠近镜头比出和平手势，穿休闲无袖上衣，沙地或海滩般背景\"},{\"position\":\"第 3 行第 2 列\",\"description\":\"男子身穿白衬衫的背影，从高处眺望夜晚城市景观\"},{\"position\":\"第 3 行第 3 列\",\"description\":\"女性夜晚在室内，手持紧凑型相机直接对准观者，窗外有城市灯光，带闪光美学\"},{\"position\":\"第 3 行第 4 列\",\"description\":\"紧密裁切的双人自拍式画面，两位主体部分可见，深色背景\"},{\"position\":\"第 4 行第 1 列\",\"description\":\"年轻男子黄昏在水岸边，将相机举到眼前，身后有多云蓝天和远处岸线\"},{\"position\":\"第 4 行第 2 列\",\"description\":\"女性夜晚在城市街道上的柔和肖像，背景有温暖的散景灯光\"},{\"position\":\"第 4 行第 3 列\",\"description\":\"亲密的情侣近距离快照，两张脸靠得很近，其中一人比出和平手势，强烈模糊和闪光灯质感\"},{\"position\":\"第 4 行第 4 列\",\"description\":\"女性夜晚独自走过一条暖光照明狭窄街道的背影，及肩头发和浅色上衣可见\"}]},\"composition\":\"每个方格都像一个夏夜和附近几次出行中的记忆碎片，取景多样，自然不完美，随性的业余摄影感\",\"color_palette\":\"柔和蓝色、温暖钨丝灯黄色、柔和肤色、深绿色、炭黑色夜影、褪色白色衣物\",\"camera_look\":\"35mm 傻瓜相机或一次性相机质感、浅焦、运动模糊、灯光周围泛光、偶尔的闪光过曝\",\"quality\":\"高分辨率拼贴，具有真实的模拟胶片柔软感，情绪感染力强且写实\"}",
     "author": "@zenkaiAI",
-    "authorUrl": "https://x.com/zenkaiAI",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/zenkaiAI",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/zenkaiAI/status/2048051889460437351",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/zenkaiAI/status/2048051889460437351",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case118/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case118/output.jpg"
   },
   {
     "id": "ui-case-119",
@@ -4248,11 +4248,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一张明亮、精致的动漫风格宣传缩略图，带有夏日恋爱氛围。画面在视觉上分为两部分，左侧为大号排版文字，右侧为两位英俊年轻男性。左侧在天蓝色背景上放置多层半透明白色面板，带柔和光晕和闪光，顶部使用优雅的大号衬线文字 \"GPT\"，呈蓝色渐变，下方使用 \"BL\"，呈薰衣草紫到紫罗兰色渐变。在两者之间和下方排列三行日文文字：\"用最新的图像生成\"、\"制作\"、\"试着玩了\"，使用深蓝色书法风日文字体。加入细微装饰元素，例如小星芒、斜向光 光带、点状纹理，以及中间文字下方的青色下划线弧形笔触。右侧展示 2 位动漫男孩的腰部以上形象，他们在绿叶树荫下、链环围栏旁随意地靠在一起。较高的男孩有凌乱的深棕色头发，穿着敞开的海军蓝外衬衫，内搭白色 T 恤，佩戴多层银色项链，并拿着 1 个带吸管的塑料杯冰咖啡。较矮的男孩有凌乱的银白色头发，穿白色 T 恤，胸前有一个小徽章纹样，双肩背着黑色背包带，佩戴多层银色项链和一枚小耳环。他们的姿势放松而亲密，深色头发男孩的手臂搭在另一人身边。使用明亮的蓝白色调，加入柔和阳光、镜头光晕、散景，以及背景中淡淡的城市天际线，营造干净的社交媒体头图或文章缩略图美感。",
     "author": "@himukai_an",
-    "authorUrl": "https://x.com/himukai_an",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/himukai_an",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/himukai_an/status/2047981800535085555",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/himukai_an/status/2047981800535085555",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case119/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case119/output.jpg"
   },
   {
     "id": "ui-case-120",
@@ -4261,11 +4261,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "一幅电影感、动漫灵感的数字插画，场景设在夜晚一间舒适的画师房间内，房间有大块窗格，窗外是温暖的城市灯光。左侧，一位年轻男性画师有着 {argument name=\"发色\" default=\"深棕色\"} 的凌乱头发，以侧面姿态坐在杂乱的书桌前，身体前倾，一只手靠近嘴边，另一只手用笔在数位板或速写本上绘画。书桌上摆放着正好 1 个装满铅笔的笔筒、1 个咖啡杯、1 台打开的笔记本电脑或数位屏，屏幕上显示日落风景、1 本螺旋装订速写本，里面有漫画风角色草图、2 本额外的绘画书或画板、1 小叠约 4 本书，以及许多散落的艺术卡片和印刷插画。右侧，一位由蓝白色光芒构成的发光空灵动漫女孩以真人大小出现，面向画师，双手温柔地向他伸出。她的形态半透明、精致，由发光轮廓线、星光粒子和流动的光丝组成，拥有长长的被风吹起的头发，以及柔和的连衣裙般轮廓。在他们之间，一股金色与白色的魔法光流从画师的书桌向上盘旋升入空中，连接创作者与创作物。在这条旋转光带中，正好有 12 到 16 个漂浮的图像碎片和草图页：单色角色草图、风景日落绘画、小型照片般的画面，以及微小图标般的卡片，全部沿着从下方中央到左上方和上方中央的弧形轨迹环绕。画面上半部分周围有数十个发光音符漂浮在空中，与闪烁粒子混合在一起，营造出灵感化为可见声音与记忆的感觉。色彩在画师一侧使用浓郁温暖的金色与琥珀色，与灵体女孩一侧的冷调电光蓝与白色形成对比，带有戏剧性的边缘光、体积光晕、精细粒子和梦幻而富有情感的氛围。构图为竖版，高度细致、亲密而诗意，唤起 {argument name=\"人物一\" default=\"你\"} 和 {argument name=\"人物二\" default=\"我\"} 之间作为画师与想象中缪斯的关系，绘画、音乐、记忆与幻想在房间中具象化显现。在书桌上加入一张小小的手写便签卡，文字为 {argument name=\"便签文字\" default=\"二人だけの物語\"}，并在书桌上展示一幅醒目的作品，同时展示一块漂浮的风景画面，主题使用 {argument name=\"scene 主题\" default=\"远方城市上空的日落天空\"}。",
     "author": "@almimeister",
-    "authorUrl": "https://x.com/almimeister",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/almimeister",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/almimeister/status/2048309710118687101",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/almimeister/status/2048309710118687101",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case120/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-prompts/main/images/ui_case120/output.jpg"
   },
   {
     "id": "ui-case-125",
@@ -4274,11 +4274,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "[BRAND NAME = CHANGE TO YOUR BRAND]。\n作为一名社交媒体艺术总监和数字拼贴艺术家，专注于为 Instagram 和数字营销活动创作大胆、面向年轻人的品牌内容。阶段 1：概念框架 创建一幅动态数字拼贴，将时尚摄影与图形设计的混乱感融合在一起。这是受控的叛逆——构图看起来即兴、充满活力，同时保持品牌一致性。美学方向是反精致：撕裂边缘、叠层纹理、手绘元素和大胆色块，传达自信与运动感。阶段 2：模特与摄影 - 主体：一名模特（多元化选角，18-30 岁），姿势动态且自信 - 姿势能量：80% 态度，20% 自然——坐姿、跳跃、运动瞬间或强势站姿（避免静态站立） - 服装：与 [BRAND NAME] 美学一致的街头风/运动休闲风——休闲但经过造型 - 主打产品：突出展示 1 件标志性 [BRAND NAME] 产品（运动鞋、包、服装）——这是视觉锚点 - 摄影风格：编辑部时尚抠图——模特从背景中提取，边缘干净 - 镜头角度：略低角度，以强化主体气场（英雄视角） - 裁切：全身或 3/4 身，清楚展示主打产品 - 背景移除：干净抠出模特，便于叠放在拼贴元素之上 阶段 3：色块基础 - 主色块：大型有机形状（占构图 40-60%），使用大胆、饱和的品牌色，位于模特后方/周围 - 形状风格：不规则、手绘质感——类似 Photoshop 笔刷笔触或撕纸纹理（不要完美几何形状） - 颜色选择（自主）：从 [BRAND NAME] 调色板中选择 1 个主视觉颜色：- 纹理：可见笔刷痕迹、颗粒或轻微噪点（15-25% 不透明度）——避免扁平数字填色 - 位置：色块用于框住模特，同时不遮挡关键产品细节 阶段 4：图形元素层 添加 3-5 个抽象图形元素，散布在构图中：- 元素类型：- 色彩调色板：总共使用 2-3 个强调色（主色块颜色 + 1-2 个来自品牌调色板的对比色） - 位置：非对称散布——主要在左上和右下区域（避免中心拥挤） - 尺寸：混合小型（画布 5%）和中型（画布 15%）元素——不要有过于压倒性的元素 - 美学：模拟手工/模拟媒介质感——不完美圆形、粗糙边缘、可见纹理 阶段 5：字体整合 - 品牌 标志：干净的 [BRAND NAME] 标志 放置在左上或右上象限（宽度的 10-15%） - 标语/口号：如果 [BRAND NAME] 有标志性口号，使用以下方式整合：- 辅助文案：可选 1 行描述语（例如 \"A MOMENT OF YOUR STYLE\"），使用较小的大写无衬线字体 - 字体处理：混合对齐文字和轻微旋转文字（2-5° 角度），营造动态能量 - 层级：标志 最大 → 标语中等 → 文案最小 阶段 6：纹理与背景 - 基础层：米白或浅灰纹理背景（不要纯白） - 纹理选项（自主选择）：- 颜色：RGB 245-250（带暖意的近白色）——保持明亮，同时增加深度 - 处理：纹理应被感受到，而不是被明显看到——增强触感但不与前景竞争 阶段 7：构图规则 - 版式：非对称平衡——模特偏离中心，图形元素形成视觉平衡 - 留白：15-20% 负空间（可见纹理背景），避免压迫感 - 图层顺序：背景纹理 → 色块 → 图形元素 → 模特（抠图） → 顶层字体 - 焦点：模特 + 主打产品 = 主要焦点（60% 视觉重量），图形作为支撑（40%） - 动势：对角线和倾斜元素创造方向流动（从左上到右下，或反向） 阶段 8：品牌智能（自主） 根据 [BRAND NAME] 个性自主调整构图：- 街头服饰/运动服饰（Nike、Adidas、Supreme）：- 奢华街头服饰（Balenciaga、Off-White、Gucci）：- 美妆/生活方式（Glossier、Fenty、Skims）：- 科技/现代（Apple、Tesla、Beats）：阶段 9：社交媒体页脚（可选） - 底部条带：画面底部 8-10% 的干净白色或浅灰色栏 - 内容：社交媒体账号（Instagram、Facebook、Twitter），使用小号无衬线字体 - 版式：三栏网格，带平台图标或文字账号 - 美学：极简且专业——与上方混乱拼贴形成对比 技术规格：- 画面比例：4:5（Instagram 信息流）或 1:1（方形社交帖子） - 分辨率：最低 2400x3000px（高质量，适合放大和细节呈现） - 色彩模式：sRGB，鲜明饱和度（针对 Instagram 优化） - 文件美学：模仿模拟手工艺的数字拼贴（Photoshop + 手绘混合） - 模特摄影：85mm 镜头，f/2.8，原始拍摄时浅景深（抠图前） - 风格参考：Nike 社交媒体活动、Spotify Wrapped 图形、Z 世代 Instagram 美学、Hypebeast x 街头服饰联名 - 情绪：自信、充满能量、年轻、真实的混乱、反企业化精致感",
     "author": "@aiistudiocom",
-    "authorUrl": "https://x.com/aiistudiocom",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/aiistudiocom/status/2051241633921049024",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom/status/2051241633921049024",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case125/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case125/output.jpg"
   },
   {
     "id": "ui-case-126",
@@ -4287,11 +4287,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "根据上传的人像创建一张干净的竖版时尚信息图。保留相同的面部身份、发型、身形和整体服装风格。将全身角色放在中心，采用放松的 T 字姿势，正面朝前。用真实照片风格的穿搭拆解元素环绕角色，并用细箭头连接。\n\n包含单独的抠图分区：头部细节、开衫、水手上衣、内搭衬衫、格纹半身裙、包、袜子、乐福鞋、配色方案、造型说明和面料纹理。在顶部添加 3–4 个不同角度的头部特写。使用简短的英文手写风标签和简洁项目符号。\n\n视觉风格：柔和的浅奶油色和腮红粉背景，干净的时尚板式布局，优雅的杂志风构图，甜美学院风美学，真实面料纹理，精致边框，小蝴蝶结和爱心涂鸦，轻盈且精致的设计。文字保持简短、易读，并完全使用英文。保持原始竖版画面比例。\n\n负面提示：\n\n中文文字、长文本、混乱布局、旧羊皮纸背景、泛黄老纸、细节模糊、面部扭曲、身份改变、多余肢体、糟糕的手部、重复身体、不真实面料、卡通风格、动漫风格、3D 渲染、水印、标志、不可读字体、设计过度拥挤、刺眼颜色、低分辨率。",
     "author": "@Shinning1010",
-    "authorUrl": "https://x.com/Shinning1010",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Shinning1010/status/2051230882069901713",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Shinning1010/status/2051230882069901713",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case126/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case126/output.jpg"
   },
   {
     "id": "ui-case-127",
@@ -4300,11 +4300,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "为奶油蒜香蘑菇意面创建分步骤食谱信息图，俯视视角，白色背景上的极简风格，食材照片带标签：\"200g spaghetti\"、\"150g mushrooms\"、\"3 garlic cloves\"、\"200ml cream\"、\"1 tbsp olive oil\"、\"parmesan\"、\"parsley\"，用虚线和图标展示制作步骤（煮锅、煎炒锅、搅拌），底部放置最终装盘的意面照片",
     "author": "@aiistudiocom",
-    "authorUrl": "https://x.com/aiistudiocom",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/aiistudiocom/status/2051060312351342957",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/aiistudiocom/status/2051060312351342957",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case127/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case127/output.jpg"
   },
   {
     "id": "ui-case-128",
@@ -4313,11 +4313,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用这张肖像创建一张个人色彩分析图。指出最适合主体的季节色彩。展示并排的服装颜色对比，突出哪些颜色最适合主体。列出最适合主体的质感、配饰和发型。以视觉为主，只使用简短标签，不要段落。",
     "author": "@ZaraIrahh",
-    "authorUrl": "https://x.com/ZaraIrahh",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/ZaraIrahh/status/2049730770474877234",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/ZaraIrahh/status/2049730770474877234",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case128/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case128/output.jpg"
   },
   {
     "id": "ui-case-129",
@@ -4326,11 +4326,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "画面 1（俯拍建立镜头）\n极端俯拍视角，位于未来感白色弧形大厅中，主体居中但在光滑反光地面上被压缩呈现，身体保持笔直但略微倾斜，双臂贴近身体并带有细微张力，头部向上仰望镜头，视线直视上方，强烈的圆形建筑线条框住构图，柔和影棚灯光形成轻微渐变，f/1.2 浅景深，尽管高度较高但具有智能手机般的近距离感，干净极简的氛围，动态开场画面，细微的运动准备感，穿全套米色西装、白色 T 恤和白色利落运动鞋，受 Peter Lindbergh 影响\n画面 2（低角度力量感）\n从地面高度进行极端低角度拍摄，主体高耸于镜头之上，双腿形成稳固基底，躯干略微前倾，双肩端正，双臂稍微离开身体，头部向下倾斜，视线看向镜头，强烈的垂直畸变，反光地面强化剪影，柔和影棚灯光配合可控高光，f/1.2 浅景深，强有力的支配感画面，细微的运动张力，全套米色西装、白色 T 恤、白色利落运动鞋，受 Peter Lindbergh 影响\n画面 3（广角孤立）\n广角远景，主体在宏大的未来感大厅中显得很小，被白色弧形建筑包围，大面积留白主导构图，主体静止站立，身体笔直，双臂放松但有结构感，头部略微转向，视线望向空间之外，反射极简，柔和均匀的光线，f/1.2 浅景深，即使距离较远也将主体分离出来，电影般的静默感，全套米色西装、白色 T 恤、白色利落运动鞋，受 Peter Lindbergh 影响\n画面 4（动态倾斜特写）\n强烈对角线倾斜的特写，主体倾入画面，双肩形成锐利角度，一只手臂横过身体，头部侧倾，视线略微偏离镜头，紧密裁切截去部分身体，柔和光线包裹轮廓，f/1.2 浅景深分离面部平面，强烈的近距离感和张力，全套米色西装，可见白色 T 恤，受 Peter Lindbergh 影响\n画面 5（向前迈步运动）\n中景，主体动态向前迈步，一条腿伸出，重心转移，双臂随受控动作轻微摆动，双肩旋转，头部朝前，视线向前，边缘带轻微运动模糊，未来感弧形墙面从身后掠过，柔和影棚灯光，f/1.2 浅景深，具有过渡能量的画面，全套米色西装、白色 T 恤、白色利落运动鞋，受 Peter Lindbergh 影响\n画面 6（最终稳固画面）\n全身正面照，主体稳稳站立，双腿略微分开，双臂带有受控张力，双肩端正，头部朝前，视线看向镜头，略微偏移的对称构图，极简未来感背景，柔和光线强调结构，f/1.2 浅景深，强烈的最终冲击画面，细微的运动准备感，全套米色西装、白色 T 恤、白色利落运动鞋，受 Peter Lindbergh 影响\n\n负面指令（适用于所有画面）：\n无文字、无水印、无低质量、无卡通风格\n\n宽高比：3:4",
     "author": "@weiinberg",
-    "authorUrl": "https://x.com/weiinberg",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/weiinberg",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/weiinberg/status/2049730563393884265",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/weiinberg/status/2049730563393884265",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case129/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case129/output.jpg"
   },
   {
     "id": "ui-case-130",
@@ -4339,11 +4339,11 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "使用上传的照片作为主要基础图像。\n\n根据图像中呈现的咖啡、饮品、甜点、盘子、道具、桌面布置和整体构图，创建一个自然反映照片真实元素的美学与情绪化结果。不要添加任何人物。忠实于食物和饮品的实际类型、它们的摆放方式，以及原始图像中捕捉到的氛围。\n\n然后，仔细观察照片中的每个元素，并添加与每个主体匹配的手绘风格注释：\n\n使用白色钢笔风格的素描线条，带有粗糙、略微不均匀的手绘质感\n\n包含物体轮廓、箭头和虚线，引导视觉流动\n\n添加简短的手写韩文备注，语气随性、内省、情绪化\n\n对于饮品：描述味道、温度和情绪\n\n对于甜点：描述质地和风味\n\n对于空间：描述氛围\n\n包含一段简短的场景整体总结\n\n微妙融入蒸汽、闪光、爱心或小型情绪符号等细节\n\n保持干净、宽松的布局，具有 Instagram story 或杂志备忘录般的美学\n\n最终结果应看起来像原始照片的情绪化造型版本，不要强行加入任何不自然属于其中的元素",
     "author": "@Ciri_ai",
-    "authorUrl": "https://x.com/Ciri_ai",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/Ciri_ai",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/Ciri_ai/status/2049721047696732550",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/Ciri_ai/status/2049721047696732550",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case130/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case130/output.jpg"
   },
   {
     "id": "ui-case-131",
@@ -4352,10 +4352,10 @@ export const imagePromptPresets: ImagePromptPreset[] = [
     "model": "gpt-image-2",
     "prompt": "创作一组高级时装编辑风格的饮品广告，场景设在黄金时刻的极简屋顶。构图极其干净，具有强烈留白、温暖的日光眩光和柔和阴影。\n\n一位五官立体、气质从容自信的时尚男模以时装大片姿态摆拍——身体微微转开，正从罐中啜饮。他穿着高级亚麻剪裁服装，单色奶油色调，部分纽扣解开，佩戴低调首饰。\n\n前景：一个雕塑感石质基座，上面摆放一罐大型主视觉 AURELIS – Blood Orange Basil，细节极其丰富，带有冷凝水珠和植物插画。\n\n字体大胆、超大、具有编辑杂志感：每一罐都有好日子\n\n使用精致的衬线字体，具有戏剧性的字号比例和字距。保持不对称、杂志式版面。\n\n添加细微小字：“植物感。明亮。为闪耀而生。”\n\n极简图标（细线风格）：低糖 / 真水果 / 轻气泡 / 12 OZ\n\n底部条带：3 罐饮品以奢华产品阵列方式呈现，水果 + 香草像静物摄影一样摆放：\n\nBlood Orange Basil\n\nPeach Ginger\n\nLime Mint\n\nCTA：选购口味 →\n\n风格：Vogue 广告大片、奢华品牌、电影感灯光、超写实、柔和色调、高对比度、高级质感。\n画面比例：竖版（4:5 或 9:16）\n\n🌿 2. 极简高级版（Apple 风格）\n\n提示词：\n\n创作一张极简高级饮品广告，采用阳光照亮的屋顶场景和极其干净的构图。\n\n背景：带有温暖黄金时刻色调的柔和渐变天空，干扰元素极少，大面积留白。\n\n一位放松的男模随意坐着，正从罐中啜饮。服装：简单、现代、中性色亚麻套装。\n\n中心主体：一罐大型悬浮或安装在基座上的 AURELIS – Blood Orange Basil，光线完美，带柔和反射和可见冷凝水珠。\n\n字体：每一口都有阳光\n\n使用现代极简字体，居中排版，留有充足间距。\n\n辅助文案：“真实植物成分。轻松清爽。”\n\n图标水平对齐：低糖 • 真水果 • 轻气泡 • 12 OZ\n\n底部区域：3 罐饮品等距排列，完美对齐，带有微妙阴影：\n\nBlood Orange Basil\n\nPeach Ginger\n\nLime Mint\n\nCTA 按钮（胶囊形）：选购口味\n\n风格：Apple 级极简主义、超干净版式、柔和渐变、现代奢华、高度精修的产品渲染。\n画面比例：竖版（4:5 或 9:16）\n\n🍊 3. 大胆 Gen Z 高级版\n\n提示词：\n\n创作一张大胆、让人停止滑动的竖版饮品广告，场景设在黄金时刻的屋顶，充满鲜明柑橘能量。\n\n灯光：温暖、饱和的阳光，发光高光，高对比度。\n\n一位自信的男模在动作中直接从罐中饮用，画面自然抓拍且充满动态。\n\n主视觉罐：尺寸夸张放大，置于纹理石质基座上，覆盖冷凝水珠。\n\n字体：喝下阳光\n\n使用大型、富有表现力的字体，形成强烈对比（深绿色 + 焦橙色），版式略有重叠。\n\n标语：“新鲜。明亮。令人上瘾。”\n\n功能图标动态排列：低糖\n真水果\n轻气泡\n12 OZ\n\n底部：3 罐饮品搭配充满能量的配料造型：\n\nBlood Orange Basil（飞溅、水橙切片）\n\nPeach Ginger（新鲜桃子 + 姜根）\n\nLime Mint（青柠角 + 薄荷叶）\n\nCTA：选购口味 →\n\n风格：高级但大胆、现代广告美学、略带实验性的版式、高对比度、社交媒体优先、动态构图。\n画面比例：竖版（首选 9:16）",
     "author": "@SPEEDAI07",
-    "authorUrl": "https://x.com/SPEEDAI07",
+    "authorUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07",
     "source": "EvoLinkAI/awesome-gpt-image-2-API-and-Prompts",
-    "sourceUrl": "https://x.com/SPEEDAI07/status/2049713995851202786",
+    "sourceUrl": "https://proxyd.picpi.top/https://x.com/SPEEDAI07/status/2049713995851202786",
     "category": "界面设计",
-    "imageUrl": "https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case131/output.jpg"
+    "imageUrl": "https://proxyd.picpi.top/https://raw.githubusercontent.com/EvoLinkAI/awesome-gpt-image-2-API-and-Prompts/main/images/ui_case131/output.jpg"
   }
 ];

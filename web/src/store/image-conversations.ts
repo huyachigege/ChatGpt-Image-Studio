@@ -11,6 +11,7 @@ import {
 } from "@/lib/api";
 import webConfig from "@/constants/common-env";
 import { httpRequest } from "@/lib/request";
+import { getStoredAuthUser } from "@/store/auth";
 
 export type ImageMode = "generate" | "edit";
 
@@ -420,6 +421,11 @@ async function getImageConversationStorageMode() {
     return cachedImageConversationStorageMode;
   }
   try {
+    const user = await getStoredAuthUser();
+    if (user && user.role !== "admin") {
+      setCachedImageConversationStorageMode("server");
+      return cachedImageConversationStorageMode;
+    }
     const config = await fetchConfig();
     setCachedImageConversationStorageMode(
       config.storage.imageConversationStorage === "server"
