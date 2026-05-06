@@ -447,6 +447,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /v1/chat/completions", s.requireImageAuth(http.HandlerFunc(s.handleImageChatCompletions)))
 	mux.Handle("POST /v1/responses", s.requireImageAuth(http.HandlerFunc(s.handleImageResponses)))
 	mux.Handle("GET /v1/models", s.requireImageAuth(http.HandlerFunc(s.handleModels)))
+	mux.Handle("GET /v1/files/image-thumb/", http.HandlerFunc(s.handleImageThumbnail))
 	mux.Handle("GET /v1/files/image/", http.HandlerFunc(s.handleImageFile))
 
 	mux.Handle("/", http.HandlerFunc(s.handleWebApp))

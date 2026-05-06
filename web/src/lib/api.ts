@@ -598,6 +598,7 @@ export type ImageGalleryItem = {
   name: string;
   folder?: string;
   url: string;
+  thumbUrl?: string;
   size: number;
   createdAt: string;
 };

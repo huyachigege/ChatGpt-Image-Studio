@@ -148,7 +148,7 @@ export default function ImageGalleryPage() {
                     <article key={item.id} className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
                       <div className="relative">
                         <a href={item.url} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden bg-stone-100 dark:bg-[var(--studio-panel)]">
-                          <img src={item.url} alt={item.name} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" loading="lazy" />
+                          <img src={item.thumbUrl || item.url} alt={item.name} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" loading="lazy" />
                         </a>
                         <label className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-2 text-xs text-stone-700 shadow-sm">
                           <input type="checkbox" className="mr-2 align-middle" checked={selectedSet.has(item.name)} onChange={() => toggleSelected(item.name)} />选择

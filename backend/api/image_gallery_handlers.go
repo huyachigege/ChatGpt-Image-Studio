@@ -17,6 +17,7 @@ type imageGalleryItem struct {
 	Name      string `json:"name"`
 	Folder    string `json:"folder,omitempty"`
 	URL       string `json:"url"`
+	ThumbURL  string `json:"thumbUrl"`
 	Size      int64  `json:"size"`
 	CreatedAt string `json:"createdAt"`
 }
@@ -73,6 +74,7 @@ func (s *Server) deleteImageGalleryNames(identity authIdentity, names []string) 
 		if err != nil {
 			return deleted, err
 		}
+		s.removeImageThumbnail(path)
 		if err := os.Remove(path); err != nil {
 			return deleted, err
 		}
@@ -107,7 +109,7 @@ func (s *Server) listAdminImageGalleryItems() ([]imageGalleryItem, error) {
 		return nil, err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() || entry.Name() == ".thumbs" {
 			continue
 		}
 		folder := sanitizeGallerySegment(entry.Name())
@@ -139,7 +141,7 @@ func (s *Server) listImageGalleryDir(dir, folder string) ([]imageGalleryItem, er
 	}
 	items := make([]imageGalleryItem, 0, len(entries))
 	for _, entry := range entries {
-		if entry.IsDir() {
+		if entry.IsDir() || entry.Name() == ".thumbs" {
 			continue
 		}
 		info, err := entry.Info()
@@ -158,6 +160,7 @@ func (s *Server) listImageGalleryDir(dir, folder string) ([]imageGalleryItem, er
 			Name:      relName,
 			Folder:    firstNonEmpty(folder, "根目录"),
 			URL:       "/v1/files/image/" + urlName,
+			ThumbURL:  "/v1/files/image-thumb/" + urlName,
 			Size:      info.Size(),
 			CreatedAt: info.ModTime().UTC().Format(time.RFC3339Nano),
 		})

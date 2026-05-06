@@ -3,6 +3,10 @@ package api
 import (
 	"crypto/sha256"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io/fs"
 	"log/slog"
 	"net/http"
@@ -11,7 +15,10 @@ import (
 	"strings"
 )
 
-const defaultImageDir = "data/tmp/image"
+const (
+	defaultImageDir      = "data/tmp/image"
+	imageThumbnailMaxDim = 360
+)
 
 // downloadAndCache downloads an upstream image using the image client's transport
 // (Chrome TLS fingerprint), saves to local disk, and returns the local filename.
@@ -131,6 +138,35 @@ func (s *Server) handleImageFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	serveImageFile(w, r, path)
+}
+
+func (s *Server) handleImageThumbnail(w http.ResponseWriter, r *http.Request) {
+	name := strings.Trim(strings.TrimPrefix(r.URL.Path, "/v1/files/image-thumb/"), "/")
+	if name == "" {
+		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+
+	path := s.resolveImageFilePath(name)
+	if path == "" {
+		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+
+	thumbPath, err := s.ensureImageThumbnail(path)
+	if err != nil {
+		slog.Warn("serve original image because thumbnail generation failed", "file", filepath.Base(path), "error", err)
+		serveImageFile(w, r, path)
+		return
+	}
+
+	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	w.Header().Set("Content-Type", "image/jpeg")
+	http.ServeFile(w, r, thumbPath)
+}
+
+func serveImageFile(w http.ResponseWriter, r *http.Request, path string) {
 	ext := strings.ToLower(filepath.Ext(path))
 	contentTypes := map[string]string{
 		".png":  "image/png",
@@ -147,4 +183,94 @@ func (s *Server) handleImageFile(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	w.Header().Set("Content-Type", ct)
 	http.ServeFile(w, r, path)
+}
+
+func (s *Server) ensureImageThumbnail(path string) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	cachePath := s.imageThumbnailCachePath(path, info)
+	if cached, err := os.Stat(cachePath); err == nil && cached.Mode().IsRegular() {
+		return cachePath, nil
+	}
+
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	src, _, err := image.Decode(file)
+	if err != nil {
+		return "", err
+	}
+	thumb := resizeImageNearest(src, imageThumbnailMaxDim)
+	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
+		return "", err
+	}
+	tmpFile := cachePath + ".tmp"
+	out, err := os.Create(tmpFile)
+	if err != nil {
+		return "", err
+	}
+	encodeErr := jpeg.Encode(out, thumb, &jpeg.Options{Quality: 72})
+	closeErr := out.Close()
+	if encodeErr != nil {
+		_ = os.Remove(tmpFile)
+		return "", encodeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(tmpFile)
+		return "", closeErr
+	}
+	if err := os.Rename(tmpFile, cachePath); err != nil {
+		_ = os.Remove(tmpFile)
+		return "", err
+	}
+	return cachePath, nil
+}
+
+func (s *Server) imageThumbnailCachePath(path string, info os.FileInfo) string {
+	cacheRoot := filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), ".thumbs")
+	fingerprint := fmt.Sprintf("%s:%d:%d", filepath.Clean(path), info.ModTime().UnixNano(), info.Size())
+	hash := sha256.Sum256([]byte(fingerprint))
+	return filepath.Join(cacheRoot, fmt.Sprintf("%x.jpg", hash[:12]))
+}
+
+func (s *Server) removeImageThumbnail(path string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
+	}
+	_ = os.Remove(s.imageThumbnailCachePath(path, info))
+}
+
+func resizeImageNearest(src image.Image, maxDim int) *image.RGBA {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1))
+	}
+	if maxDim <= 0 {
+		maxDim = imageThumbnailMaxDim
+	}
+	dstW, dstH := width, height
+	if width > height && width > maxDim {
+		dstW = maxDim
+		dstH = max(1, height*maxDim/width)
+	} else if height >= width && height > maxDim {
+		dstH = maxDim
+		dstW = max(1, width*maxDim/height)
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, dstW, dstH))
+	for y := 0; y < dstH; y++ {
+		sy := bounds.Min.Y + y*height/dstH
+		for x := 0; x < dstW; x++ {
+			sx := bounds.Min.X + x*width/dstW
+			dst.Set(x, y, src.At(sx, sy))
+		}
+	}
+	return dst
 }
