@@ -40,6 +40,7 @@ import {
   selectConversationActiveTask,
 } from "./task-runtime";
 import { WorkspaceHeader } from "./components/workspace-header";
+import { imagePromptPresets, type ImagePromptPreset } from "./prompt-presets";
 import { useImageHistory } from "./hooks/use-image-history";
 import { useImageSourceInputs } from "./hooks/use-image-source-inputs";
 import { useImageSubmit } from "./hooks/use-image-submit";
@@ -1237,6 +1238,16 @@ export default function ImagePage() {
     [openDraftConversation, setSourceImages],
   );
 
+  const applyPromptPreset = useCallback(
+    (preset: ImagePromptPreset) => {
+      setMode("generate");
+      setImagePrompt(preset.prompt);
+      openDraftConversation();
+      textareaRef.current?.focus();
+    },
+    [openDraftConversation],
+  );
+
   const { handleSelectionEditSubmit, handleRetryTurn, handleSubmit } =
     useImageSubmit({
       mode,
@@ -1422,6 +1433,7 @@ export default function ImagePage() {
         availableQuota={availableQuota}
         sourceImages={sourceImages}
         imagePrompt={imagePrompt}
+        promptPresets={imagePromptPresets}
         textareaRef={textareaRef}
         uploadInputRef={uploadInputRef}
         maskInputRef={maskInputRef}
@@ -1436,6 +1448,7 @@ export default function ImagePage() {
         onImageQualityChange={(value) => setImageQuality(value as ImageQuality)}
         onPromptChange={setImagePrompt}
         onPromptPaste={handlePromptPaste}
+        onApplyPromptPreset={applyPromptPreset}
         onRemoveSourceImage={removeSourceImage}
         onOpenSourceSelectionEditor={openSourceSelectionEditor}
         onAppendFiles={appendFiles}

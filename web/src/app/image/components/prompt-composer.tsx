@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
 import Zoom from "react-medium-image-zoom";
-import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Trash2 } from "lucide-react";
+import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ImageQuality } from "@/lib/api";
 import type { ImageMode, StoredSourceImage } from "@/store/image-conversations";
 import { cn } from "@/lib/utils";
+import type { ImagePromptPreset } from "../prompt-presets";
 import { buildSourceImageUrl } from "../view-utils";
 
 type PromptComposerProps = {
@@ -37,6 +38,7 @@ type PromptComposerProps = {
   availableQuota: string;
   sourceImages: StoredSourceImage[];
   imagePrompt: string;
+  promptPresets?: ImagePromptPreset[];
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   uploadInputRef: RefObject<HTMLInputElement | null>;
   maskInputRef: RefObject<HTMLInputElement | null>;
@@ -47,6 +49,7 @@ type PromptComposerProps = {
   onImageQualityChange: (value: string) => void;
   onPromptChange: (value: string) => void;
   onPromptPaste: (event: ReactClipboardEvent<Element>) => void;
+  onApplyPromptPreset?: (preset: ImagePromptPreset) => void;
   onRemoveSourceImage: (id: string) => void;
   onOpenSourceSelectionEditor: (sourceImageId: string) => void;
   onAppendFiles: (files: FileList | null, role: "image" | "mask") => Promise<void>;
@@ -71,6 +74,7 @@ export function PromptComposer({
   availableQuota,
   sourceImages,
   imagePrompt,
+  promptPresets = [],
   textareaRef,
   uploadInputRef,
   maskInputRef,
@@ -81,6 +85,7 @@ export function PromptComposer({
   onImageQualityChange,
   onPromptChange,
   onPromptPaste,
+  onApplyPromptPreset,
   onRemoveSourceImage,
   onOpenSourceSelectionEditor,
   onAppendFiles,
@@ -88,6 +93,17 @@ export function PromptComposer({
   onSubmit,
 }: PromptComposerProps) {
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
+  const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
+  const [presetQuery, setPresetQuery] = useState("");
+  const filteredPromptPresets = promptPresets
+    .filter((preset) => {
+      const query = presetQuery.trim().toLowerCase();
+      if (!query) {
+        return true;
+      }
+      return `${preset.title} ${preset.description} ${preset.prompt} ${preset.author}`.toLowerCase().includes(query);
+    })
+    .slice(0, 18);
   const currentModeDescription = modeOptions.find((item) => item.value === mode)?.description ?? "";
   const showImageOutputControls = mode === "generate";
   const showImageQualityControl = mode === "edit" || mode === "generate";
@@ -398,12 +414,78 @@ export function PromptComposer({
               />
             )}
           </div>
-          <div className={cn("px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
+          <div className={cn("relative px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
+            {isPresetPanelOpen ? (
+              <div
+                className="absolute bottom-[calc(100%-0.25rem)] left-3 right-3 z-40 overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-[0_22px_70px_-28px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:left-4 sm:right-4"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="border-b border-stone-100 p-3 dark:border-[var(--studio-border)]">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-stone-900 dark:text-[var(--studio-text-strong)]">提示词模板</div>
+                      <div className="mt-1 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">内置 Awesome GPT4o Image Prompts，可搜索后直接套用。</div>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full px-2.5 py-1 text-xs font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
+                      onClick={() => setIsPresetPanelOpen(false)}
+                    >
+                      关闭
+                    </button>
+                  </div>
+                  <Input
+                    value={presetQuery}
+                    onChange={(event) => setPresetQuery(event.target.value)}
+                    placeholder="搜索模板、风格、作者"
+                    className="h-9 rounded-full border-stone-200 bg-stone-50 px-4 text-sm shadow-none focus-visible:ring-1"
+                  />
+                </div>
+                <div className="hide-scrollbar max-h-[320px] overflow-y-auto p-2">
+                  {filteredPromptPresets.length > 0 ? (
+                    filteredPromptPresets.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        className="block w-full rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-50 dark:hover:bg-[var(--studio-panel-muted)]"
+                        onClick={() => {
+                          onApplyPromptPreset?.(preset);
+                          setIsPresetPanelOpen(false);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-semibold text-stone-900 dark:text-[var(--studio-text-strong)]">{preset.title}</div>
+                            <div className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-stone-500 dark:text-[var(--studio-text-muted)]">{preset.description || preset.prompt}</div>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-stone-100 px-2 py-1 text-[10px] font-medium text-stone-500 dark:bg-[var(--studio-panel-muted)]">{preset.model}</span>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-8 text-center text-sm text-stone-400">没找到匹配模板</div>
+                  )}
+                </div>
+              </div>
+            ) : null}
             <div className="flex items-end justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="hidden text-xs text-stone-400 dark:text-[var(--studio-text-muted)] sm:inline">
                   Enter 发送 · Shift+Enter 换行 · 可直接粘贴图片
                 </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 rounded-full border-stone-200 bg-white px-2 text-[11px] font-medium text-stone-700 shadow-none sm:h-8 sm:px-2.5 sm:text-xs"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsPresetPanelOpen((current) => !current);
+                  }}
+                >
+                  <Sparkles className="size-3.5" />
+                  模板
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
