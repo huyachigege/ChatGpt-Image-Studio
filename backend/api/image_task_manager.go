@@ -816,6 +816,15 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		}
 	}
 
+	var contextReference *imageTaskContextReference
+	if req.ContextReference != nil {
+		contextReference = &imageTaskContextReference{
+			ConversationID:  strings.TrimSpace(req.ContextReference.ConversationID),
+			ParentMessageID: strings.TrimSpace(req.ContextReference.ParentMessageID),
+			SourceAccountID: strings.TrimSpace(req.ContextReference.SourceAccountID),
+		}
+	}
+
 	resolutionAccess := strings.ToLower(strings.TrimSpace(req.ResolutionAccess))
 	requirePaid := m.server.configuredImageMode() == "studio" &&
 		(resolutionAccess == "paid" || requiresPaidGenerateTask(req.Size))
@@ -825,6 +834,9 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	}
 	if sourceReference != nil && sourceReference.SourceAccountID != "" {
 		requirement.SourceAccountID = sourceReference.SourceAccountID
+		requirement.NeedPaid = false
+	} else if contextReference != nil && contextReference.SourceAccountID != "" {
+		requirement.SourceAccountID = contextReference.SourceAccountID
 		requirement.NeedPaid = false
 	} else if req.Policy != nil && req.Policy.Enabled {
 		normalized := req.Policy.Normalize()
@@ -864,6 +876,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		ResponseFormat:   firstNonEmpty(strings.TrimSpace(req.ResponseFormat), "url"),
 		SourceImages:     sourceImages,
 		SourceReference:  sourceReference,
+		ContextReference: contextReference,
 		Requirement:      requirement,
 		CreatedAt:        createdAt,
 		Status:           imageTaskStatusQueued,

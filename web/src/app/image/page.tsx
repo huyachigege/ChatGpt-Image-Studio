@@ -1259,6 +1259,7 @@ export default function ImagePage() {
       imageResolutionAccess,
       imageQuality,
       selectedConversationId,
+      conversationTurns: selectedConversationTurns,
       editorTarget,
       makeId,
       focusConversation,

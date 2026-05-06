@@ -145,6 +145,14 @@ func normalizeImageRouteModel(value, fallback string) string {
 
 // GenerateImage creates a new image from a text prompt.
 func (c *ChatGPTClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]ImageResult, error) {
+	return c.generateImage(ctx, prompt, model, size, quality, background, "", "")
+}
+
+func (c *ChatGPTClient) GenerateImageWithContext(ctx context.Context, prompt, model string, n int, size, quality, background, conversationID, parentMessageID string) ([]ImageResult, error) {
+	return c.generateImage(ctx, prompt, model, size, quality, background, conversationID, parentMessageID)
+}
+
+func (c *ChatGPTClient) generateImage(ctx context.Context, prompt, model string, size, quality, background, conversationID, parentMessageID string) ([]ImageResult, error) {
 	fullPrompt := prompt
 	if size != "" && size != "auto" && size != "1024x1024" {
 		fullPrompt = fmt.Sprintf("Generate an image with size %s. %s", size, prompt)
@@ -156,7 +164,7 @@ func (c *ChatGPTClient) GenerateImage(ctx context.Context, prompt, model string,
 		fullPrompt = fullPrompt + " The image must have a transparent background (PNG with alpha channel)."
 	}
 
-	body := c.buildConversationBody(fullPrompt, model, "", "", nil)
+	body := c.buildConversationBody(fullPrompt, model, conversationID, parentMessageID, nil)
 	fBody := cloneConversationBody(body)
 	fBody["client_prepare_state"] = "none"
 	fBody["supported_encodings"] = []string{"v1"}

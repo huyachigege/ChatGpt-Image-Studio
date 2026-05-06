@@ -20,6 +20,7 @@ import type { EditorTarget } from "./use-image-source-inputs";
 import {
   buildConversationTitle,
   buildInpaintSourceReference,
+  buildLatestImageContextReference,
   createConversationTurn,
   createLoadingImages,
   formatImageError,
@@ -38,6 +39,7 @@ type UseImageSubmitOptions = {
   imageResolutionAccess: ImageResolutionAccess;
   imageQuality: ImageQuality;
   selectedConversationId: string | null;
+  conversationTurns: ImageConversationTurn[];
   editorTarget: EditorTarget | null;
   makeId: () => string;
   focusConversation: (conversationId: string) => void;
@@ -119,6 +121,7 @@ export function useImageSubmit({
   imageResolutionAccess,
   imageQuality,
   selectedConversationId,
+  conversationTurns,
   editorTarget,
   makeId,
   focusConversation,
@@ -356,6 +359,7 @@ export function useImageSubmit({
         quality: turnQuality,
         sourceImages: turnSourceImages,
         sourceReference: turn.sourceReference,
+        contextReference: turn.contextReference,
         images: nextImages,
         createdAt: new Date().toISOString(),
         status: isSingleImageRetry ? "running" : "queued",
@@ -387,6 +391,7 @@ export function useImageSubmit({
           quality: turnQuality,
           sourceImages: turnSourceImages,
           sourceReference: turn.sourceReference,
+          contextReference: turn.contextReference,
         });
 
         await updateConversation(conversationId, (current) => ({
@@ -474,8 +479,11 @@ export function useImageSubmit({
 
     const conversationId = selectedConversationId ?? makeId();
     const turnId = makeId();
-      const expectedCount =
-      mode === "generate" ? parsedCount : 1;
+    const expectedCount = mode === "generate" ? parsedCount : 1;
+    const contextReference =
+      mode === "generate" && selectedConversationId && sourceImages.length === 0
+        ? buildLatestImageContextReference(conversationTurns)
+        : undefined;
     const draftTurn = createConversationTurn({
       turnId,
       title: buildConversationTitle(mode, prompt),
@@ -487,6 +495,7 @@ export function useImageSubmit({
       resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
       quality: imageQuality,
       sourceImages,
+      contextReference,
       images: createLoadingImages(expectedCount, turnId),
       createdAt: new Date().toISOString(),
       status: "queued",
@@ -520,6 +529,7 @@ export function useImageSubmit({
         resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
         quality: imageQuality,
         sourceImages,
+        contextReference,
       });
 
       await updateConversation(conversationId, (current) => ({
@@ -563,6 +573,7 @@ export function useImageSubmit({
       isSubmitDispatchingRef.current = false;
     }
   }, [
+    conversationTurns,
     focusConversation,
     imageModel,
     imagePrompt,

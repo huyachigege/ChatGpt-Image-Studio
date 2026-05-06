@@ -1605,7 +1605,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		route = "cpa"
 		direction = "cpa"
 	} else {
-		route = s.configuredImageRoute(account.Type)
+		route = s.configuredImageRouteForAccount(account)
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
 		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
@@ -2400,6 +2400,13 @@ func (s *Server) configuredImageRoute(accountType string) string {
 	default:
 		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.FreeImageRoute, "legacy")
 	}
+}
+
+func (s *Server) configuredImageRouteForAccount(account accounts.PublicAccount) string {
+	if s.allowDisabledStudioImageAccounts() && strings.TrimSpace(account.Status) == "禁用" {
+		return "legacy"
+	}
+	return s.configuredImageRoute(account.Type)
 }
 
 func (s *Server) imageRequestConfig() handler.ImageRequestConfig {

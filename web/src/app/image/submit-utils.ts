@@ -1,6 +1,7 @@
 "use client";
 
 import type {
+  ImageContextReference,
   InpaintSourceReference,
   ImageModel,
   ImageQuality,
@@ -45,6 +46,7 @@ export function createConversationTurn(payload: {
   scale?: string;
   sourceImages?: StoredSourceImage[];
   sourceReference?: InpaintSourceReference;
+  contextReference?: ImageContextReference;
   images: StoredImage[];
   createdAt: string;
   status: "queued" | "running" | "generating" | "success" | "error" | "cancelled";
@@ -63,6 +65,7 @@ export function createConversationTurn(payload: {
     scale: payload.scale,
     sourceImages: payload.sourceImages ?? [],
     sourceReference: payload.sourceReference,
+    contextReference: payload.contextReference,
     images: payload.images,
     createdAt: payload.createdAt,
     status: payload.status,
@@ -178,6 +181,34 @@ export function buildInpaintSourceReference(image: StoredImage): InpaintSourceRe
     parent_message_id: image.parent_message_id,
     source_account_id: image.source_account_id,
   };
+}
+
+export function buildImageContextReference(image: StoredImage): ImageContextReference | undefined {
+  if (!image.conversation_id || !image.parent_message_id || !image.source_account_id) {
+    return undefined;
+  }
+  return {
+    conversation_id: image.conversation_id,
+    parent_message_id: image.parent_message_id,
+    source_account_id: image.source_account_id,
+  };
+}
+
+export function buildLatestImageContextReference(turns: ImageConversationTurn[]): ImageContextReference | undefined {
+  for (let turnIndex = turns.length - 1; turnIndex >= 0; turnIndex--) {
+    const images = turns[turnIndex]?.images ?? [];
+    for (let imageIndex = images.length - 1; imageIndex >= 0; imageIndex--) {
+      const image = images[imageIndex];
+      if (image.status && image.status !== "success") {
+        continue;
+      }
+      const reference = buildImageContextReference(image);
+      if (reference) {
+        return reference;
+      }
+    }
+  }
+  return undefined;
 }
 
 function extractErrorCode(error: unknown) {

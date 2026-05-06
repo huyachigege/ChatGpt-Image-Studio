@@ -85,6 +85,29 @@ func TestConfiguredImageRoute(t *testing.T) {
 	}
 }
 
+func TestConfiguredImageRouteForDisabledStudioAccountUsesLegacy(t *testing.T) {
+	server := &Server{
+		cfg: &config.Config{
+			ChatGPT: config.ChatGPTConfig{
+				ImageMode:                        "studio",
+				FreeImageRoute:                   "responses",
+				PaidImageRoute:                   "responses",
+				StudioAllowDisabledImageAccounts: true,
+			},
+		},
+	}
+
+	account := accounts.PublicAccount{Type: "Plus", Status: "禁用"}
+	if got := server.configuredImageRouteForAccount(account); got != "legacy" {
+		t.Fatalf("configuredImageRouteForAccount(disabled Plus) = %q, want %q", got, "legacy")
+	}
+
+	account.Status = "正常"
+	if got := server.configuredImageRouteForAccount(account); got != "responses" {
+		t.Fatalf("configuredImageRouteForAccount(active Plus) = %q, want %q", got, "responses")
+	}
+}
+
 func TestMigrateImageFilesSkipsNestedTargetDirectory(t *testing.T) {
 	rootDir := t.TempDir()
 	cfg := config.New(rootDir)

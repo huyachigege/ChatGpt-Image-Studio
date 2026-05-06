@@ -115,6 +115,12 @@ export type InpaintSourceReference = {
   source_account_id: string;
 };
 
+export type ImageContextReference = {
+  conversation_id: string;
+  parent_message_id: string;
+  source_account_id: string;
+};
+
 export type Account = {
   id: string;
   fileName: string;
@@ -986,6 +992,7 @@ export async function createImageTask(payload: {
     url?: string;
   }>;
   sourceReference?: InpaintSourceReference;
+  contextReference?: ImageContextReference;
   policy?: StoredImageAccountPolicy;
 }) {
   const policy = payload.policy ?? (await getImageAccountPolicyForRequest());
@@ -1008,6 +1015,7 @@ export async function createImageTask(payload: {
       quality: payload.quality,
       sourceImages: payload.sourceImages ?? [],
       sourceReference: payload.sourceReference,
+      contextReference: payload.contextReference,
       policy: normalizeImageAccountPolicy(policy),
     },
   });

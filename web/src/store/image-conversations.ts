@@ -4,6 +4,7 @@ import localforage from "localforage";
 
 import {
   fetchConfig,
+  type ImageContextReference,
   type ImageModel,
   type ImageQuality,
   type ImageResolutionAccess,
@@ -59,6 +60,7 @@ export type ImageConversationTurn = {
   scale?: string;
   sourceImages?: StoredSourceImage[];
   sourceReference?: InpaintSourceReference;
+  contextReference?: ImageContextReference;
   images: StoredImage[];
   createdAt: string;
   status: ImageConversationStatus;

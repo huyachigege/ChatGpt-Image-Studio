@@ -136,6 +136,13 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			true,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+				if task.ContextReference != nil && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+					if generator, ok := client.(interface {
+						GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
+					}); ok {
+						return generator.GenerateImageWithContext(taskCtx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+					}
+				}
 				return client.GenerateImage(taskCtx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
 			},
 			fakeReq,
