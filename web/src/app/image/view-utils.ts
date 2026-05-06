@@ -23,8 +23,31 @@ export function buildImageDataUrl(image: StoredImage) {
   return `data:image/png;base64,${image.b64_json}`;
 }
 
+export function buildImageThumbnailUrl(image: StoredImage) {
+  const url = String(image.url || "").trim();
+  if (!url) {
+    return buildImageDataUrl(image);
+  }
+  return buildThumbnailURL(url);
+}
+
+function buildThumbnailURL(url: string) {
+  const normalized = String(url || "").trim();
+  if (!normalized) {
+    return "";
+  }
+  if (normalized.includes("/v1/files/image/")) {
+    return normalizeImageURL(normalized.replace("/v1/files/image/", "/v1/files/image-thumb/"));
+  }
+  return normalizeImageURL(normalized);
+}
+
 export function buildSourceImageUrl(source: StoredSourceImage) {
   return normalizeImageURL(source.dataUrl || source.url);
+}
+
+export function buildSourceImageThumbnailUrl(source: StoredSourceImage) {
+  return source.dataUrl ? normalizeImageURL(source.dataUrl) : buildThumbnailURL(source.url || "");
 }
 
 export function buildConversationSourceLabel(source: StoredSourceImage) {
@@ -36,9 +59,9 @@ export function buildConversationPreviewSource(conversation: ImageConversation) 
     (image) => image.status === "success" && (image.b64_json || image.url),
   );
   if (latestSuccessfulImage) {
-    return buildImageDataUrl(latestSuccessfulImage);
+    return buildImageThumbnailUrl(latestSuccessfulImage);
   }
 
   const firstSourceImage = conversation.sourceImages?.find((item) => item.role === "image");
-  return firstSourceImage ? buildSourceImageUrl(firstSourceImage) : "";
+  return firstSourceImage ? buildSourceImageThumbnailUrl(firstSourceImage) : "";
 }

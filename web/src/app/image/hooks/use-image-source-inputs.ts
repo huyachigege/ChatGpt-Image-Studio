@@ -87,7 +87,7 @@ export function useImageSourceInputs({
     });
   }, [makeId]);
 
-  const handlePromptPaste = useCallback((event: ReactClipboardEvent<HTMLTextAreaElement>) => {
+  const handlePromptPaste = useCallback((event: ReactClipboardEvent<Element>) => {
     const clipboardImages = Array.from(event.clipboardData.items)
       .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
       .map((item) => item.getAsFile())

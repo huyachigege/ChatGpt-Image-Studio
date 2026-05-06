@@ -46,7 +46,7 @@ type PromptComposerProps = {
   onImageResolutionTierChange: (value: string) => void;
   onImageQualityChange: (value: string) => void;
   onPromptChange: (value: string) => void;
-  onPromptPaste: (event: ReactClipboardEvent<HTMLTextAreaElement>) => void;
+  onPromptPaste: (event: ReactClipboardEvent<Element>) => void;
   onRemoveSourceImage: (id: string) => void;
   onOpenSourceSelectionEditor: (sourceImageId: string) => void;
   onAppendFiles: (files: FileList | null, role: "image" | "mask") => Promise<void>;
@@ -131,7 +131,8 @@ export function PromptComposer({
 
   return (
     <div
-        className={cn(
+      onPaste={onPromptPaste}
+      className={cn(
         "fixed inset-x-0 bottom-0 z-30 px-3 backdrop-blur supports-[padding:max(0px)]:pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4 lg:static lg:inset-auto lg:bottom-auto lg:z-20 lg:rounded-none lg:border-x-0 lg:border-b-0 lg:border-t lg:bg-white lg:px-5 lg:shadow-none dark:lg:border-[var(--studio-border)] dark:lg:bg-[var(--studio-panel-soft)]",
         isMobileComposerCollapsed
           ? "border-transparent bg-white/96 shadow-none dark:bg-[color:var(--studio-bg)]"
@@ -364,7 +365,6 @@ export function PromptComposer({
                         ? "描述你想如何修改当前图片"
                         : "可选：描述你想增强的方向"
                   }
-                  onPaste={onPromptPaste}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" && !event.shiftKey) {
                       event.preventDefault();
@@ -387,7 +387,6 @@ export function PromptComposer({
                       ? "描述你想如何修改当前图片"
                       : "可选：描述你想增强的方向"
                 }
-                onPaste={onPromptPaste}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" && !event.shiftKey) {
                     event.preventDefault();
@@ -403,7 +402,7 @@ export function PromptComposer({
             <div className="flex items-end justify-between gap-3">
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="hidden text-xs text-stone-400 dark:text-[var(--studio-text-muted)] sm:inline">
-                  Enter 发送 · Shift+Enter 换行
+                  Enter 发送 · Shift+Enter 换行 · 可直接粘贴图片
                 </span>
                 <Button
                   type="button"

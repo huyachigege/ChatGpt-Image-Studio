@@ -56,8 +56,10 @@ export default function LoginPage() {
   return (
     <div className="grid h-full min-h-0 w-full place-items-center overflow-y-auto">
       <div className="grid w-full max-w-[1120px] overflow-hidden rounded-[32px] border border-stone-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="hidden bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.78),_rgba(255,255,255,0.18)_38%,_rgba(28,25,23,0.08)_100%),linear-gradient(155deg,#111827_0%,#1f2937_52%,#374151_100%)] p-8 text-white lg:flex lg:flex-col lg:justify-between">
-          <div className="flex items-center gap-3">
+        <div className="relative hidden overflow-hidden bg-stone-950 p-8 text-white lg:flex lg:flex-col lg:justify-between">
+          <img src="/assets/image-studio-hero.png" alt="" className="absolute inset-0 h-full w-full object-cover opacity-72" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.34),transparent_30%),linear-gradient(135deg,rgba(12,10,9,0.34),rgba(12,10,9,0.82)_68%)]" />
+          <div className="relative z-10 flex items-center gap-3">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-white/12 backdrop-blur">
               <Sparkles className="size-4" />
             </span>
@@ -67,22 +69,22 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="relative z-10 space-y-6">
             <div className="space-y-3">
               <div className="text-sm font-medium uppercase tracking-[0.24em] text-white/55">Image Studio</div>
               <h1 className="max-w-[420px] text-[40px] font-semibold leading-[1.1] tracking-tight">
                 每个用户都有自己的图片工作台。
               </h1>
               <p className="max-w-[430px] text-sm leading-7 text-white/72">
-                普通用户通过用户名、密码和邀请码注册；管理员使用 admin 加管理员密码登录；历史记录、任务队列和图片文件按用户隔离。
+                用自己的账号进入图片工作台，生成、编辑、历史记录和图片文件都会保存在独立空间里。
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {[
-                ["登录", "用户名 + 密码进入工作区"],
-                ["注册", "邀请码创建普通用户"],
-                ["后台", "admin 用户管理配置"],
+                ["创作", "生成和编辑图片"],
+                ["历史", "回看自己的图库"],
+                ["隔离", "账号之间互不干扰"],
               ].map(([title, desc]) => (
                 <div key={title} className="rounded-2xl border border-white/12 bg-white/6 p-4 backdrop-blur-sm">
                   <div className="text-sm font-semibold">{title}</div>
@@ -92,7 +94,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="text-xs text-white/50">管理员用户名固定为 admin，密码使用后端管理员密码。</div>
+          <div className="relative z-10 text-xs text-white/50">图片会保存在你的个人工作区，打开原图和下载时才请求高清文件。</div>
         </div>
 
         <div className="flex items-center justify-center px-5 py-8 sm:px-8 lg:px-10">
@@ -106,7 +108,7 @@ export default function LoginPage() {
                   {isRegister ? "注册工作台账号" : "登录工作台"}
                 </h1>
                 <p className="text-sm leading-7 text-stone-500">
-                  {isRegister ? "使用邀请码创建普通用户账号。" : "普通用户用自己的用户名登录；管理员使用 admin 加管理员密码登录。"}
+                  {isRegister ? "使用邀请码创建你的图片工作台账号。" : "用你的用户名和密码进入图片工作台。"}
                 </p>
               </div>
             </div>
@@ -123,7 +125,7 @@ export default function LoginPage() {
               <Input
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                placeholder={isRegister ? "用户名，例如 xiaochige" : "用户名，管理员为 admin"}
+                placeholder={isRegister ? "用户名，例如 xiaochige" : "用户名"}
                 className="h-13 rounded-2xl border-stone-200 bg-stone-50 px-4 shadow-none focus-visible:ring-1"
               />
               {isRegister ? (
@@ -167,7 +169,7 @@ export default function LoginPage() {
             </div>
 
             <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-4 text-xs leading-6 text-stone-500">
-              普通用户只能访问图片工作台；账号、配置、同步、诊断等入口仅管理员可见并由后端拦截。
+              每个账号都有独立的图片工作台、历史任务和图库目录，适合多人共用同一个服务。
             </div>
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-6 text-amber-950">
