@@ -1,30 +1,42 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"chatgpt2api/internal/imagehistory"
 	"chatgpt2api/internal/users"
 )
 
 type imageGalleryItem struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Folder    string `json:"folder,omitempty"`
-	URL       string `json:"url"`
-	ThumbURL  string `json:"thumbUrl"`
-	Size      int64  `json:"size"`
-	CreatedAt string `json:"createdAt"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Folder         string `json:"folder,omitempty"`
+	URL            string `json:"url"`
+	ThumbURL       string `json:"thumbUrl"`
+	Size           int64  `json:"size"`
+	CreatedAt      string `json:"createdAt"`
+	Prompt         string `json:"prompt,omitempty"`
+	ConversationID string `json:"conversationId,omitempty"`
+	TurnID         string `json:"turnId,omitempty"`
+}
+
+type imageGalleryPromptMetadata struct {
+	Prompt         string
+	ConversationID string
+	TurnID         string
 }
 
 func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) {
 	identity := identityFromContext(r.Context())
-	items, err := s.listImageGalleryItems(identity)
+	items, err := s.listImageGalleryItems(r.Context(), identity)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
@@ -83,16 +95,24 @@ func (s *Server) deleteImageGalleryNames(identity authIdentity, names []string) 
 	return deleted, nil
 }
 
-func (s *Server) listImageGalleryItems(identity authIdentity) ([]imageGalleryItem, error) {
+func (s *Server) listImageGalleryItems(ctx context.Context, identity authIdentity) ([]imageGalleryItem, error) {
+	var items []imageGalleryItem
+	var err error
 	if identity.Role == users.RoleAdmin {
-		return s.listAdminImageGalleryItems()
+		items, err = s.listAdminImageGalleryItems()
+	} else {
+		root := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
+		folder := sanitizeGallerySegment(identity.UserID)
+		if folder == "" {
+			items, err = s.listImageGalleryDir(root, "")
+		} else {
+			items, err = s.listImageGalleryDir(filepath.Join(root, folder), folder)
+		}
 	}
-	root := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
-	folder := sanitizeGallerySegment(identity.UserID)
-	if folder == "" {
-		return s.listImageGalleryDir(root, "")
+	if err != nil {
+		return nil, err
 	}
-	return s.listImageGalleryDir(filepath.Join(root, folder), folder)
+	return s.attachImageGalleryPrompts(ctx, identity, items), nil
 }
 
 func (s *Server) listAdminImageGalleryItems() ([]imageGalleryItem, error) {
@@ -169,6 +189,96 @@ func (s *Server) listImageGalleryDir(dir, folder string) ([]imageGalleryItem, er
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
 	return items, nil
+}
+
+func (s *Server) attachImageGalleryPrompts(ctx context.Context, identity authIdentity, items []imageGalleryItem) []imageGalleryItem {
+	if len(items) == 0 || !s.serverImageConversationStorageEnabled() {
+		return items
+	}
+	userID := identity.UserID
+	if identity.Role == users.RoleAdmin {
+		userID = ""
+	}
+	store, err := imagehistory.NewStoreForUser(s.cfg, userID)
+	if err != nil {
+		return items
+	}
+	defer store.Close()
+	conversations, err := store.List(ctx)
+	if err != nil {
+		return items
+	}
+	metadataByName := buildImageGalleryPromptMetadata(conversations)
+	for index := range items {
+		metadata, ok := lookupImageGalleryPromptMetadata(metadataByName, items[index])
+		if !ok {
+			continue
+		}
+		items[index].Prompt = metadata.Prompt
+		items[index].ConversationID = metadata.ConversationID
+		items[index].TurnID = metadata.TurnID
+	}
+	return items
+}
+
+func buildImageGalleryPromptMetadata(conversations []imagehistory.Conversation) map[string]imageGalleryPromptMetadata {
+	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	for _, conversation := range conversations {
+		conversationPrompt := strings.TrimSpace(conversation.Prompt)
+		for _, image := range conversation.Images {
+			addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
+				Prompt:         strings.TrimSpace(firstNonEmpty(image.Prompt, conversationPrompt)),
+				ConversationID: conversation.ID,
+			})
+		}
+		for _, turn := range conversation.Turns {
+			turnPrompt := strings.TrimSpace(firstNonEmpty(turn.Prompt, conversationPrompt))
+			for _, image := range turn.Images {
+				addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
+					Prompt:         strings.TrimSpace(firstNonEmpty(image.Prompt, turnPrompt)),
+					ConversationID: conversation.ID,
+					TurnID:         turn.ID,
+				})
+			}
+		}
+	}
+	return metadataByName
+}
+
+func addImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, imageURL string, metadata imageGalleryPromptMetadata) {
+	imageURL = strings.TrimSpace(imageURL)
+	if imageURL == "" || metadata.Prompt == "" {
+		return
+	}
+	withoutQuery := strings.Split(imageURL, "?")[0]
+	keys := []string{
+		withoutQuery,
+		strings.TrimPrefix(withoutQuery, "/v1/files/image/"),
+		path.Base(withoutQuery),
+	}
+	for _, key := range keys {
+		key = strings.Trim(strings.TrimSpace(key), "/")
+		if key == "" || key == "." {
+			continue
+		}
+		metadataByName[key] = metadata
+	}
+}
+
+func lookupImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, item imageGalleryItem) (imageGalleryPromptMetadata, bool) {
+	keys := []string{
+		item.Name,
+		strings.TrimPrefix(item.URL, "/v1/files/image/"),
+		path.Base(item.Name),
+		path.Base(item.URL),
+	}
+	for _, key := range keys {
+		key = strings.Trim(strings.TrimSpace(key), "/")
+		if metadata, ok := metadataByName[key]; ok {
+			return metadata, true
+		}
+	}
+	return imageGalleryPromptMetadata{}, false
 }
 
 func (s *Server) resolveScopedImageGalleryPath(identity authIdentity, name string) (string, string, error) {

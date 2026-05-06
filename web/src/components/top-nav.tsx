@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, ChevronLeft, ImageIcon, Images, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield } from "lucide-react";
+import { Activity, Check, ChevronLeft, Copy, ImageIcon, Images, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Terminal, X } from "lucide-react";
 
 import webConfig from "@/constants/common-env";
 import { fetchVersionInfo } from "@/lib/api";
@@ -67,14 +67,62 @@ type DesktopTopNavProps = {
 
 function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogout }: DesktopTopNavProps) {
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [isApiExampleOpen, setIsApiExampleOpen] = useState(false);
+  const [activeApiExample, setActiveApiExample] = useState("generate-curl");
+  const [copiedExampleId, setCopiedExampleId] = useState("");
   const visibleNavItems = user?.role === "admin" ? navItems : navItems.filter((item) => item.href.startsWith("/image"));
-  const apiBaseUrl = webConfig.apiUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+  const apiBaseUrl = (webConfig.apiUrl || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")).replace(/\/$/, "");
   const exampleToken = user?.imageApiKey ?? "";
-  const requestExample = exampleToken
-    ? `curl ${apiBaseUrl.replace(/\/$/, "")}/v1/images/generations \\\n  -H "Authorization: Bearer ${exampleToken}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"prompt":"一只坐在窗边的橘猫","size":"1024x1024"}'`
-    : "";
+  const apiExamples = [
+    {
+      id: "generate-curl",
+      label: "生成图片",
+      subtitle: "JSON 请求",
+      filename: "Terminal",
+      code: `curl ${apiBaseUrl}/v1/images/generations \\\n  -H "Authorization: Bearer ${exampleToken}" \\\n  -H "Content-Type: application/json" \\\n  -d '{"model":"gpt-image-2","prompt":"一只坐在窗边的橘猫","size":"1024x1024","quality":"high","n":1}'`,
+    },
+    {
+      id: "edit-curl",
+      label: "编辑图片",
+      subtitle: "multipart 请求",
+      filename: "Terminal",
+      code: `curl ${apiBaseUrl}/v1/images/edits \\\n  -H "Authorization: Bearer ${exampleToken}" \\\n  -F "model=gpt-image-2" \\\n  -F "prompt=把背景换成夜晚城市街景" \\\n  -F "image=@input.png" \\\n  -F "size=1024x1024"`,
+    },
+    {
+      id: "generate-js",
+      label: "JavaScript",
+      subtitle: "fetch 调用",
+      filename: "app.js",
+      code: `const response = await fetch("${apiBaseUrl}/v1/images/generations", {
+  method: "POST",
+  headers: {
+    "Authorization": "Bearer ${exampleToken}",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "gpt-image-2",
+    prompt: "一只坐在窗边的橘猫",
+    size: "1024x1024",
+    quality: "high",
+    n: 1,
+  }),
+});
+
+const result = await response.json();`,
+    },
+  ];
+  const selectedApiExample = apiExamples.find((item) => item.id === activeApiExample) ?? apiExamples[0];
+  const copyApiExample = async () => {
+    if (!selectedApiExample) {
+      return;
+    }
+    await navigator.clipboard.writeText(selectedApiExample.code);
+    setCopiedExampleId(selectedApiExample.id);
+    window.setTimeout(() => setCopiedExampleId(""), 1400);
+  };
 
   return (
+    <>
     <aside className={cn("hidden shrink-0 transition-[width] duration-200 lg:flex", collapsed ? "w-[92px]" : "w-[228px]")}>
       <div className="flex h-full w-full flex-col rounded-[28px] border border-stone-200 bg-[#f0f0ed] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.65)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
         <div className={cn("gap-2", collapsed ? "flex flex-col items-center" : "flex items-center justify-between")}>
@@ -153,15 +201,18 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogou
         </nav>
 
         <div className="mt-auto space-y-3">
-          {requestExample && !collapsed ? (
-            <details className="group rounded-2xl bg-white/70 px-4 py-3 text-[11px] leading-5 text-stone-600 shadow-sm dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">
-              <summary className="cursor-pointer list-none font-medium text-stone-700 outline-none transition hover:text-stone-950 dark:text-[var(--studio-text)] dark:hover:text-[var(--studio-text-strong)]">
-                图片 API 请求示例
-                <span className="ml-2 text-stone-400 group-open:hidden">展开</span>
-                <span className="ml-2 hidden text-stone-400 group-open:inline">收起</span>
-              </summary>
-              <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap break-all rounded-xl bg-stone-50 p-2 font-mono text-[10px] leading-5 dark:bg-[var(--studio-panel)]">{requestExample}</pre>
-            </details>
+          {exampleToken && !collapsed ? (
+            <button
+              type="button"
+              onClick={() => setIsApiExampleOpen(true)}
+              className="flex w-full items-center justify-between rounded-2xl bg-white/70 px-4 py-3 text-left text-xs text-stone-600 shadow-sm transition hover:bg-white hover:text-stone-900 dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)] dark:hover:bg-[var(--studio-panel-muted)] dark:hover:text-[var(--studio-text-strong)]"
+            >
+              <span>
+                <span className="block font-medium text-stone-700 dark:text-[var(--studio-text)]">图片 API 请求示例</span>
+                <span className="mt-1 block text-[11px] text-stone-400">查看 cURL / JS 调用</span>
+              </span>
+              <Terminal className="size-4 shrink-0" />
+            </button>
           ) : null}
           <a
             href={repositoryUrl}
@@ -191,6 +242,85 @@ function DesktopTopNav({ pathname, defaultCollapsed, versionLabel, user, onLogou
         </div>
       </div>
     </aside>
+    {isApiExampleOpen ? (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-950/35 p-4 backdrop-blur-sm" onClick={() => setIsApiExampleOpen(false)}>
+        <div
+          className="w-full max-w-[980px] overflow-hidden rounded-[28px] border border-stone-200 bg-white text-stone-900 shadow-[0_30px_90px_-36px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-strong)]"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="flex items-center justify-between border-b border-stone-200 px-7 py-5 dark:border-[var(--studio-border)]">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight text-stone-950 dark:text-[var(--studio-text-strong)]">图片 API 请求示例</h2>
+              <p className="mt-2 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">选择调用方式后复制到终端或项目代码中使用。</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsApiExampleOpen(false)}
+              className="inline-flex size-9 items-center justify-center rounded-full text-stone-400 transition hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-[var(--studio-panel-muted)] dark:hover:text-[var(--studio-text-strong)]"
+              aria-label="关闭"
+            >
+              <X className="size-5" />
+            </button>
+          </div>
+
+          <div className="px-7 pt-5">
+            <div className="flex flex-wrap gap-5 border-b border-stone-200 dark:border-[var(--studio-border)]">
+              {apiExamples.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveApiExample(item.id)}
+                  className={cn(
+                    "flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-medium transition",
+                    activeApiExample === item.id
+                      ? "border-stone-950 text-stone-950 dark:border-[var(--studio-accent-strong)] dark:text-[var(--studio-text-strong)]"
+                      : "border-transparent text-stone-500 hover:text-stone-900 dark:text-[var(--studio-text-muted)] dark:hover:text-[var(--studio-text-strong)]",
+                  )}
+                >
+                  <Terminal className="size-4" />
+                  <span>{item.label}</span>
+                  <span className="hidden text-stone-400 sm:inline dark:text-[var(--studio-text-muted)]">{item.subtitle}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 px-7 py-5">
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+              <div className="flex items-center justify-between border-b border-stone-200 px-4 py-3 dark:border-[var(--studio-border)]">
+                <div className="font-mono text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{selectedApiExample.filename}</div>
+                <button
+                  type="button"
+                  onClick={() => void copyApiExample()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition hover:bg-stone-100 hover:text-stone-950 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text)] dark:hover:bg-[var(--studio-panel-muted)]"
+                >
+                  {copiedExampleId === selectedApiExample.id ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+                  {copiedExampleId === selectedApiExample.id ? "已复制" : "复制"}
+                </button>
+              </div>
+              <pre className="max-h-[360px] overflow-auto whitespace-pre-wrap break-all px-5 py-4 font-mono text-sm leading-7 text-stone-800 dark:text-[var(--studio-text)]">
+                {selectedApiExample.code}
+              </pre>
+            </div>
+
+            <div className="rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">
+              这里展示的是当前登录用户的图片 API Key，只用于调用本项目的 <code className="rounded bg-white px-1.5 py-0.5 text-stone-800 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text)]">/v1/images/*</code> 接口。
+            </div>
+          </div>
+
+          <div className="flex justify-end border-t border-stone-200 px-7 py-4 dark:border-[var(--studio-border)]">
+            <button
+              type="button"
+              onClick={() => setIsApiExampleOpen(false)}
+              className="rounded-xl border border-stone-200 bg-white px-5 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50 hover:text-stone-950 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:hover:bg-[var(--studio-panel-muted)]"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      </div>
+    ) : null}
+    </>
   );
 }
 

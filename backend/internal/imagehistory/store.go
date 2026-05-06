@@ -39,6 +39,7 @@ type Image struct {
 	Status          string `json:"status,omitempty"`
 	B64JSON         string `json:"b64_json,omitempty"`
 	URL             string `json:"url,omitempty"`
+	Prompt          string `json:"prompt,omitempty"`
 	RevisedPrompt   string `json:"revised_prompt,omitempty"`
 	FileID          string `json:"file_id,omitempty"`
 	GenID           string `json:"gen_id,omitempty"`
@@ -264,6 +265,9 @@ func (s *Store) normalizeConversation(conversation Conversation) (Conversation, 
 		}
 		for imageIndex := range turn.Images {
 			image := &turn.Images[imageIndex]
+			if image.Prompt == "" {
+				image.Prompt = turn.Prompt
+			}
 			if image.ID == "" {
 				image.ID = fmt.Sprintf("%s-image-%d", turn.ID, imageIndex)
 			}

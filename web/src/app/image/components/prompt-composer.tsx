@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import Zoom from "react-medium-image-zoom";
 import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
@@ -95,19 +96,22 @@ export function PromptComposer({
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
   const [presetQuery, setPresetQuery] = useState("");
+  const [activePresetCategory, setActivePresetCategory] = useState("全部");
+  const presetCategories = Array.from(new Set(promptPresets.map((preset) => preset.category).filter(Boolean)));
   const filteredPromptPresets = promptPresets
+    .filter((preset) => activePresetCategory === "全部" || preset.category === activePresetCategory)
     .filter((preset) => {
       const query = presetQuery.trim().toLowerCase();
       if (!query) {
         return true;
       }
-      return `${preset.title} ${preset.description} ${preset.prompt} ${preset.author}`.toLowerCase().includes(query);
+      return `${preset.title} ${preset.description} ${preset.prompt} ${preset.author} ${preset.category} ${preset.source}`.toLowerCase().includes(query);
     })
-    .slice(0, 18);
+    .slice(0, 60);
   const showImageOutputControls = mode === "generate";
   const showImageQualityControl = mode === "edit" || mode === "generate";
   const sizeHintAriaLabel = "查看分辨率说明";
-  const imageQualityPrefix = mode === "edit" ? "输出质量" : "质量";
+  const imageQualityPrefix = "质量";
   const hasComposerContent = imagePrompt.trim().length > 0 || sourceImages.length > 0;
   const previousHasComposerContentRef = useRef(hasComposerContent);
   const [isMobileComposerExpanded, setIsMobileComposerExpanded] = useState(hasComposerContent);
@@ -200,7 +204,7 @@ export function PromptComposer({
             ) : null}
           </div>
 
-          <div className="hide-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:flex-wrap sm:gap-2 sm:overflow-visible sm:px-0 sm:pb-0">
+          <div className="hide-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1 sm:mx-0 sm:gap-2 sm:px-0 sm:pb-0 xl:justify-end">
             {showImageOutputControls ? (
               <Select value={imageAspectRatio} onValueChange={onImageAspectRatioChange}>
                 <SelectTrigger className="h-9 w-[84px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[108px] sm:text-sm">
@@ -409,59 +413,130 @@ export function PromptComposer({
             )}
           </div>
           <div className={cn("relative px-3 pb-1.5 pt-2.5 sm:px-4 sm:pb-2.5 sm:pt-2.5", showMobileExpandedSections ? "block" : "hidden lg:block")}>
-            {isPresetPanelOpen ? (
+            {isPresetPanelOpen && typeof document !== "undefined" ? createPortal((
               <div
-                className="absolute bottom-full left-3 right-3 z-40 mb-2 overflow-hidden rounded-[22px] border border-stone-200 bg-white shadow-[0_22px_70px_-28px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:left-4 sm:right-4"
-                onClick={(event) => event.stopPropagation()}
+                className="fixed inset-0 z-50 flex items-end justify-center bg-stone-950/45 px-3 py-4 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-10 lg:pt-8"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setIsPresetPanelOpen(false);
+                }}
               >
-                <div className="border-b border-stone-100 p-3 dark:border-[var(--studio-border)]">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-stone-900 dark:text-[var(--studio-text-strong)]">提示词模板</div>
-                      <div className="mt-1 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">内置 Awesome GPT4o Image Prompts，可搜索后直接套用。</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="rounded-full px-2.5 py-1 text-xs font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-900"
-                      onClick={() => setIsPresetPanelOpen(false)}
-                    >
-                      关闭
-                    </button>
-                  </div>
-                  <Input
-                    value={presetQuery}
-                    onChange={(event) => setPresetQuery(event.target.value)}
-                    placeholder="搜索模板、风格、作者"
-                    className="h-9 rounded-full border-stone-200 bg-stone-50 px-4 text-sm shadow-none focus-visible:ring-1"
-                  />
-                </div>
-                <div className="hide-scrollbar max-h-[320px] overflow-y-auto p-2">
-                  {filteredPromptPresets.length > 0 ? (
-                    filteredPromptPresets.map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        className="block w-full rounded-2xl px-3 py-2.5 text-left transition hover:bg-stone-50 dark:hover:bg-[var(--studio-panel-muted)]"
-                        onClick={() => {
-                          onApplyPromptPreset?.(preset);
-                          setIsPresetPanelOpen(false);
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-semibold text-stone-900 dark:text-[var(--studio-text-strong)]">{preset.title}</div>
-                            <div className="mt-1 max-h-10 overflow-hidden text-xs leading-5 text-stone-500 dark:text-[var(--studio-text-muted)]">{preset.description || preset.prompt}</div>
-                          </div>
-                          <span className="shrink-0 rounded-full bg-stone-100 px-2 py-1 text-[10px] font-medium text-stone-500 dark:bg-[var(--studio-panel-muted)]">{preset.model}</span>
+                <div
+                  className="flex h-[88vh] w-full max-w-[1080px] flex-col overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-[0_28px_90px_-24px_rgba(15,23,42,0.55)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:h-[82vh]"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <div className="border-b border-stone-100 p-4 dark:border-[var(--studio-border)] sm:p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-base font-semibold text-stone-950 dark:text-[var(--studio-text-strong)] sm:text-lg">提示词模板</div>
+                          <span className="rounded-full bg-stone-950 px-2.5 py-1 text-[11px] font-semibold text-white dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)]">gpt-image-2</span>
                         </div>
+                        <div className="mt-1 text-xs leading-5 text-stone-500 dark:text-[var(--studio-text-muted)] sm:text-sm">
+                          来自 EvoLinkAI/awesome-gpt-image-2-API-and-Prompts，按分类浏览后可直接套用。
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-stone-500 transition hover:bg-stone-100 hover:text-stone-900 dark:hover:bg-[var(--studio-panel-muted)] dark:hover:text-[var(--studio-text-strong)]"
+                        onClick={() => setIsPresetPanelOpen(false)}
+                      >
+                        关闭
                       </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-8 text-center text-sm text-stone-400">没找到匹配模板</div>
-                  )}
+                    </div>
+                    <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                      <Input
+                        value={presetQuery}
+                        onChange={(event) => setPresetQuery(event.target.value)}
+                        placeholder="搜索标题、提示词、分类、作者"
+                        className="h-10 rounded-full border-stone-200 bg-stone-50 px-4 text-sm shadow-none focus-visible:ring-1 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]"
+                      />
+                      <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 lg:max-w-[520px]">
+                        {["全部", ...presetCategories].map((category) => (
+                          <button
+                            key={category}
+                            type="button"
+                            className={cn(
+                              "shrink-0 rounded-full px-3 py-2 text-xs font-medium transition",
+                              activePresetCategory === category
+                                ? "bg-stone-950 text-white dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)]"
+                                : "bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-900 dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-muted)] dark:hover:text-[var(--studio-text-strong)]",
+                            )}
+                            onClick={() => setActivePresetCategory(category)}
+                          >
+                            {category}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="hide-scrollbar flex-1 overflow-y-auto p-3 sm:p-4">
+                    {filteredPromptPresets.length > 0 ? (
+                      <div className="grid gap-3 lg:grid-cols-2">
+                        {filteredPromptPresets.map((preset) => (
+                          <article
+                            key={preset.id}
+                            className="group overflow-hidden rounded-[22px] border border-stone-200 bg-stone-50/70 transition hover:border-stone-300 hover:bg-white hover:shadow-[0_18px_50px_-28px_rgba(15,23,42,0.45)] dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)] dark:hover:bg-[var(--studio-panel)]"
+                          >
+                            <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
+                              {preset.imageUrl ? (
+                                <Image
+                                  src={preset.imageUrl}
+                                  alt={preset.title}
+                                  width={156}
+                                  height={112}
+                                  unoptimized
+                                  className="h-24 w-28 shrink-0 rounded-2xl bg-stone-100 object-cover sm:h-28 sm:w-36"
+                                />
+                              ) : null}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">{preset.category}</span>
+                                  <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">{preset.model}</span>
+                                </div>
+                                <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-stone-950 dark:text-[var(--studio-text-strong)] sm:text-[15px]">{preset.title}</h3>
+                                <div className="mt-1 truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">by {preset.author}</div>
+                              </div>
+                            </div>
+                            <div className="border-t border-stone-200/70 px-3 py-3 dark:border-[var(--studio-border)] sm:px-4">
+                              <div className="max-h-28 overflow-y-auto rounded-2xl bg-white px-3 py-2 text-xs leading-5 text-stone-600 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text)]">
+                                {preset.prompt}
+                              </div>
+                              <div className="mt-3 flex items-center justify-between gap-3">
+                                <a
+                                  href={preset.sourceUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="min-w-0 truncate text-xs font-medium text-stone-400 transition hover:text-stone-700 dark:text-[var(--studio-text-muted)] dark:hover:text-[var(--studio-text-strong)]"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  查看来源
+                                </a>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-8 shrink-0 rounded-full bg-stone-950 px-3 text-xs font-semibold text-white hover:bg-stone-800 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)]"
+                                  onClick={() => {
+                                    onApplyPromptPreset?.(preset);
+                                    setIsPresetPanelOpen(false);
+                                  }}
+                                >
+                                  套用模板
+                                </Button>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex h-full min-h-[260px] items-center justify-center rounded-[24px] border border-dashed border-stone-200 text-sm text-stone-400 dark:border-[var(--studio-border)] dark:text-[var(--studio-text-muted)]">
+                        没找到匹配模板
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            ) : null}
+            ), document.body) : null}
             <div className="flex items-end justify-between gap-3">
               <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                 <Button

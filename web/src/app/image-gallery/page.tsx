@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Download, ImageIcon, LoaderCircle, RefreshCw, Trash2 } from "lucide-react";
+import { Download, ImageIcon, LoaderCircle, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ function formatSize(size: number) {
 }
 
 export default function ImageGalleryPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<ImageGalleryItem[]>([]);
   const [selectedNames, setSelectedNames] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,6 +72,15 @@ export default function ImageGalleryPage() {
     }
   };
 
+  const handleEditPrompt = (item: ImageGalleryItem) => {
+    const prompt = item.prompt?.trim();
+    if (!prompt) {
+      toast.error("这张图片没有保存提示词");
+      return;
+    }
+    navigate("/image/workspace", { state: { prompt } });
+  };
+
   const handleBatchDelete = async () => {
     if (selectedNames.length === 0) return;
     setIsBatchDeleting(true);
@@ -104,9 +115,8 @@ export default function ImageGalleryPage() {
               <div className="inline-flex size-12 items-center justify-center rounded-[18px] bg-stone-950 text-white shadow-sm">
                 <ImageIcon className="size-5" />
               </div>
-              <div className="space-y-1">
+              <div>
                 <h1 className="text-2xl font-semibold tracking-tight text-stone-950 dark:text-[var(--studio-text-strong)]">历史图库</h1>
-                <p className="text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">普通用户看自己的目录；管理员按文件夹查看 data/image 下所有图片。</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -168,7 +178,16 @@ export default function ImageGalleryPage() {
                           <div className="truncate text-sm font-medium text-stone-950 dark:text-[var(--studio-text-strong)]" title={item.name}>{item.name.split("/").pop()}</div>
                           <div className="mt-1 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{formatTime(item.createdAt)} · {formatSize(item.size)}</div>
                         </div>
+                        {item.prompt ? (
+                          <div className="rounded-2xl border border-stone-100 bg-stone-50 px-3 py-2.5 text-xs leading-5 text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]" title={item.prompt}>
+                            <div className="mb-1 font-medium text-stone-700 dark:text-[var(--studio-text)]">生成提示词</div>
+                            <div className="line-clamp-3 whitespace-pre-wrap">{item.prompt}</div>
+                          </div>
+                        ) : null}
                         <div className="flex gap-2">
+                          <Button type="button" variant="outline" className="h-10 flex-1 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" onClick={() => handleEditPrompt(item)} disabled={!item.prompt}>
+                            <Pencil className="size-4" />修改
+                          </Button>
                           <Button type="button" variant="outline" className="h-10 flex-1 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" asChild>
                             <a href={item.url} download={item.name.split("/").pop()}><Download className="size-4" />下载</a>
                           </Button>

@@ -609,6 +609,9 @@ export type ImageGalleryItem = {
   thumbUrl?: string;
   size: number;
   createdAt: string;
+  prompt?: string;
+  conversationId?: string;
+  turnId?: string;
 };
 
 export type AppUserItem = {
