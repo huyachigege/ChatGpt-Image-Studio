@@ -5,6 +5,7 @@ import { Download, ImageIcon, LoaderCircle, Pencil, RefreshCw, Trash2 } from "lu
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+import { OriginalImagePreview } from "@/components/original-image-preview";
 import { Button } from "@/components/ui/button";
 import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
 
@@ -157,18 +158,16 @@ export default function ImageGalleryPage() {
                   {groupItems.map((item) => (
                     <article key={item.id} className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
                       <div className="relative">
-                        <a
-                          href={item.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="当前显示缩略图，点击查看原图"
-                          className="group relative block aspect-square overflow-hidden bg-stone-100 dark:bg-[var(--studio-panel)]"
+                        <OriginalImagePreview
+                          originalUrl={item.url}
+                          title={item.name}
+                          className="group relative block aspect-square w-full overflow-hidden bg-stone-100 text-left dark:bg-[var(--studio-panel)]"
                         >
                           <img src={item.thumbUrl || item.url} alt={item.name} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" loading="lazy" />
                           <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur">
                             缩略图
                           </span>
-                        </a>
+                        </OriginalImagePreview>
                         <label className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-2 text-xs text-stone-700 shadow-sm">
                           <input type="checkbox" className="mr-2 align-middle" checked={selectedSet.has(item.name)} onChange={() => toggleSelected(item.name)} />选择
                         </label>

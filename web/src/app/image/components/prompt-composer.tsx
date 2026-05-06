@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import Zoom from "react-medium-image-zoom";
 import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
+import { OriginalImagePreview } from "@/components/original-image-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -335,7 +335,11 @@ export function PromptComposer({
                       </button>
                     </div>
                   </div>
-                  <Zoom>
+                  <OriginalImagePreview
+                    originalUrl={buildSourceImageUrl(item)}
+                    title={item.name}
+                    className="block w-full text-left"
+                  >
                     <Image
                       src={buildSourceImageUrl(item)}
                       alt={item.name}
@@ -344,7 +348,7 @@ export function PromptComposer({
                       unoptimized
                       className="block h-16 w-full cursor-zoom-in bg-stone-50 object-contain sm:h-20"
                     />
-                  </Zoom>
+                  </OriginalImagePreview>
                 </div>
               ))}
             </div>

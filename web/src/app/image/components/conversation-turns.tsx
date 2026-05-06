@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 
 import { AppImage as Image } from "@/components/app-image";
+import { OriginalImagePreview } from "@/components/original-image-preview";
 import type { ImageTaskView } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import type {
@@ -225,12 +226,10 @@ export const ConversationTurns = memo(function ConversationTurns({
                         <div className="border-b border-stone-100 px-3 py-2 text-left text-[11px] font-medium text-stone-500">
                           {buildConversationSourceLabel(source)}
                         </div>
-                        <a
-                          href={buildSourceImageUrl(source)}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="当前显示缩略图，点击查看原图"
-                          className="group relative block"
+                        <OriginalImagePreview
+                          originalUrl={buildSourceImageUrl(source)}
+                          title={source.name}
+                          className="group relative block w-full text-left"
                         >
                           <Image
                             src={buildSourceImageThumbnailUrl(source)}
@@ -243,7 +242,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                           <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded-full bg-white/85 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 shadow-sm backdrop-blur">
                             缩略图
                           </span>
-                        </a>
+                        </OriginalImagePreview>
                       </div>
                     ))}
                   </div>
@@ -361,12 +360,10 @@ export const ConversationTurns = memo(function ConversationTurns({
                       >
                         {image.status === "success" && imageDataUrl ? (
                           <div>
-                            <a
-                              href={imageDataUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              title="当前显示缩略图，点击查看原图"
-                              className="group relative block"
+                            <OriginalImagePreview
+                              originalUrl={imageDataUrl}
+                              title={`Generated result ${index + 1}`}
+                              className="group relative block text-left"
                             >
                               <Image
                                 src={imageThumbUrl}
@@ -379,7 +376,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                               <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur">
                                 缩略图
                               </span>
-                            </a>
+                            </OriginalImagePreview>
                             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-4 py-3">
                               <button
                                 type="button"
