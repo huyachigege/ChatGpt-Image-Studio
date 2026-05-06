@@ -147,10 +147,16 @@ export default function ImageGalleryPage() {
                   {groupItems.map((item) => (
                     <article key={item.id} className="overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
                       <div className="relative">
-                        <a href={item.url} target="_blank" rel="noreferrer" className="group relative block aspect-square overflow-hidden bg-stone-100 dark:bg-[var(--studio-panel)]">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="当前显示缩略图，点击查看原图"
+                          className="group relative block aspect-square overflow-hidden bg-stone-100 dark:bg-[var(--studio-panel)]"
+                        >
                           <img src={item.thumbUrl || item.url} alt={item.name} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" loading="lazy" />
-                          <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white opacity-90 shadow-sm transition group-hover:bg-black/70">
-                            缩略图 · 点击看原图
+                          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur">
+                            缩略图
                           </span>
                         </a>
                         <label className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-2 text-xs text-stone-700 shadow-sm">
