@@ -409,6 +409,7 @@ export type RequestLogItem = {
   userRole?: string;
   size?: string;
   quality?: string;
+  prompt?: string;
   promptLength?: number;
   preferred: boolean;
   success: boolean;
@@ -629,6 +630,14 @@ export type AppUserItem = {
   imageApiKey?: string;
   disabled?: boolean;
   createdAt?: string;
+  quota?: {
+    freeUsed: number;
+    freeLimit: number;
+    freeRemaining: number;
+    paidUsed: number;
+    paidLimit: number;
+    paidRemaining: number;
+  };
 };
 
 export type InviteItem = {
@@ -684,8 +693,13 @@ export async function fetchImageQuota() {
   return httpRequest<{ item: DailyImageQuota }>("/api/image/quota");
 }
 
-export async function listImageGallery() {
-  return httpRequest<{ items: ImageGalleryItem[] }>("/api/image/gallery");
+export async function listImageGallery(params: { page?: number; pageSize?: number; q?: string } = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params.q?.trim()) searchParams.set("q", params.q.trim());
+  const query = searchParams.toString();
+  return httpRequest<{ items: ImageGalleryItem[]; total: number; page: number; pageSize: number }>(`/api/image/gallery${query ? `?${query}` : ""}`);
 }
 
 export async function deleteImageGalleryItem(name: string) {
@@ -715,6 +729,13 @@ export async function updateUserDisabled(id: string, disabled: boolean) {
 export async function deleteUser(id: string) {
   return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}`, {
     method: "DELETE",
+  });
+}
+
+export async function adjustUserQuota(id: string, kind: "free" | "paid", delta: number) {
+  return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}/quota`, {
+    method: "POST",
+    body: { kind, delta },
   });
 }
 
@@ -869,8 +890,15 @@ export async function updateConfig(config: ConfigPayload) {
   return result;
 }
 
-export async function fetchRequestLogs() {
-  return httpRequest<{ items: RequestLogItem[] }>("/api/requests");
+export async function fetchRequestLogs(params: { page?: number; pageSize?: number; user?: string; account?: string; prompt?: string } = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
+  if (params.user?.trim()) searchParams.set("user", params.user.trim());
+  if (params.account?.trim()) searchParams.set("account", params.account.trim());
+  if (params.prompt?.trim()) searchParams.set("prompt", params.prompt.trim());
+  const query = searchParams.toString();
+  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number }>(`/api/requests${query ? `?${query}` : ""}`);
 }
 
 export async function fetchVersionInfo() {

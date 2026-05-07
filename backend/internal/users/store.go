@@ -568,6 +568,84 @@ func (s *Store) ConsumeDailyImageQuota(ctx context.Context, userID, quotaKind st
 	return s.GetDailyImageQuota(ctx, userID)
 }
 
+func (s *Store) GetDailyImageQuotaBatch(ctx context.Context, userIDs []string) (map[string]DailyImageQuota, error) {
+	dateKey := currentQuotaDateKey()
+	result := make(map[string]DailyImageQuota, len(userIDs))
+	for _, uid := range userIDs {
+		result[uid] = DailyImageQuota{
+			DateKey:       dateKey,
+			FreeLimit:     DailyFreeImageLimit,
+			PaidLimit:     DailyPaidImageLimit,
+			FreeRemaining: DailyFreeImageLimit,
+			PaidRemaining: DailyPaidImageLimit,
+		}
+	}
+	if len(userIDs) == 0 {
+		return result, nil
+	}
+	placeholders := make([]string, len(userIDs))
+	args := make([]any, 0, len(userIDs)+1)
+	for i, uid := range userIDs {
+		placeholders[i] = "?"
+		args = append(args, uid)
+	}
+	args = append(args, dateKey)
+	query := `SELECT user_id, free_used, paid_used FROM app_user_daily_image_quotas WHERE user_id IN (` + strings.Join(placeholders, ",") + `) AND quota_date = ?`
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return result, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var uid string
+		var freeUsed, paidUsed int
+		if err := rows.Scan(&uid, &freeUsed, &paidUsed); err != nil {
+			return result, err
+		}
+		result[uid] = DailyImageQuota{
+			DateKey:       dateKey,
+			FreeLimit:     DailyFreeImageLimit,
+			FreeUsed:      freeUsed,
+			FreeRemaining: maxInt(0, DailyFreeImageLimit-freeUsed),
+			PaidLimit:     DailyPaidImageLimit,
+			PaidUsed:      paidUsed,
+			PaidRemaining: maxInt(0, DailyPaidImageLimit-paidUsed),
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
+func (s *Store) AdjustDailyImageQuota(ctx context.Context, userID, quotaKind string, delta int) (DailyImageQuota, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return DailyImageQuota{}, fmt.Errorf("user id is required")
+	}
+	if delta <= 0 {
+		return DailyImageQuota{}, fmt.Errorf("delta must be positive")
+	}
+	dateKey := currentQuotaDateKey()
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	if _, err := s.db.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, updated_at) VALUES (?, ?, 0, 0, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, dateKey, now); err != nil {
+		return DailyImageQuota{}, err
+	}
+	var err error
+	switch strings.ToLower(strings.TrimSpace(quotaKind)) {
+	case "paid":
+		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_used = MAX(0, paid_used - ?), updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, dateKey)
+	case "free", "":
+		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_used = MAX(0, free_used - ?), updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, dateKey)
+	default:
+		return DailyImageQuota{}, fmt.Errorf("invalid quota kind")
+	}
+	if err != nil {
+		return DailyImageQuota{}, err
+	}
+	return s.GetDailyImageQuota(ctx, userID)
+}
+
 func currentQuotaDateKey() string {
 	shanghai := time.FixedZone("CST", 8*3600)
 	return time.Now().In(shanghai).Format("2006-01-02")

@@ -509,6 +509,9 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		image := images[0]
 		image.ID = task.Images[unitIndex].ID
 		image.Status = "success"
+		if strings.TrimSpace(image.Prompt) == "" {
+			image.Prompt = strings.TrimSpace(task.Prompt)
+		}
 		task.Images[unitIndex] = image
 	}
 
@@ -873,7 +876,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		ResolutionAccess: resolutionAccess,
 		Quality:          strings.TrimSpace(req.Quality),
 		Background:       strings.TrimSpace(req.Background),
-		ResponseFormat:   firstNonEmpty(strings.TrimSpace(req.ResponseFormat), "url"),
+		ResponseFormat:   "url",
 		SourceImages:     sourceImages,
 		SourceReference:  sourceReference,
 		ContextReference: contextReference,

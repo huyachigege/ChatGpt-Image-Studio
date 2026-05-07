@@ -255,8 +255,19 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
+	query := imageRequestLogQuery{
+		Page:     parsePositiveQueryInt(r, "page", 1),
+		PageSize: parsePositiveQueryInt(r, "pageSize", 20),
+		User:     r.URL.Query().Get("user"),
+		Account:  r.URL.Query().Get("account"),
+		Prompt:   r.URL.Query().Get("prompt"),
+	}
+	items, total := s.reqLogs.list(query)
 	writeJSON(w, http.StatusOK, map[string]any{
-		"items": s.reqLogs.list(100),
+		"items":    items,
+		"total":    total,
+		"page":     query.Page,
+		"pageSize": query.PageSize,
 	})
 }
 

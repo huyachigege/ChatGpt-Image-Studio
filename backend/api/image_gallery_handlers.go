@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,13 @@ type imageGalleryItem struct {
 	TurnID         string `json:"turnId,omitempty"`
 }
 
+type imageGalleryListResponse struct {
+	Items    []imageGalleryItem `json:"items"`
+	Total    int                `json:"total"`
+	Page     int                `json:"page"`
+	PageSize int                `json:"pageSize"`
+}
+
 type imageGalleryPromptMetadata struct {
 	Prompt         string
 	ConversationID string
@@ -36,12 +44,30 @@ type imageGalleryPromptMetadata struct {
 
 func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) {
 	identity := identityFromContext(r.Context())
+	page := parsePositiveQueryInt(r, "page", 1)
+	pageSize := parsePositiveQueryInt(r, "pageSize", 24)
+	if pageSize > 100 {
+		pageSize = 100
+	}
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	items, err := s.listImageGalleryItems(r.Context(), identity)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	if query != "" {
+		items = filterImageGalleryItemsByPrompt(items, query)
+	}
+	total := len(items)
+	start := (page - 1) * pageSize
+	if start > total {
+		start = total
+	}
+	end := start + pageSize
+	if end > total {
+		end = total
+	}
+	writeJSON(w, http.StatusOK, imageGalleryListResponse{Items: items[start:end], Total: total, Page: page, PageSize: pageSize})
 }
 
 func (s *Server) handleDeleteImageGalleryItem(w http.ResponseWriter, r *http.Request) {
@@ -76,6 +102,28 @@ func (s *Server) handleBatchDeleteImageGallery(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": deleted})
 }
 
+func parsePositiveQueryInt(r *http.Request, key string, fallback int) int {
+	value, err := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get(key)))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func filterImageGalleryItemsByPrompt(items []imageGalleryItem, query string) []imageGalleryItem {
+	query = strings.ToLower(strings.TrimSpace(query))
+	if query == "" {
+		return items
+	}
+	filtered := make([]imageGalleryItem, 0, len(items))
+	for _, item := range items {
+		if strings.Contains(strings.ToLower(item.Prompt), query) {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
 func (s *Server) deleteImageGalleryNames(identity authIdentity, names []string) ([]string, error) {
 	if len(names) == 0 {
 		return nil, errBadRequest("image names are required")
@@ -99,14 +147,14 @@ func (s *Server) listImageGalleryItems(ctx context.Context, identity authIdentit
 	var items []imageGalleryItem
 	var err error
 	if identity.Role == users.RoleAdmin {
-		items, err = s.listAdminImageGalleryItems()
+		items, err = s.listAdminImageGalleryItems(ctx)
 	} else {
 		root := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
 		folder := sanitizeGallerySegment(identity.UserID)
 		if folder == "" {
-			items, err = s.listImageGalleryDir(root, "")
+			items, err = s.listImageGalleryDir(root, "", "")
 		} else {
-			items, err = s.listImageGalleryDir(filepath.Join(root, folder), folder)
+			items, err = s.listImageGalleryDir(filepath.Join(root, folder), folder, "")
 		}
 	}
 	if err != nil {
@@ -115,12 +163,13 @@ func (s *Server) listImageGalleryItems(ctx context.Context, identity authIdentit
 	return s.attachImageGalleryPrompts(ctx, identity, items), nil
 }
 
-func (s *Server) listAdminImageGalleryItems() ([]imageGalleryItem, error) {
+func (s *Server) listAdminImageGalleryItems(ctx context.Context) ([]imageGalleryItem, error) {
 	root := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
-	items, err := s.listImageGalleryDir(root, "")
+	items, err := s.listImageGalleryDir(root, "", "管理员")
 	if err != nil {
 		return nil, err
 	}
+	usernames := s.imageGalleryUsernames(ctx)
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -136,7 +185,7 @@ func (s *Server) listAdminImageGalleryItems() ([]imageGalleryItem, error) {
 		if folder == "" {
 			continue
 		}
-		folderItems, err := s.listImageGalleryDir(filepath.Join(root, folder), folder)
+		folderItems, err := s.listImageGalleryDir(filepath.Join(root, folder), folder, firstNonEmpty(usernames[folder], folder))
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +200,24 @@ func (s *Server) listAdminImageGalleryItems() ([]imageGalleryItem, error) {
 	return items, nil
 }
 
-func (s *Server) listImageGalleryDir(dir, folder string) ([]imageGalleryItem, error) {
+func (s *Server) imageGalleryUsernames(ctx context.Context) map[string]string {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		return map[string]string{}
+	}
+	defer store.Close()
+	items, err := store.ListUsers(ctx)
+	if err != nil {
+		return map[string]string{}
+	}
+	result := make(map[string]string, len(items))
+	for _, item := range items {
+		result[sanitizeGallerySegment(item.ID)] = firstNonEmpty(item.Username, item.Name, item.ID)
+	}
+	return result
+}
+
+func (s *Server) listImageGalleryDir(dir, folder, displayFolder string) ([]imageGalleryItem, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -178,7 +244,7 @@ func (s *Server) listImageGalleryDir(dir, folder string) ([]imageGalleryItem, er
 		items = append(items, imageGalleryItem{
 			ID:        relName,
 			Name:      relName,
-			Folder:    firstNonEmpty(folder, "根目录"),
+			Folder:    displayFolder,
 			URL:       "/v1/files/image/" + urlName,
 			ThumbURL:  "/v1/files/image-thumb/" + urlName,
 			Size:      info.Size(),

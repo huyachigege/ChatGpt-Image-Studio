@@ -119,7 +119,7 @@ func (c *cpaImageClient) GenerateImage(ctx context.Context, prompt, model string
 		"prompt":          strings.TrimSpace(prompt),
 		"model":           strings.TrimSpace(model),
 		"n":               max(1, n),
-		"response_format": "b64_json",
+		"response_format": "url",
 	}
 	if strings.TrimSpace(size) != "" {
 		body["size"] = strings.TrimSpace(size)
@@ -154,7 +154,7 @@ func (c *cpaImageClient) EditImageByUpload(ctx context.Context, prompt, model st
 	writer := multipart.NewWriter(&payload)
 	_ = writer.WriteField("prompt", strings.TrimSpace(prompt))
 	_ = writer.WriteField("model", strings.TrimSpace(model))
-	_ = writer.WriteField("response_format", "b64_json")
+	_ = writer.WriteField("response_format", "url")
 	if strings.TrimSpace(size) != "" {
 		_ = writer.WriteField("size", strings.TrimSpace(size))
 	}

@@ -26,6 +26,7 @@ import {
   type ImageConversationTurn,
   type ImageMode,
   type StoredImage,
+  type StoredSourceImage,
 } from "@/store/image-conversations";
 import { ConversationTurns } from "./components/conversation-turns";
 import { EmptyState } from "./components/empty-state";
@@ -50,7 +51,9 @@ type ImageAspectRatio = "auto" | "1:1" | "4:3" | "3:2" | "16:9" | "21:9" | "9:16
 type ImageResolutionTier = "auto-free" | "auto-paid" | "sd" | "2k" | "4k";
 type ImageResolutionAccess = "free" | "paid";
 type ImageWorkspaceRouteState = {
+  mode?: ImageMode;
   prompt?: string;
+  sourceImages?: StoredSourceImage[];
 };
 type ImageResolutionPreset = {
   tier: ImageResolutionTier;
@@ -688,21 +691,6 @@ export default function ImagePage() {
     () => selectedResolutionPreset?.access ?? "free",
     [selectedResolutionPreset],
   );
-  const imageSizeHint = useMemo(
-    () => (
-      <>
-        <div>
-          <span className="font-semibold text-stone-800">分辨率限制：</span>
-          Free 档每天 120 张；Paid 档每天 30 张。普通用户可以自由切换分辨率，提交后按所选档位扣除对应额度。
-        </div>
-        <div className="mt-2">
-          <span className="font-semibold text-stone-800">Auto 模式补充：</span>
-          当比例切到 Auto 时，当前项目不会强制指定比例和分辨率，请直接在提示词里写明横竖版、画幅比例和目标输出尺寸。`Free / Paid` 只决定额度类型和调度倾向。
-        </div>
-      </>
-    ),
-    [],
-  );
   const imageSources = useMemo(
     () => sourceImages.filter((item) => item.role === "image"),
     [sourceImages],
@@ -1233,14 +1221,15 @@ export default function ImagePage() {
 
   useEffect(() => {
     const state = location.state as ImageWorkspaceRouteState | null;
-    const prompt = state?.prompt?.trim();
-    if (!prompt || currentImageView !== "workspace") {
+    const prompt = state?.prompt?.trim() || "";
+    const routeSourceImages = Array.isArray(state?.sourceImages) ? state.sourceImages : [];
+    if (currentImageView !== "workspace" || (!prompt && routeSourceImages.length === 0 && !state?.mode)) {
       return;
     }
-    setMode("generate");
+    setMode(state?.mode === "edit" ? "edit" : "generate");
     setImageCount("1");
     setImagePrompt(prompt);
-    setSourceImages([]);
+    setSourceImages(routeSourceImages);
     openDraftConversation();
     textareaRef.current?.focus();
     navigate(pathname, { replace: true, state: null });
@@ -1426,7 +1415,6 @@ export default function ImagePage() {
         imageResolutionTier={imageResolutionTier}
         imageResolutionTierLabel={imageResolutionTierLabel}
         imageResolutionTierOptions={imageResolutionTierOptions}
-        imageSizeHint={imageSizeHint}
         imageQuality={imageQuality}
         imageQualityOptions={imageQualityOptions}
         imageQualityDisabled={!isImageQualityEnabled}

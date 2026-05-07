@@ -99,7 +99,7 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 		syncClient:     syncClient,
 		syncRunCache:   map[string]*sourceSyncRunResult{},
 		staticDir:      cfg.ResolvePath(cfg.Server.StaticDir),
-		reqLogs:        newImageRequestLogStore(),
+		reqLogs:        newImageRequestLogStore(cfg.ResolvePath("data/image_request_logs.jsonl")),
 		imageAdmission: newImageAdmissionController(),
 		officialClientFactory: func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
 			return handler.NewChatGPTClientWithAuthData(accessToken, proxyURL, authData, requestConfig)
@@ -405,6 +405,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleCreateInvite)))
 	mux.Handle("GET /api/users", s.requireAdminAuth(http.HandlerFunc(s.handleListUsers)))
 	mux.Handle("PATCH /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateUser)))
+	mux.Handle("POST /api/users/{id}/quota", s.requireAdminAuth(http.HandlerFunc(s.handleAdjustUserQuota)))
 	mux.Handle("DELETE /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteUser)))
 	mux.Handle("GET /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleGetConfig)))
 	mux.Handle("GET /api/config/defaults", s.requireAdminAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
@@ -588,7 +589,27 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	userIDs := make([]string, len(items))
+	for i, item := range items {
+		userIDs[i] = item.ID
+	}
+	quotas, err := store.GetDailyImageQuotaBatch(r.Context(), userIDs)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	type userWithQuota struct {
+		users.User
+		Quota *users.DailyImageQuota `json:"quota,omitempty"`
+	}
+	result := make([]userWithQuota, len(items))
+	for i, item := range items {
+		result[i] = userWithQuota{User: item}
+		if q, ok := quotas[item.ID]; ok {
+			result[i].Quota = &q
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": result})
 }
 
 func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
@@ -614,6 +635,33 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) handleAdjustUserQuota(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Kind  string `json:"kind"`
+		Delta int    `json:"delta"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if body.Delta <= 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "delta must be positive"})
+		return
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	quota, err := store.AdjustDailyImageQuota(r.Context(), r.PathValue("id"), body.Kind, body.Delta)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "quota": quota})
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -1025,7 +1073,7 @@ func (s *Server) handleImageGenerations(w http.ResponseWriter, r *http.Request) 
 		Size:           req.Size,
 		Quality:        req.Quality,
 		Background:     req.Background,
-		ResponseFormat: req.ResponseFormat,
+		ResponseFormat: "url",
 	}, r)
 	if err != nil {
 		writeImageRequestError(w, err)
@@ -1046,7 +1094,7 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	requestedModel := normalizeRequestedImageModel(r.FormValue("model"), s.cfg.ChatGPT.Model)
-	responseFormat := firstNonEmpty(r.FormValue("response_format"), s.cfg.App.ImageFormat, "url")
+	responseFormat := "url"
 	size := strings.TrimSpace(r.FormValue("size"))
 	quality := strings.TrimSpace(r.FormValue("quality"))
 	mask, err := readOptionalMultipartFile(r.MultipartForm, "mask")
@@ -1120,6 +1168,7 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 type imageRequestMetadata struct {
 	size         string
 	quality      string
+	prompt       string
 	promptLength int
 }
 
@@ -1129,14 +1178,17 @@ func (m imageRequestMetadata) applyTo(entry *imageRequestLogEntry) {
 	}
 	entry.Size = strings.TrimSpace(m.size)
 	entry.Quality = strings.TrimSpace(m.quality)
+	entry.Prompt = strings.TrimSpace(m.prompt)
 	entry.PromptLength = m.promptLength
 }
 
 func newImageRequestMetadata(prompt, size, quality string) imageRequestMetadata {
+	prompt = strings.TrimSpace(prompt)
 	return imageRequestMetadata{
 		size:         strings.TrimSpace(size),
 		quality:      strings.TrimSpace(quality),
-		promptLength: len([]rune(strings.TrimSpace(prompt))),
+		prompt:       prompt,
+		promptLength: len([]rune(prompt)),
 	}
 }
 
@@ -1944,11 +1996,6 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
 		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
-	for _, key := range parseKeys(s.cfg.App.APIKey) {
-		if token == key {
-			return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
-		}
-	}
 	store, err := users.NewStore(s.cfg)
 	if err != nil {
 		return authIdentity{}, false
@@ -1989,16 +2036,6 @@ func bearerFromRequest(r *http.Request) string {
 		return ""
 	}
 	return strings.TrimSpace(parts[1])
-}
-
-func parseKeys(raw string) []string {
-	result := make([]string, 0)
-	for _, item := range strings.Split(raw, ",") {
-		if cleaned := strings.TrimSpace(item); cleaned != "" {
-			result = append(result, cleaned)
-		}
-	}
-	return result
 }
 
 func resolveStaticAsset(staticDir, requestPath string) string {

@@ -5,6 +5,7 @@ import {
   Copy,
   KeyRound,
   LoaderCircle,
+  Plus,
   RefreshCcw,
   Trash2,
   UserRound,
@@ -18,6 +19,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  adjustUserQuota,
   createInvite,
   deleteUser,
   fetchConfig,
@@ -42,6 +44,8 @@ import { ImageModeSection } from "./components/image-mode-section";
 import { IntegrationSection } from "./components/integration-section";
 import { RuntimeSection } from "./components/runtime-section";
 import { ServicePathsSection } from "./components/service-paths-section";
+
+const MANAGEMENT_PAGE_SIZE = 10;
 
 function joinDisplayPath(root: string, relativePath: string) {
   const normalizedRoot = String(root || "")
@@ -226,6 +230,8 @@ export default function SettingsPage() {
   const [savedConfig, setSavedConfig] = useState<ConfigPayload | null>(null);
   const [invites, setInvites] = useState<InviteItem[]>([]);
   const [users, setUsers] = useState<AppUserItem[]>([]);
+  const [invitePage, setInvitePage] = useState(1);
+  const [userPage, setUserPage] = useState(1);
   const [latestInviteCode, setLatestInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -271,6 +277,16 @@ export default function SettingsPage() {
     () =>
       String(config.sync.managementKey || "").trim() ? "已配置" : "未配置",
     [config.sync.managementKey],
+  );
+  const invitePageCount = Math.max(1, Math.ceil(invites.length / MANAGEMENT_PAGE_SIZE));
+  const userPageCount = Math.max(1, Math.ceil(users.length / MANAGEMENT_PAGE_SIZE));
+  const pagedInvites = useMemo(
+    () => invites.slice((invitePage - 1) * MANAGEMENT_PAGE_SIZE, invitePage * MANAGEMENT_PAGE_SIZE),
+    [invitePage, invites],
+  );
+  const pagedUsers = useMemo(
+    () => users.slice((userPage - 1) * MANAGEMENT_PAGE_SIZE, userPage * MANAGEMENT_PAGE_SIZE),
+    [userPage, users],
   );
   const storageMigrationNotice = useMemo(() => {
     if (!savedConfig) {
@@ -348,6 +364,7 @@ export default function SettingsPage() {
     try {
       const payload = await fetchInvites();
       setInvites(payload.items || []);
+      setInvitePage(1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "读取邀请码失败");
     } finally {
@@ -362,6 +379,7 @@ export default function SettingsPage() {
       if (payload.item?.code) {
         setLatestInviteCode(payload.item.code);
         setInvites((current) => [payload.item, ...current]);
+        setInvitePage(1);
         toast.success(`邀请码已生成：${payload.item.code}`);
       }
     } catch (error) {
@@ -385,6 +403,7 @@ export default function SettingsPage() {
     try {
       const payload = await fetchUsers();
       setUsers(payload.items || []);
+      setUserPage(1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "读取用户失败");
     } finally {
@@ -410,9 +429,31 @@ export default function SettingsPage() {
     try {
       await deleteUser(item.id);
       setUsers((current) => current.filter((user) => user.id !== item.id));
+      setUserPage((current) => Math.min(current, Math.max(1, Math.ceil((users.length - 1) / MANAGEMENT_PAGE_SIZE))));
       toast.success("用户已删除");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除用户失败");
+    } finally {
+      setMutatingUserID("");
+    }
+  };
+
+  const handleAddQuota = async (item: AppUserItem) => {
+    const input = window.prompt("增加额度数量（正整数）：\n类型请在数字前加 p 表示 Paid，否则默认 Free\n例如：10 = Free+10，p5 = Paid+5", "10");
+    if (!input) return;
+    const isPaid = input.trim().toLowerCase().startsWith("p");
+    const num = parseInt(isPaid ? input.trim().slice(1) : input.trim(), 10);
+    if (!num || num <= 0) {
+      toast.error("请输入有效的正整数");
+      return;
+    }
+    setMutatingUserID(item.id);
+    try {
+      await adjustUserQuota(item.id, isPaid ? "paid" : "free", num);
+      toast.success(`已为 ${item.username} 增加 ${isPaid ? "Paid" : "Free"} 额度 ${num}`);
+      await loadUsers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "调整额度失败");
     } finally {
       setMutatingUserID("");
     }
@@ -674,7 +715,7 @@ export default function SettingsPage() {
                 {invites.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingInvites ? "正在读取邀请码..." : "还没有邀请码，先生成一个。"}</div>
                 ) : (
-                  invites.map((item) => (
+                  pagedInvites.map((item) => (
                     <div key={item.code} className="grid grid-cols-[1.2fr_1fr_1fr] gap-3 px-4 py-4 text-sm">
                       <button type="button" className="min-w-0 truncate text-left font-mono text-stone-950 dark:text-[var(--studio-text-strong)]" onClick={() => void copyInviteCode(item.code)} title="点击复制邀请码">
                         {item.code}
@@ -688,6 +729,13 @@ export default function SettingsPage() {
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+              <span>共 {invites.length} 条，第 {invitePage}/{invitePageCount} 页</span>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setInvitePage((page) => Math.max(1, page - 1))} disabled={invitePage <= 1}>上一页</Button>
+                <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setInvitePage((page) => Math.min(invitePageCount, page + 1))} disabled={invitePage >= invitePageCount}>下一页</Button>
               </div>
             </div>
           </section>
@@ -716,18 +764,19 @@ export default function SettingsPage() {
             </div>
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 dark:border-[var(--studio-border)]">
-              <div className="grid grid-cols-[1fr_1fr_0.8fr_1.2fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
+              <div className="grid grid-cols-[1fr_0.6fr_0.6fr_1.2fr_1.4fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
                 <span>用户</span>
                 <span>状态</span>
                 <span>角色</span>
+                <span>今日额度</span>
                 <span>操作</span>
               </div>
               <div className="divide-y divide-stone-200 dark:divide-[var(--studio-border)]">
                 {users.length === 0 ? (
                   <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingUsers ? "正在读取用户..." : "还没有普通用户。"}</div>
                 ) : (
-                  users.map((item) => (
-                    <div key={item.id} className="grid grid-cols-[1fr_1fr_0.8fr_1.2fr] gap-3 px-4 py-4 text-sm">
+                  pagedUsers.map((item) => (
+                    <div key={item.id} className="grid grid-cols-[1fr_0.6fr_0.6fr_1.2fr_1.4fr] items-center gap-3 px-4 py-4 text-sm">
                       <div className="min-w-0">
                         <div className="truncate font-medium text-stone-950 dark:text-[var(--studio-text-strong)]">{item.username}</div>
                         <div className="mt-1 truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{item.name || item.id}</div>
@@ -736,7 +785,28 @@ export default function SettingsPage() {
                         {item.disabled ? "已禁用" : "正常"}
                       </span>
                       <span className="text-stone-600 dark:text-[var(--studio-text)]">{item.role}</span>
+                      <div className="text-xs text-stone-600 dark:text-[var(--studio-text)]">
+                        {item.quota ? (
+                          <>
+                            <span>Free {item.quota.freeRemaining}/{item.quota.freeLimit}</span>
+                            <span className="mx-1">·</span>
+                            <span>Paid {item.quota.paidRemaining}/{item.quota.paidLimit}</span>
+                          </>
+                        ) : (
+                          <span className="text-stone-400">-</span>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-9 rounded-xl border-stone-200 bg-white px-3 text-xs text-stone-700 shadow-none"
+                          onClick={() => void handleAddQuota(item)}
+                          disabled={mutatingUserID === item.id}
+                        >
+                          <Plus className="size-3" />
+                          额度
+                        </Button>
                         <Button
                           type="button"
                           variant="outline"
@@ -761,6 +831,13 @@ export default function SettingsPage() {
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+              <span>共 {users.length} 个用户，第 {userPage}/{userPageCount} 页</span>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setUserPage((page) => Math.max(1, page - 1))} disabled={userPage <= 1}>上一页</Button>
+                <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setUserPage((page) => Math.min(userPageCount, page + 1))} disabled={userPage >= userPageCount}>下一页</Button>
               </div>
             </div>
           </section>

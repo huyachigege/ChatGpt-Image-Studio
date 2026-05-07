@@ -146,7 +146,7 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 		Size:           size,
 		Quality:        strings.TrimSpace(req.Quality),
 		Background:     strings.TrimSpace(req.Background),
-		ResponseFormat: firstNonEmpty(req.ResponseFormat, s.cfg.App.ImageFormat, "url"),
+		ResponseFormat: "url",
 		Policy:         policy,
 	})
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *Server) executeImageEdit(ctx context.Context, req imageEditRequest, r *
 		Count:          1,
 		Size:           strings.TrimSpace(req.Size),
 		Quality:        strings.TrimSpace(req.Quality),
-		ResponseFormat: firstNonEmpty(req.ResponseFormat, s.cfg.App.ImageFormat, "url"),
+		ResponseFormat: "url",
 		SourceImages:   sourceImages,
 		Policy:         policy,
 	})
@@ -241,7 +241,7 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 		Prompt:         prompt,
 		Model:          normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model),
 		Count:          1,
-		ResponseFormat: firstNonEmpty(req.ResponseFormat, s.cfg.App.ImageFormat, "url"),
+		ResponseFormat: "url",
 		SourceImages: []imageTaskSourceImagePayload{
 			{
 				ID:      "compat-mask",
@@ -362,7 +362,7 @@ func (s *Server) runCompatImageRequest(ctx context.Context, r *http.Request, req
 			Size:           req.Size,
 			Quality:        req.Quality,
 			Background:     req.Background,
-			ResponseFormat: "b64_json",
+			ResponseFormat: "url",
 		}, r)
 	}
 
@@ -380,7 +380,7 @@ func (s *Server) runCompatImageRequest(ctx context.Context, r *http.Request, req
 		Images:         images,
 		Size:           req.Size,
 		Quality:        req.Quality,
-		ResponseFormat: "b64_json",
+		ResponseFormat: "url",
 	}, r)
 }
 

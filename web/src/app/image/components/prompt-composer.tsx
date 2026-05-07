@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUp, Brush, ChevronDown, CircleHelp, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowUp, Brush, ChevronDown, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
 import { OriginalImagePreview } from "@/components/original-image-preview";
@@ -31,7 +31,6 @@ type PromptComposerProps = {
   imageResolutionTier: string;
   imageResolutionTierLabel: string;
   imageResolutionTierOptions: Array<{ label: string; value: string; disabled?: boolean }>;
-  imageSizeHint: ReactNode;
   imageQuality: ImageQuality;
   imageQualityOptions: Array<{ label: string; value: ImageQuality; description: string }>;
   imageQualityDisabled: boolean;
@@ -67,7 +66,6 @@ export function PromptComposer({
   imageResolutionTier,
   imageResolutionTierLabel,
   imageResolutionTierOptions,
-  imageSizeHint,
   imageQuality,
   imageQualityOptions,
   imageQualityDisabled,
@@ -110,7 +108,6 @@ export function PromptComposer({
     .slice(0, 60);
   const showImageOutputControls = mode === "generate";
   const showImageQualityControl = mode === "edit" || mode === "generate";
-  const sizeHintAriaLabel = "查看分辨率说明";
   const imageQualityPrefix = "质量";
   const hasComposerContent = imagePrompt.trim().length > 0 || sourceImages.length > 0;
   const previousHasComposerContentRef = useRef(hasComposerContent);
@@ -132,30 +129,6 @@ export function PromptComposer({
     onMobileCollapsedChange?.(isMobileComposerCollapsed);
   }, [isMobileComposerCollapsed, onMobileCollapsedChange]);
 
-  const [sizeHintOpen, setSizeHintOpen] = useState(false);
-  const sizeHintTooltip =
-    showImageOutputControls ? (
-      <span
-        className="relative hidden shrink-0 items-center align-middle sm:inline-flex"
-        onMouseEnter={() => setSizeHintOpen(true)}
-        onMouseLeave={() => setSizeHintOpen(false)}
-        onFocus={() => setSizeHintOpen(true)}
-        onBlur={() => setSizeHintOpen(false)}
-      >
-        <span
-          tabIndex={0}
-          className="inline-flex size-9 cursor-help items-center justify-center rounded-full border border-stone-200 bg-white text-stone-400 transition-colors hover:text-stone-700 focus-visible:text-stone-700 focus-visible:outline-none"
-          aria-label={sizeHintAriaLabel}
-        >
-          <CircleHelp className="size-4" />
-        </span>
-        {sizeHintOpen ? (
-          <span className="pointer-events-auto absolute right-0 bottom-full z-50 mb-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-stone-200 bg-white px-4 py-3 text-xs font-normal leading-6 text-stone-600 shadow-[0_18px_50px_-24px_rgba(15,23,42,0.35)]">
-            {imageSizeHint}
-          </span>
-        ) : null}
-      </span>
-    ) : null;
 
   return (
     <div
@@ -247,7 +220,6 @@ export function PromptComposer({
               </Select>
             ) : null}
 
-            {sizeHintTooltip}
 
             {showImageQualityControl ? (
               <Select value={imageQuality} onValueChange={onImageQualityChange} disabled={imageQualityDisabled}>
