@@ -262,7 +262,7 @@ func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 		Account:  r.URL.Query().Get("account"),
 		Prompt:   r.URL.Query().Get("prompt"),
 	}
-	items, total := s.reqLogs.list(query)
+	items, total := s.reqLogs.listPage(query)
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items":    items,
 		"total":    total,

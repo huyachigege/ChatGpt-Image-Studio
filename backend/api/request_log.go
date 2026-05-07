@@ -50,11 +50,11 @@ type imageRequestLogEntry struct {
 }
 
 type imageRequestLogQuery struct {
-	Page      int
-	PageSize  int
-	User      string
-	Account   string
-	Prompt    string
+	Page     int
+	PageSize int
+	User     string
+	Account  string
+	Prompt   string
 }
 
 type imageRequestLogStore struct {
@@ -89,7 +89,22 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 	_ = s.append(entry)
 }
 
-func (s *imageRequestLogStore) list(query imageRequestLogQuery) ([]imageRequestLogEntry, int) {
+func (s *imageRequestLogStore) list(limit int) []imageRequestLogEntry {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if limit <= 0 || limit > len(s.items) {
+		limit = len(s.items)
+	}
+	out := make([]imageRequestLogEntry, limit)
+	copy(out, s.items[:limit])
+	return out
+}
+
+func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequestLogEntry, int) {
 	if s == nil {
 		return nil, 0
 	}
