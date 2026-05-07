@@ -615,6 +615,8 @@ export type ImageGalleryItem = {
   url: string;
   thumbUrl?: string;
   size: number;
+  width?: number;
+  height?: number;
   createdAt: string;
   prompt?: string;
   conversationId?: string;

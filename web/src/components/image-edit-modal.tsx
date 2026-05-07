@@ -142,7 +142,7 @@ export function ImageEditModal({
   const pointerActiveRef = useRef(false);
 
   const [prompt, setPrompt] = useState("");
-  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(true);
   const [brushSize, setBrushSize] = useState(42);
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 });
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
@@ -202,7 +202,7 @@ export function ImageEditModal({
 
     pointerActiveRef.current = false;
     setPrompt("");
-    setSelectionMode(false);
+    setSelectionMode(true);
     setBrushSize(42);
     setStrokes([]);
     setRedoStrokes([]);

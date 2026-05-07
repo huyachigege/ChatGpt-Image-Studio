@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Copy, Download, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Download, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -10,7 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
 
-const GALLERY_PAGE_SIZE = 24;
+const GALLERY_ROWS = 3;
+
+function getGalleryColumnCount() {
+  if (typeof window === "undefined") return 6;
+  if (window.matchMedia("(min-width: 1536px)").matches) return 6;
+  if (window.matchMedia("(min-width: 1280px)").matches) return 4;
+  if (window.matchMedia("(min-width: 640px)").matches) return 3;
+  return 2;
+}
 
 function formatTime(value: string) {
   const date = new Date(value);
@@ -28,6 +36,21 @@ function formatSize(size: number) {
     unitIndex += 1;
   }
   return `${value >= 10 || unitIndex === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function formatResolution(item: ImageGalleryItem) {
+  if (!item.width || !item.height) return "未知分辨率";
+  return `${item.width}×${item.height}`;
+}
+
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function formatAspectRatio(item: ImageGalleryItem) {
+  if (!item.width || !item.height) return "未知比例";
+  const divisor = gcd(item.width, item.height);
+  return `${item.width / divisor}:${item.height / divisor}`;
 }
 
 function basename(name: string) {
@@ -51,17 +74,19 @@ export default function ImageGalleryPage() {
   const [deletingName, setDeletingName] = useState("");
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [page, setPage] = useState(1);
+  const [columnCount, setColumnCount] = useState(getGalleryColumnCount());
+  const [pageSize, setPageSize] = useState(GALLERY_ROWS * getGalleryColumnCount());
   const [total, setTotal] = useState(0);
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [detailItem, setDetailItem] = useState<ImageGalleryItem | null>(null);
 
-  const pageCount = Math.max(1, Math.ceil(total / GALLERY_PAGE_SIZE));
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const loadItems = useCallback(async (nextPage: number, nextQuery: string) => {
+  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number) => {
     setIsLoading(true);
     try {
-      const payload = await listImageGallery({ page: nextPage, pageSize: GALLERY_PAGE_SIZE, q: nextQuery });
+      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery });
       setItems(payload.items || []);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);
@@ -74,12 +99,43 @@ export default function ImageGalleryPage() {
   }, []);
 
   useEffect(() => {
-    void loadItems(page, searchQuery);
-  }, [loadItems, page, searchQuery]);
+    const updatePageSize = () => {
+      const nextColumnCount = getGalleryColumnCount();
+      setColumnCount(nextColumnCount);
+      setPageSize(GALLERY_ROWS * nextColumnCount);
+      setPage(1);
+    };
+    updatePageSize();
+    window.addEventListener("resize", updatePageSize);
+    return () => window.removeEventListener("resize", updatePageSize);
+  }, []);
+
+  useEffect(() => {
+    void loadItems(page, searchQuery, pageSize);
+  }, [loadItems, page, pageSize, searchQuery]);
 
   const totalSize = useMemo(() => items.reduce((sum, item) => sum + (Number.isFinite(item.size) ? item.size : 0), 0), [items]);
+  const previewItems = useMemo(() => items.map((item) => ({ originalUrl: item.url, title: basename(item.name) })), [items]);
+  const previewIndexByName = useMemo(() => new Map(items.map((item, index) => [item.name, index])), [items]);
   const selectedSet = useMemo(() => new Set(selectedNames), [selectedNames]);
   const selectedItems = useMemo(() => items.filter((item) => selectedSet.has(item.name)), [items, selectedSet]);
+  const missingDimensionItems = useMemo(() => items.filter((item) => !item.width || !item.height), [items]);
+
+  useEffect(() => {
+    if (missingDimensionItems.length === 0 || typeof window === "undefined") return;
+    let cancelled = false;
+    for (const item of missingDimensionItems) {
+      const image = new window.Image();
+      image.onload = () => {
+        if (cancelled || !image.naturalWidth || !image.naturalHeight) return;
+        setItems((current) => current.map((entry) => (entry.name === item.name && (!entry.width || !entry.height) ? { ...entry, width: image.naturalWidth, height: image.naturalHeight } : entry)));
+      };
+      image.src = item.url;
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [missingDimensionItems]);
 
   const toggleSelected = (name: string) => {
     setSelectedNames((current) => (current.includes(name) ? current.filter((item) => item !== name) : [...current, name]));
@@ -126,15 +182,6 @@ export default function ImageGalleryPage() {
     });
   };
 
-  const handleCopyPrompt = async (prompt: string) => {
-    try {
-      await navigator.clipboard.writeText(prompt);
-      toast.success("提示词已复制");
-    } catch {
-      toast.error("复制失败，请手动复制");
-    }
-  };
-
   const handleBatchDelete = async () => {
     if (selectedNames.length === 0) return;
     setIsBatchDeleting(true);
@@ -152,18 +199,20 @@ export default function ImageGalleryPage() {
     }
   };
 
-  const groupedItems = useMemo(() => {
-    const groups = new Map<string, ImageGalleryItem[]>();
-    for (const item of items) {
-      const folder = item.folder || "";
-      groups.set(folder, [...(groups.get(folder) || []), item]);
-    }
-    return Array.from(groups.entries());
-  }, [items]);
+  const galleryRows = useMemo(() => {
+    return Array.from({ length: GALLERY_ROWS }, (_, rowIndex) => {
+      const start = rowIndex * columnCount;
+      const rowItems = items.slice(start, start + columnCount);
+      const previousFolder = items[start - 1]?.folder || "";
+      const newFolder = rowItems.find((item) => (item.folder || "") !== previousFolder)?.folder || "";
+      const groupItems = newFolder ? items.filter((item) => item.folder === newFolder) : [];
+      return { groupItems, label: newFolder, rowItems };
+    });
+  }, [columnCount, items]);
 
   return (
     <section className="h-full">
-      <div className="hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 pb-5 pt-0 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:px-5 sm:pb-6 lg:px-6 lg:pb-7">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 pb-4 pt-0 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:px-5 lg:px-6">
         <div className="sticky top-0 z-20 -mx-4 bg-[#fcfcfb] px-4 pt-5 pb-4 transition-colors duration-200 dark:bg-[var(--studio-panel)] sm:-mx-5 sm:px-5 sm:pt-6 sm:pb-4 lg:-mx-6 lg:px-6 lg:pt-7 lg:pb-5">
           <section className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex items-center gap-4">
@@ -189,7 +238,7 @@ export default function ImageGalleryPage() {
                 {isBatchDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                 删除选中 {selectedNames.length > 0 ? selectedNames.length : ""}
               </Button>
-              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery)} disabled={isLoading}>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize)} disabled={isLoading}>
                 {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 刷新
               </Button>
@@ -197,67 +246,66 @@ export default function ImageGalleryPage() {
           </section>
         </div>
 
-        {isLoading ? (
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {isLoading ? (
           <div className="grid min-h-[280px] place-items-center text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">
             <div className="flex items-center gap-2"><LoaderCircle className="size-4 animate-spin" />正在读取历史图库...</div>
           </div>
         ) : items.length === 0 ? (
           <div className="grid min-h-[280px] place-items-center rounded-[28px] border border-dashed border-stone-200 bg-white/70 text-sm text-stone-500 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">{searchQuery ? "没有匹配的图片。" : "当前还没有可展示的图片。"}</div>
         ) : (
-          <div className="mt-5 space-y-8">
-            {groupedItems.map(([folder, groupItems]) => (
-              <section key={folder || "all"} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  {folder ? <h2 className="text-sm font-semibold text-stone-700 dark:text-[var(--studio-text)]">{folder}</h2> : <span />}
-                  <button type="button" className="text-xs text-stone-500 underline underline-offset-4" onClick={() => setSelectedNames((current) => {
-                    const names = groupItems.map((item) => item.name);
+          <div className="grid h-full min-h-0 grid-rows-3 gap-2 pt-2">
+            {galleryRows.map((row, rowIndex) => (
+              <section key={rowIndex} className="flex min-h-0 flex-col">
+                <div className={`flex h-4 shrink-0 items-center justify-between border-b text-[11px] ${row.label ? "border-stone-200 dark:border-[var(--studio-border)]" : "border-transparent"}`}>
+                  {row.label ? <span className="font-semibold text-stone-700 dark:text-[var(--studio-text)]">{row.label}</span> : <span />}
+                  {row.label ? <button type="button" className="text-stone-500 underline underline-offset-4" onClick={() => setSelectedNames((current) => {
+                    const names = row.groupItems.map((item) => item.name);
                     const allSelected = names.every((name) => current.includes(name));
                     return allSelected ? current.filter((name) => !names.includes(name)) : Array.from(new Set([...current, ...names]));
-                  })}>全选/取消本组</button>
+                  })}>全选/取消本组</button> : <span />}
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                  {groupItems.map((item) => (
-                    <article key={item.id} className="flex overflow-hidden rounded-[28px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] flex-col">
-                      <div className="relative">
+                <div className="grid min-h-0 flex-1 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+                  {row.rowItems.map((item) => (
+                    <article key={item.id} className="group flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+                      <div className="relative min-h-0 flex-1">
                         <OriginalImagePreview
                           originalUrl={item.url}
                           title={basename(item.name)}
-                          className="group relative block aspect-square w-full overflow-hidden bg-stone-100 text-left dark:bg-[var(--studio-panel)]"
+                          items={previewItems}
+                          initialIndex={previewIndexByName.get(item.name) ?? 0}
+                          className="group relative block h-full w-full overflow-hidden bg-stone-100 text-left dark:bg-[var(--studio-panel)]"
                         >
                           <img src={item.thumbUrl || item.url} alt={basename(item.name)} className="h-full w-full object-cover transition duration-200 hover:scale-[1.02]" loading="lazy" />
-                          <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur">
-                            缩略图
-                          </span>
                         </OriginalImagePreview>
-                        <label className="absolute left-3 top-3 rounded-full bg-white/90 px-3 py-2 text-xs text-stone-700 shadow-sm">
-                          <input type="checkbox" className="mr-2 align-middle" checked={selectedSet.has(item.name)} onChange={() => toggleSelected(item.name)} />选择
+                        <label className={`absolute left-2 top-2 rounded-full border border-white/25 bg-white/18 px-2 py-1 text-[11px] text-white shadow-[0_8px_24px_rgba(15,23,42,0.18)] backdrop-blur-md transition dark:border-white/10 dark:bg-stone-950/20 ${selectedSet.has(item.name) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
+                          <input type="checkbox" className="mr-1.5 align-middle accent-white" checked={selectedSet.has(item.name)} onChange={() => toggleSelected(item.name)} />选择
                         </label>
+                        <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-full border border-white/25 bg-white/18 px-2 py-1 text-[11px] text-white opacity-0 shadow-[0_8px_24px_rgba(15,23,42,0.18)] backdrop-blur-md transition group-hover:opacity-100 dark:border-white/10 dark:bg-stone-950/20">
+                          <span className="min-w-0 flex-1 truncate">
+                            {formatTime(item.createdAt)} · {formatSize(item.size)} · {formatResolution(item)}
+                          </span>
+                          <button type="button" className="pointer-events-auto inline-flex size-5 shrink-0 items-center justify-center rounded-full text-white/85 transition hover:bg-white/20 hover:text-white" onClick={() => setDetailItem(item)} aria-label="查看图片详情" title="详情">
+                            <Info className="size-3.5" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex flex-1 flex-col space-y-3 p-4">
-                        <div className="text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{formatTime(item.createdAt)} · {formatSize(item.size)}</div>
-                        {item.prompt ? (
-                          <div className="rounded-2xl border border-stone-100 bg-stone-50 px-3 py-2.5 text-xs leading-5 text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]" title={item.prompt}>
-                            <div className="line-clamp-3 whitespace-pre-wrap">{item.prompt}</div>
-                            <button type="button" className="mt-2 inline-flex items-center gap-1 text-[11px] font-medium text-stone-700 underline underline-offset-4 dark:text-[var(--studio-text)]" onClick={() => void handleCopyPrompt(item.prompt || "")}> <Copy className="size-3" />复制提示词</button>
-                          </div>
-                        ) : (
-                          <div className="rounded-2xl border border-dashed border-stone-200 px-3 py-2.5 text-xs text-stone-400 dark:border-[var(--studio-border)]">未绑定提示词</div>
-                        )}
-                        <div className="mt-auto grid grid-cols-2 gap-2 pt-2">
-                          <Button type="button" variant="outline" className="h-10 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" onClick={() => handleEditImage(item)}>
-                            <Pencil className="size-4" />修改
+                      <div className="flex shrink-0 flex-col gap-1 p-2">
+                        <div className="h-6 rounded-xl border border-stone-100 bg-stone-50 px-2 text-[11px] leading-6 text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]" title={item.prompt || "未绑定提示词"}>
+                          {item.prompt ? <div className="truncate">{item.prompt}</div> : <div className="text-stone-400">未绑定提示词</div>}
+                        </div>
+                        <div className="grid shrink-0 grid-cols-2 gap-1 pt-0.5">
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleEditImage(item)}>
+                            <Pencil className="size-3.5" />编辑
                           </Button>
-                          <Button type="button" variant="outline" className="h-10 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" onClick={() => handleReferenceImages([item])}>
-                            <ImagePlus className="size-4" />参考
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleReferenceImages([item])}>
+                            <ImagePlus className="size-3.5" />参考
                           </Button>
-                          <Button type="button" variant="outline" className="h-10 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" onClick={() => setDetailItem(item)}>
-                            <Info className="size-4" />详情
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" asChild>
+                            <a href={item.url} download={basename(item.name)}><Download className="size-3.5" />下载</a>
                           </Button>
-                          <Button type="button" variant="outline" className="h-10 rounded-2xl border-stone-200 bg-white text-stone-700 shadow-none" asChild>
-                            <a href={item.url} download={basename(item.name)}><Download className="size-4" />下载</a>
-                          </Button>
-                          <Button type="button" variant="outline" className="col-span-2 h-10 rounded-2xl border-red-200 bg-white px-3 text-red-600 shadow-none hover:bg-red-50 hover:text-red-700" onClick={() => void handleDelete(item)} disabled={deletingName === item.name}>
-                            {deletingName === item.name ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}删除
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-red-200 bg-white px-2 text-[11px] text-red-600 shadow-none hover:bg-red-50 hover:text-red-700" onClick={() => void handleDelete(item)} disabled={deletingName === item.name}>
+                            {deletingName === item.name ? <LoaderCircle className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}删除
                           </Button>
                         </div>
                       </div>
@@ -267,9 +315,10 @@ export default function ImageGalleryPage() {
               </section>
             ))}
           </div>
-        )}
+          )}
+        </div>
 
-        <div className="mt-5 flex items-center justify-between text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+        <div className="mt-auto flex shrink-0 items-center justify-between pt-3 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
           <span>第 {page}/{pageCount} 页</span>
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="h-9 rounded-full border-stone-200 bg-white px-4 text-xs shadow-none" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1 || isLoading}>上一页</Button>
@@ -289,6 +338,8 @@ export default function ImageGalleryPage() {
                 <div><dt className="text-xs text-stone-500">分组</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{detailItem.folder || "—"}</dd></div>
                 <div><dt className="text-xs text-stone-500">创建时间</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{new Date(detailItem.createdAt).toLocaleString("zh-CN")}</dd></div>
                 <div><dt className="text-xs text-stone-500">大小</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatSize(detailItem.size)} ({detailItem.size} B)</dd></div>
+                <div><dt className="text-xs text-stone-500">分辨率</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatResolution(detailItem)}</dd></div>
+                <div><dt className="text-xs text-stone-500">长宽比</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatAspectRatio(detailItem)}</dd></div>
                 <div><dt className="text-xs text-stone-500">URL</dt><dd className="mt-1 break-all font-mono text-xs text-stone-800 dark:text-[var(--studio-text)]">{detailItem.url}</dd></div>
               </dl>
             </div>

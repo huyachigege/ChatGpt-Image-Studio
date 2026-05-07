@@ -118,8 +118,6 @@ export function PromptComposer({
   useEffect(() => {
     if (hasComposerContent && !previousHasComposerContentRef.current) {
       setIsMobileComposerExpanded(true);
-    } else if (!hasComposerContent && previousHasComposerContentRef.current) {
-      setIsMobileComposerExpanded(false);
     }
 
     previousHasComposerContentRef.current = hasComposerContent;

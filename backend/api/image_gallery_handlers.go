@@ -3,6 +3,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 	"os"
 	"path"
@@ -23,6 +27,8 @@ type imageGalleryItem struct {
 	URL            string `json:"url"`
 	ThumbURL       string `json:"thumbUrl"`
 	Size           int64  `json:"size"`
+	Width          int    `json:"width,omitempty"`
+	Height         int    `json:"height,omitempty"`
 	CreatedAt      string `json:"createdAt"`
 	Prompt         string `json:"prompt,omitempty"`
 	ConversationID string `json:"conversationId,omitempty"`
@@ -241,6 +247,7 @@ func (s *Server) listImageGalleryDir(dir, folder, displayFolder string) ([]image
 			relName = folder + "/" + name
 			urlName = relName
 		}
+		width, height := imageGalleryDimensions(filepath.Join(dir, name))
 		items = append(items, imageGalleryItem{
 			ID:        relName,
 			Name:      relName,
@@ -248,6 +255,8 @@ func (s *Server) listImageGalleryDir(dir, folder, displayFolder string) ([]image
 			URL:       "/v1/files/image/" + urlName,
 			ThumbURL:  "/v1/files/image-thumb/" + urlName,
 			Size:      info.Size(),
+			Width:     width,
+			Height:    height,
 			CreatedAt: info.ModTime().UTC().Format(time.RFC3339Nano),
 		})
 	}
@@ -255,6 +264,19 @@ func (s *Server) listImageGalleryDir(dir, folder, displayFolder string) ([]image
 		return items[i].CreatedAt > items[j].CreatedAt
 	})
 	return items, nil
+}
+
+func imageGalleryDimensions(filePath string) (int, int) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return 0, 0
+	}
+	defer file.Close()
+	config, _, err := image.DecodeConfig(file)
+	if err != nil {
+		return 0, 0
+	}
+	return config.Width, config.Height
 }
 
 func (s *Server) attachImageGalleryPrompts(ctx context.Context, identity authIdentity, items []imageGalleryItem) []imageGalleryItem {

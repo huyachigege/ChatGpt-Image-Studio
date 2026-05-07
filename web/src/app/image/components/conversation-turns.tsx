@@ -239,9 +239,6 @@ export const ConversationTurns = memo(function ConversationTurns({
                             unoptimized
                             className="block h-24 w-full cursor-zoom-in bg-stone-50 object-contain"
                           />
-                          <span className="pointer-events-none absolute bottom-1.5 right-1.5 rounded-full bg-white/85 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 shadow-sm backdrop-blur">
-                            缩略图
-                          </span>
                         </OriginalImagePreview>
                       </div>
                     ))}
@@ -373,9 +370,6 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 unoptimized
                                 className="block h-auto max-h-[270px] w-auto max-w-full cursor-zoom-in"
                               />
-                              <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-white/85 px-2 py-0.5 text-[11px] font-medium text-stone-600 shadow-sm backdrop-blur">
-                                缩略图
-                              </span>
                             </OriginalImagePreview>
                             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-4 py-3">
                               <button

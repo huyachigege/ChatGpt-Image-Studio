@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"chatgpt2api/internal/accounts"
+	"chatgpt2api/internal/imagehistory"
 	"chatgpt2api/internal/imaging"
 )
 
@@ -135,7 +136,10 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 		return nil, newRequestError("no_available_image_accounts", "当前没有可用的图片账号")
 	}
 
+	identity := identityFromContext(ctx)
 	task, err := s.imageTasks.createTask(createImageTaskRequest{
+		UserID:         identity.UserID,
+		Username:       identity.Username,
 		ConversationID: "",
 		TurnID:         fmt.Sprintf("compat-generate-%d", time.Now().UnixNano()),
 		Source:         "compat",
@@ -156,6 +160,7 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 	if err != nil {
 		return nil, err
 	}
+	s.saveCompatTaskHistory(ctx, identity, finalTask, "generate", prompt, normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model), req.N, size, strings.TrimSpace(req.Quality), nil)
 	return compatTaskPayload(finalTask)
 }
 
@@ -193,7 +198,10 @@ func (s *Server) executeImageEdit(ctx context.Context, req imageEditRequest, r *
 		return nil, err
 	}
 
+	identity := identityFromContext(ctx)
 	task, err := s.imageTasks.createTask(createImageTaskRequest{
+		UserID:         identity.UserID,
+		Username:       identity.Username,
 		ConversationID: "",
 		TurnID:         fmt.Sprintf("compat-edit-%d", time.Now().UnixNano()),
 		Source:         "compat",
@@ -214,6 +222,7 @@ func (s *Server) executeImageEdit(ctx context.Context, req imageEditRequest, r *
 	if err != nil {
 		return nil, err
 	}
+	s.saveCompatTaskHistory(ctx, identity, finalTask, "edit", prompt, normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model), 1, strings.TrimSpace(req.Size), strings.TrimSpace(req.Quality), sourceImages)
 	return compatTaskPayload(finalTask)
 }
 
@@ -233,7 +242,18 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 		return nil, newRequestError("source_account_id_required", "source_account_id is required for selection edit")
 	}
 
+	identity := identityFromContext(ctx)
+	sourceImages := []imageTaskSourceImagePayload{
+		{
+			ID:      "compat-mask",
+			Role:    "mask",
+			Name:    "mask.png",
+			DataURL: "data:image/png;base64," + base64.StdEncoding.EncodeToString(req.Mask),
+		},
+	}
 	task, err := s.imageTasks.createTask(createImageTaskRequest{
+		UserID:         identity.UserID,
+		Username:       identity.Username,
 		ConversationID: "",
 		TurnID:         fmt.Sprintf("compat-selection-edit-%d", time.Now().UnixNano()),
 		Source:         "compat",
@@ -242,14 +262,7 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 		Model:          normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model),
 		Count:          1,
 		ResponseFormat: "url",
-		SourceImages: []imageTaskSourceImagePayload{
-			{
-				ID:      "compat-mask",
-				Role:    "mask",
-				Name:    "mask.png",
-				DataURL: "data:image/png;base64," + base64.StdEncoding.EncodeToString(req.Mask),
-			},
-		},
+		SourceImages:   sourceImages,
 		SourceReference: &imageTaskSourceReferencePayload{
 			OriginalFileID:  strings.TrimSpace(req.OriginalFileID),
 			OriginalGenID:   strings.TrimSpace(req.OriginalGenID),
@@ -265,7 +278,78 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 	if err != nil {
 		return nil, err
 	}
+	s.saveCompatTaskHistory(ctx, identity, finalTask, "edit", prompt, normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model), 1, "", "", sourceImages)
 	return compatTaskPayload(finalTask)
+}
+
+func (s *Server) saveCompatTaskHistory(ctx context.Context, identity authIdentity, task *imageTaskView, mode, prompt, model string, count int, size, quality string, sources []imageTaskSourceImagePayload) {
+	if task == nil || len(task.Images) == 0 || strings.TrimSpace(identity.UserID) == "" {
+		return
+	}
+	images := append([]imagehistory.Image(nil), task.Images...)
+	for index := range images {
+		if strings.TrimSpace(images[index].Prompt) == "" {
+			images[index].Prompt = prompt
+		}
+	}
+	sourceImages := make([]imagehistory.SourceImage, 0, len(sources))
+	for _, source := range sources {
+		sourceImages = append(sourceImages, imagehistory.SourceImage{
+			ID:      strings.TrimSpace(source.ID),
+			Role:    strings.TrimSpace(source.Role),
+			Name:    strings.TrimSpace(source.Name),
+			DataURL: strings.TrimSpace(source.DataURL),
+			URL:     strings.TrimSpace(source.URL),
+		})
+	}
+	createdAt := task.CreatedAt
+	if strings.TrimSpace(createdAt) == "" {
+		createdAt = time.Now().UTC().Format(time.RFC3339Nano)
+	}
+	status := "success"
+	if task.Status != imageTaskStatusSucceeded {
+		status = string(task.Status)
+	}
+	title := firstNonEmpty(strings.TrimSpace(prompt), mode)
+	if len([]rune(title)) > 24 {
+		title = string([]rune(title)[:24]) + "..."
+	}
+	store, err := imagehistory.NewStoreForUser(s.cfg, identity.UserID)
+	if err != nil {
+		return
+	}
+	defer store.Close()
+	_, _ = store.Save(ctx, imagehistory.Conversation{
+		ID:           firstNonEmpty(task.ConversationID, task.ID),
+		UserID:       identity.UserID,
+		Title:        title,
+		Mode:         mode,
+		Prompt:       prompt,
+		Model:        model,
+		Count:        count,
+		Size:         size,
+		Quality:      quality,
+		SourceImages: sourceImages,
+		Images:       images,
+		CreatedAt:    createdAt,
+		Status:       status,
+		Turns: []imagehistory.Turn{
+			{
+				ID:           firstNonEmpty(task.TurnID, task.ID+"-turn"),
+				Title:        title,
+				Mode:         mode,
+				Prompt:       prompt,
+				Model:        model,
+				Count:        count,
+				Size:         size,
+				Quality:      quality,
+				SourceImages: sourceImages,
+				Images:       images,
+				CreatedAt:    createdAt,
+				Status:       status,
+			},
+		},
+	})
 }
 
 func (s *Server) handleImageChatCompletions(w http.ResponseWriter, r *http.Request) {
