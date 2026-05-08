@@ -842,6 +842,7 @@ func (c *ChatGPTClient) parseSSE(ctx context.Context, reader io.Reader, requestC
 		conversationID string
 		asyncMode      bool
 		images         []ImageResult
+		refusalText    string
 	)
 
 	for scanner.Scan() {
@@ -895,6 +896,13 @@ func (c *ChatGPTClient) parseSSE(ctx context.Context, reader io.Reader, requestC
 		}
 		// Extract images from multimodal_text parts (sync case)
 		images = append(images, c.extractImages(ctx, msg, conversationID)...)
+
+		// Detect model refusal: assistant text message that finished without producing images
+		if msg.Author.Role == "assistant" && msg.Status == "finished_successfully" && msg.Content.ContentType == "text" {
+			if text := extractSSETextContent(msg); text != "" {
+				refusalText = text
+			}
+		}
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -907,6 +915,11 @@ func (c *ChatGPTClient) parseSSE(ctx context.Context, reader io.Reader, requestC
 	// If images were found inline, return immediately
 	if len(images) > 0 {
 		return images, nil
+	}
+
+	// If the model produced a text reply without images, it refused the request
+	if refusalText != "" {
+		return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusalText, 200))
 	}
 
 	// If async mode, poll the conversation until images appear
@@ -983,13 +996,16 @@ func (c *ChatGPTClient) pollForImages(ctx context.Context, conversationID, rootM
 		case <-time.After(c.pollInterval):
 		}
 
-		images, err := c.fetchConversationImages(ctx, conversationID, rootMessageID)
+		images, refusal, err := c.fetchConversationImagesWithRefusal(ctx, conversationID, rootMessageID)
 		if err != nil {
 			log.Printf("[poll] error fetching conversation: %v", err)
 			continue
 		}
 		if len(images) > 0 {
 			return images, nil
+		}
+		if refusal != "" {
+			return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusal, 200))
 		}
 		log.Printf("[poll] still waiting for images...")
 	}
@@ -998,19 +1014,24 @@ func (c *ChatGPTClient) pollForImages(ctx context.Context, conversationID, rootM
 
 // fetchConversationImages fetches the full conversation and extracts any image results.
 func (c *ChatGPTClient) fetchConversationImages(ctx context.Context, conversationID, rootMessageID string) ([]ImageResult, error) {
+	images, _, err := c.fetchConversationImagesWithRefusal(ctx, conversationID, rootMessageID)
+	return images, err
+}
+
+func (c *ChatGPTClient) fetchConversationImagesWithRefusal(ctx context.Context, conversationID, rootMessageID string) ([]ImageResult, string, error) {
 	url := fmt.Sprintf("%s/conversation/%s", baseURL, conversationID)
 	req, _ := http.NewRequestWithContext(ctx, "GET", url, nil)
 	c.setHeaders(req)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return nil, fmt.Errorf("GET conversation returned %d: %s", resp.StatusCode, string(body))
+		return nil, "", fmt.Errorf("GET conversation returned %d: %s", resp.StatusCode, string(body))
 	}
 
 	var conv struct {
@@ -1021,10 +1042,11 @@ func (c *ChatGPTClient) fetchConversationImages(ctx context.Context, conversatio
 		} `json:"mapping"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&conv); err != nil {
-		return nil, fmt.Errorf("decode conversation: %w", err)
+		return nil, "", fmt.Errorf("decode conversation: %w", err)
 	}
 
 	var images []ImageResult
+	var refusal string
 	seen := map[string]struct{}{}
 	var visit func(string)
 	visit = func(nodeID string) {
@@ -1044,6 +1066,11 @@ func (c *ChatGPTClient) fetchConversationImages(ctx context.Context, conversatio
 				node.Message.Author.Role, node.Message.Status,
 				node.Message.Content.ContentType, len(node.Message.Content.Parts))
 			images = append(images, c.extractImages(ctx, node.Message, conversationID)...)
+			if node.Message.Author.Role == "assistant" && node.Message.Status == "finished_successfully" && node.Message.Content.ContentType == "text" {
+				if text := extractSSETextContent(node.Message); text != "" {
+					refusal = text
+				}
+			}
 		}
 		for _, childID := range node.Children {
 			visit(childID)
@@ -1052,14 +1079,20 @@ func (c *ChatGPTClient) fetchConversationImages(ctx context.Context, conversatio
 
 	if rootMessageID != "" {
 		visit(rootMessageID)
-		return images, nil
+		if len(images) > 0 {
+			return images, "", nil
+		}
+		return images, refusal, nil
 	}
 
 	for nodeID := range conv.Mapping {
 		visit(nodeID)
 	}
 
-	return images, nil
+	if len(images) > 0 {
+		return images, "", nil
+	}
+	return images, refusal, nil
 }
 
 // getAttachmentURL fetches the download URL for sediment:// assets via the attachment API.
@@ -1192,6 +1225,28 @@ func shouldFallbackFromFConversation(err error) bool {
 	}
 	return strings.Contains(message, "f conversation request:") ||
 		strings.Contains(message, "f conversation returned 5")
+}
+
+func extractSSETextContent(msg *sseMessage) string {
+	if msg == nil || msg.Content.ContentType != "text" || len(msg.Content.Parts) == 0 {
+		return ""
+	}
+	var parts []string
+	for _, raw := range msg.Content.Parts {
+		var text string
+		if json.Unmarshal(raw, &text) == nil && strings.TrimSpace(text) != "" {
+			parts = append(parts, strings.TrimSpace(text))
+		}
+	}
+	return strings.Join(parts, " ")
+}
+
+func truncateRefusal(text string, maxLen int) string {
+	runes := []rune(text)
+	if len(runes) <= maxLen {
+		return text
+	}
+	return string(runes[:maxLen]) + "..."
 }
 
 func extractFileID(pointer string) string {

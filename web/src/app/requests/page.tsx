@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteRequestLogs, fetchRequestLogs, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
+import { deleteRequestLogs, fetchRequestLogFilters, fetchRequestLogs, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatTime(value: string) {
@@ -65,7 +65,6 @@ export default function RequestsPage() {
       const data = await fetchRequestLogs({ page: safePage, pageSize: numericPageSize, ...filters });
       setItems(data.items || []);
       setSelectedIds((prev) => prev.filter((id) => (data.items || []).some((item) => item.id === id)));
-      setFilterOptions(data.filters || { users: [], accounts: [] });
       setTotal(data.total || 0);
       setPage(data.page || safePage);
     } catch (error) {
@@ -78,6 +77,10 @@ export default function RequestsPage() {
   useEffect(() => {
     void loadItems();
   }, [loadItems]);
+
+  useEffect(() => {
+    fetchRequestLogFilters().then((data) => setFilterOptions(data)).catch(() => {});
+  }, []);
 
   const paginationItems = useMemo(() => {
     const nextItems: (number | "...")[] = [];

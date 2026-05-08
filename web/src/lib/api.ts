@@ -926,7 +926,11 @@ export async function fetchRequestLogs(params: { page?: number; pageSize?: numbe
   if (params.account?.trim()) searchParams.set("account", params.account.trim());
   if (params.prompt?.trim()) searchParams.set("prompt", params.prompt.trim());
   const query = searchParams.toString();
-  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number; filters: RequestLogFilterOptions }>(`/api/requests${query ? `?${query}` : ""}`);
+  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number }>(`/api/requests${query ? `?${query}` : ""}`);
+}
+
+export async function fetchRequestLogFilters() {
+  return httpRequest<RequestLogFilterOptions>("/api/requests/filters");
 }
 
 export async function deleteRequestLogs(ids: string[]) {

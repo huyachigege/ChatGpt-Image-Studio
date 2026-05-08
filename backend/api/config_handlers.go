@@ -268,8 +268,11 @@ func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 		"total":    total,
 		"page":     query.Page,
 		"pageSize": query.PageSize,
-		"filters":  s.reqLogs.filterOptions(),
 	})
+}
+
+func (s *Server) handleRequestLogFilters(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.reqLogs.filterOptions())
 }
 
 func (s *Server) handleDeleteRequestLogs(w http.ResponseWriter, r *http.Request) {

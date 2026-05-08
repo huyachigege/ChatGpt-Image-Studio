@@ -151,10 +151,8 @@ export default function ImageGalleryPage() {
     setDeletingName(item.name);
     try {
       await deleteImageGalleryItems([item.name]);
-      setItems((current) => current.filter((entry) => entry.name !== item.name));
-      setSelectedNames((current) => current.filter((name) => name !== item.name));
-      setTotal((current) => Math.max(0, current - 1));
       toast.success("图片已删除");
+      void loadItems(page, searchQuery, pageSize);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除图片失败");
     } finally {
@@ -197,11 +195,9 @@ export default function ImageGalleryPage() {
     setIsBatchDeleting(true);
     try {
       const payload = await deleteImageGalleryItems(selectedNames);
-      const deleted = new Set(payload.deleted || selectedNames);
-      setItems((current) => current.filter((entry) => !deleted.has(entry.name)));
-      setSelectedNames([]);
-      setTotal((current) => Math.max(0, current - deleted.size));
-      toast.success(`已删除 ${deleted.size} 张图片`);
+      const deleted = payload.deleted || selectedNames;
+      toast.success(`已删除 ${deleted.length} 张图片`);
+      void loadItems(page, searchQuery, pageSize);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "批量删除失败");
     } finally {
