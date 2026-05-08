@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Activity, ChevronLeft, ChevronRight, Copy, Info, RefreshCw, Search } from "lucide-react";
+import { Activity, ChevronLeft, ChevronRight, Copy, Info, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fetchRequestLogs, type RequestLogItem } from "@/lib/api";
+import { deleteRequestLogs, fetchRequestLogs, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatTime(value: string) {
@@ -44,11 +44,14 @@ export default function RequestsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState("20");
   const [total, setTotal] = useState(0);
-  const [userDraft, setUserDraft] = useState("");
-  const [accountDraft, setAccountDraft] = useState("");
+  const [userDraft, setUserDraft] = useState("all");
+  const [accountDraft, setAccountDraft] = useState("all");
   const [promptDraft, setPromptDraft] = useState("");
   const [filters, setFilters] = useState({ user: "", account: "", prompt: "" });
+  const [filterOptions, setFilterOptions] = useState<RequestLogFilterOptions>({ users: [], accounts: [] });
   const [detailItem, setDetailItem] = useState<RequestLogItem | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const numericPageSize = Number(pageSize);
   const pageCount = Math.max(1, Math.ceil(total / numericPageSize));
@@ -61,6 +64,8 @@ export default function RequestsPage() {
     try {
       const data = await fetchRequestLogs({ page: safePage, pageSize: numericPageSize, ...filters });
       setItems(data.items || []);
+      setSelectedIds((prev) => prev.filter((id) => (data.items || []).some((item) => item.id === id)));
+      setFilterOptions(data.filters || { users: [], accounts: [] });
       setTotal(data.total || 0);
       setPage(data.page || safePage);
     } catch (error) {
@@ -93,8 +98,15 @@ export default function RequestsPage() {
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(1);
-    setFilters({ user: userDraft.trim(), account: accountDraft.trim(), prompt: promptDraft.trim() });
+    setFilters({
+      user: userDraft === "all" ? "" : userDraft,
+      account: accountDraft === "all" ? "" : accountDraft,
+      prompt: promptDraft.trim(),
+    });
   };
+
+  const currentPageIds = useMemo(() => items.map((item) => item.id), [items]);
+  const isAllCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIds.includes(id));
 
   const copyPrompt = async (item: RequestLogItem) => {
     const prompt = item.prompt?.trim();
@@ -104,6 +116,39 @@ export default function RequestsPage() {
     }
     await navigator.clipboard.writeText(prompt);
     toast.success("提示词已复制");
+  };
+
+  const toggleSelected = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => checked ? Array.from(new Set([...prev, id])) : prev.filter((item) => item !== id));
+  };
+
+  const toggleCurrentPageSelected = (checked: boolean) => {
+    setSelectedIds((prev) => {
+      if (!checked) {
+        return prev.filter((id) => !currentPageIds.includes(id));
+      }
+      return Array.from(new Set([...prev, ...currentPageIds]));
+    });
+  };
+
+  const handleDeleteSelected = async (ids: string[]) => {
+    if (ids.length === 0 || isDeleting) {
+      return;
+    }
+    if (!window.confirm(`确定删除 ${ids.length} 条调用请求记录吗？`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const result = await deleteRequestLogs(ids);
+      setSelectedIds((prev) => prev.filter((id) => !(result.deleted || []).includes(id)));
+      toast.success(`已删除 ${result.deleted?.length || 0} 条记录`);
+      await loadItems();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "删除调用请求失败");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -121,13 +166,30 @@ export default function RequestsPage() {
           </div>
           <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
             <form className="grid gap-2 sm:grid-cols-3 lg:flex" onSubmit={handleFilterSubmit}>
-              <Input value={userDraft} onChange={(event) => setUserDraft(event.target.value)} placeholder="按用户筛选" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none" />
-              <Input value={accountDraft} onChange={(event) => setAccountDraft(event.target.value)} placeholder="按账号筛选" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none" />
+              <Select value={userDraft} onValueChange={setUserDraft}>
+                <SelectTrigger className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none lg:w-[170px]"><SelectValue placeholder="选择用户" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部用户</SelectItem>
+                  {filterOptions.users.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select value={accountDraft} onValueChange={setAccountDraft}>
+                <SelectTrigger className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none lg:w-[220px]"><SelectValue placeholder="选择账号" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部账号</SelectItem>
+                  {filterOptions.accounts.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
               <Input value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} placeholder="搜索提示词" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none" />
               <Button type="submit" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none">
                 <Search className="size-4" />筛选
               </Button>
             </form>
+            {selectedIds.length > 0 ? (
+              <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteSelected(selectedIds)} disabled={isDeleting}>
+                <Trash2 className="size-4" />删除选中({selectedIds.length})
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none" onClick={() => void loadItems()} disabled={isLoading}>
               {isLoading ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               刷新记录
@@ -140,6 +202,15 @@ export default function RequestsPage() {
             <div className="space-y-4 p-4 lg:hidden">
               {items.map((item) => (
                 <div key={item.id} className="rounded-2xl border border-stone-200/80 bg-stone-50/60 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <label className="inline-flex items-center gap-2 text-xs text-stone-500">
+                      <input type="checkbox" className="size-4 rounded border-stone-300" checked={selectedIds.includes(item.id)} onChange={(event) => toggleSelected(item.id, event.target.checked)} />
+                      选择
+                    </label>
+                    <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg border-red-200 bg-white px-2 text-xs text-red-600" onClick={() => void handleDeleteSelected([item.id])} disabled={isDeleting}>
+                      <Trash2 className="size-3.5" />删除
+                    </Button>
+                  </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <div className="font-medium text-stone-700">{formatTime(item.startedAt)}</div>
@@ -177,6 +248,9 @@ export default function RequestsPage() {
                   <table className="w-full min-w-[1180px] text-left">
                     <thead className="sticky top-0 z-10 border-b border-stone-100 bg-white/95 text-[11px] uppercase tracking-[0.18em] text-stone-400 backdrop-blur-sm">
                       <tr>
+                        <th className="px-4 py-3 whitespace-nowrap">
+                          <input type="checkbox" className="size-4 rounded border-stone-300" checked={isAllCurrentPageSelected} onChange={(event) => toggleCurrentPageSelected(event.target.checked)} aria-label="选择当前页" />
+                        </th>
                         <th className="px-4 py-3 whitespace-nowrap">时间</th>
                         <th className="px-4 py-3 whitespace-nowrap">操作</th>
                         <th className="px-4 py-3 whitespace-nowrap">路由</th>
@@ -186,12 +260,15 @@ export default function RequestsPage() {
                         <th className="px-4 py-3 whitespace-nowrap">提示词</th>
                         <th className="px-4 py-3 whitespace-nowrap">用户</th>
                         <th className="px-4 py-3 whitespace-nowrap">账号</th>
-                        <th className="px-4 py-3 whitespace-nowrap">详情</th>
+                        <th className="px-4 py-3 whitespace-nowrap">操作</th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.map((item) => (
                         <tr key={item.id} className="border-b border-stone-100/80 text-sm text-stone-600 hover:bg-stone-50/70">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <input type="checkbox" className="size-4 rounded border-stone-300" checked={selectedIds.includes(item.id)} onChange={(event) => toggleSelected(item.id, event.target.checked)} aria-label="选择记录" />
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="font-medium text-stone-700">{formatTime(item.startedAt)}</div>
                             <div className="text-xs text-stone-400">{item.finishedAt ? formatTime(item.finishedAt) : "进行中"}</div>
@@ -207,7 +284,7 @@ export default function RequestsPage() {
                             <div className="text-xs text-stone-400">{typeof item.promptLength === "number" && item.promptLength > 0 ? `${item.promptLength} 字` : "prompt: —"}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap"><Badge variant={item.success ? "success" : "danger"} className="rounded-md px-2 py-1">{item.success ? "成功" : "失败"}</Badge></td>
-                          <td className="px-4 py-3"><div className="max-w-[220px] truncate text-xs text-stone-500" title={item.error || ""}>{item.error || "—"}</div></td>
+                          <td className="px-4 py-3 whitespace-nowrap"><div className="max-w-[80px] truncate text-xs text-stone-500" title={item.error || ""}>{item.error || "—"}</div></td>
                           <td className="px-4 py-3"><PromptCell item={item} onCopy={copyPrompt} /></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="truncate text-stone-700" title={item.username || item.userId || ""}>{item.username || item.userId || "—"}</div>
@@ -218,9 +295,14 @@ export default function RequestsPage() {
                             <div className="truncate text-xs text-stone-400" title={item.accountFile || ""}>{item.accountType ? `${item.accountType} · ${item.accountFile || "—"}` : item.accountFile || "—"}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => setDetailItem(item)}>
-                              <Info className="size-3.5" />详情
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => setDetailItem(item)}>
+                                <Info className="size-3.5" />详情
+                              </Button>
+                              <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-red-200 bg-white px-2 text-xs text-red-600" onClick={() => void handleDeleteSelected([item.id])} disabled={isDeleting}>
+                                <Trash2 className="size-3.5" />删除
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}

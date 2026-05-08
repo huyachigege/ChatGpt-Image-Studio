@@ -54,6 +54,13 @@ type Server struct {
 	cachedSub2APIKey       string
 }
 
+func (s *Server) Close() error {
+	if s == nil || s.reqLogs == nil {
+		return nil
+	}
+	return s.reqLogs.close()
+}
+
 type requestError struct {
 	code    string
 	message string
@@ -102,7 +109,7 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 		syncClient:     syncClient,
 		syncRunCache:   map[string]*sourceSyncRunResult{},
 		staticDir:      cfg.ResolvePath(cfg.Server.StaticDir),
-		reqLogs:        newImageRequestLogStore(cfg.ResolvePath("data/image_request_logs.jsonl")),
+		reqLogs:        newImageRequestLogStore(cfg),
 		imageAdmission: newImageAdmissionController(),
 		officialClientFactory: func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
 			return handler.NewChatGPTClientWithAuthData(accessToken, proxyURL, authData, requestConfig)
@@ -441,6 +448,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/integration/newapi/token", s.requireAdminAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
 	mux.Handle("POST /api/integration/sub2api/groups", s.requireAdminAuth(http.HandlerFunc(s.handleSub2APIGroups)))
 	mux.Handle("GET /api/requests", s.requireAdminAuth(http.HandlerFunc(s.handleListRequestLogs)))
+	mux.Handle("POST /api/requests/delete", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteRequestLogs)))
 	mux.Handle("GET /api/startup/check", s.requireAdminAuth(http.HandlerFunc(s.handleStartupCheck)))
 	mux.Handle("GET /api/runtime/status", s.requireAdminAuth(http.HandlerFunc(s.handleRuntimeStatus)))
 	mux.Handle("GET /api/diagnostics/export", s.requireAdminAuth(http.HandlerFunc(s.handleExportDiagnostics)))

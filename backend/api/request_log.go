@@ -2,14 +2,20 @@ package api
 
 import (
 	"bufio"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"chatgpt2api/internal/config"
+
+	_ "modernc.org/sqlite"
 )
 
 const maxImageRequestLogEntries = 5000
@@ -60,19 +66,43 @@ type imageRequestLogQuery struct {
 	Prompt   string
 }
 
-type imageRequestLogStore struct {
-	mu    sync.Mutex
-	path  string
-	items []imageRequestLogEntry
+type imageRequestLogFilterOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
-func newImageRequestLogStore(path string) *imageRequestLogStore {
+type imageRequestLogFilterOptions struct {
+	Users    []imageRequestLogFilterOption `json:"users"`
+	Accounts []imageRequestLogFilterOption `json:"accounts"`
+}
+
+type imageRequestLogStore struct {
+	mu         sync.Mutex
+	path       string
+	legacyPath string
+	db         *sql.DB
+	items      []imageRequestLogEntry
+}
+
+func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
+	dbPath := cfg.ResolvePath(cfg.Storage.SQLitePath)
+	if dbPath == "" {
+		dbPath = cfg.ResolvePath("data/chatgpt-image-studio.db")
+	}
 	store := &imageRequestLogStore{
-		path:  strings.TrimSpace(path),
-		items: make([]imageRequestLogEntry, 0, maxImageRequestLogEntries),
+		path:       strings.TrimSpace(dbPath),
+		legacyPath: cfg.ResolvePath("data/image_request_logs.jsonl"),
+		items:      make([]imageRequestLogEntry, 0, maxImageRequestLogEntries),
 	}
 	store.load()
 	return store
+}
+
+func (s *imageRequestLogStore) close() error {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	return s.db.Close()
 }
 
 func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
@@ -170,50 +200,229 @@ func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequ
 	return out, total
 }
 
+func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
+	if s == nil {
+		return nil, nil
+	}
+	wanted := make(map[string]struct{}, len(ids))
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			wanted[id] = struct{}{}
+		}
+	}
+	if len(wanted) == 0 {
+		return nil, nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	deleted := make([]string, 0, len(wanted))
+	next := make([]imageRequestLogEntry, 0, len(s.items))
+	for _, item := range s.items {
+		if _, ok := wanted[item.ID]; ok {
+			deleted = append(deleted, item.ID)
+			continue
+		}
+		next = append(next, item)
+	}
+	if len(deleted) == 0 {
+		return deleted, nil
+	}
+	s.items = next
+	return deleted, s.rewriteLocked()
+}
+
+func (s *imageRequestLogStore) filterOptions() imageRequestLogFilterOptions {
+	options := imageRequestLogFilterOptions{}
+	if s == nil {
+		return options
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	users := map[string]string{}
+	accounts := map[string]string{}
+	for _, item := range s.items {
+		if value, label := requestLogUserOption(item); value != "" {
+			users[value] = label
+		}
+		if value, label := requestLogAccountOption(item); value != "" {
+			accounts[value] = label
+		}
+	}
+	options.Users = requestLogOptionsFromMap(users)
+	options.Accounts = requestLogOptionsFromMap(accounts)
+	return options
+}
+
 func (s *imageRequestLogStore) load() {
 	if s == nil || strings.TrimSpace(s.path) == "" {
 		return
 	}
-	file, err := os.Open(s.path)
+	if err := s.openSQLite(); err != nil {
+		return
+	}
+	defer func() {
+		_ = s.db.Close()
+		s.db = nil
+	}()
+	_ = s.importLegacyJSONL()
+
+	rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
 	if err != nil {
 		return
 	}
-	defer file.Close()
+	defer rows.Close()
 
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	items := make([]imageRequestLogEntry, 0, maxImageRequestLogEntries)
-	for scanner.Scan() {
-		var entry imageRequestLogEntry
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
 			continue
 		}
-		items = append([]imageRequestLogEntry{entry}, items...)
-		if len(items) > maxImageRequestLogEntries {
-			items = items[:maxImageRequestLogEntries]
+		var entry imageRequestLogEntry
+		if err := json.Unmarshal(raw, &entry); err != nil {
+			continue
 		}
+		items = append(items, entry)
 	}
 	s.items = items
 }
 
 func (s *imageRequestLogStore) append(entry imageRequestLogEntry) error {
-	if s == nil || strings.TrimSpace(s.path) == "" {
+	if s == nil {
+		return nil
+	}
+	if err := s.openSQLite(); err != nil {
+		return err
+	}
+	defer func() {
+		_ = s.db.Close()
+		s.db = nil
+	}()
+	return s.insertSQLite(entry)
+}
+
+func (s *imageRequestLogStore) rewriteLocked() error {
+	if s == nil {
+		return nil
+	}
+	if err := s.openSQLite(); err != nil {
+		return err
+	}
+	defer func() {
+		_ = s.db.Close()
+		s.db = nil
+	}()
+	_, err := s.db.Exec(`DELETE FROM image_request_logs`)
+	if err != nil {
+		return err
+	}
+	for index := len(s.items) - 1; index >= 0; index-- {
+		if err := s.insertSQLite(s.items[index]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *imageRequestLogStore) openSQLite() error {
+	if s.db != nil {
 		return nil
 	}
 	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
 		return err
 	}
-	file, err := os.OpenFile(s.path, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	db, err := sql.Open("sqlite", s.path)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	if _, err := db.Exec(`PRAGMA busy_timeout = 10000`); err != nil {
+		_ = db.Close()
+		return err
+	}
+	if _, err := db.Exec(`PRAGMA journal_mode = WAL`); err != nil {
+		_ = db.Close()
+		return err
+	}
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS image_request_logs (
+		id TEXT PRIMARY KEY,
+		started_at TEXT NOT NULL DEFAULT '',
+		user_key TEXT NOT NULL DEFAULT '',
+		account_key TEXT NOT NULL DEFAULT '',
+		prompt TEXT NOT NULL DEFAULT '',
+		raw_json BLOB NOT NULL
+	)`); err != nil {
+		_ = db.Close()
+		return err
+	}
+	for _, stmt := range []string{
+		`CREATE INDEX IF NOT EXISTS idx_image_request_logs_started_at ON image_request_logs(started_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_image_request_logs_user_key ON image_request_logs(user_key)`,
+		`CREATE INDEX IF NOT EXISTS idx_image_request_logs_account_key ON image_request_logs(account_key)`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			_ = db.Close()
+			return err
+		}
+	}
+	s.db = db
+	return nil
+}
+
+func (s *imageRequestLogStore) insertSQLite(entry imageRequestLogEntry) error {
+	if strings.TrimSpace(entry.ID) == "" {
+		return nil
+	}
 	payload, err := json.Marshal(entry)
 	if err != nil {
 		return err
 	}
-	_, err = file.Write(append(payload, '\n'))
+	_, err = s.db.Exec(
+		`INSERT OR REPLACE INTO image_request_logs (id, started_at, user_key, account_key, prompt, raw_json) VALUES (?, ?, ?, ?, ?, ?)`,
+		entry.ID,
+		entry.StartedAt,
+		strings.ToLower(strings.TrimSpace(entry.UserID+" "+entry.Username+" "+entry.UserRole)),
+		strings.ToLower(strings.TrimSpace(entry.AccountEmail+" "+entry.AccountFile+" "+entry.AccountType)),
+		strings.ToLower(strings.TrimSpace(entry.Prompt)),
+		payload,
+	)
 	return err
+}
+
+func (s *imageRequestLogStore) importLegacyJSONL() error {
+	if strings.TrimSpace(s.legacyPath) == "" {
+		return nil
+	}
+	var existing int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM image_request_logs`).Scan(&existing); err != nil || existing > 0 {
+		return err
+	}
+	file, err := os.Open(s.legacyPath)
+	if err != nil {
+		return nil
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		var entry imageRequestLogEntry
+		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+			continue
+		}
+		if strings.TrimSpace(entry.ID) == "" {
+			entry.ID = fmt.Sprintf("req_%d", time.Now().UnixNano())
+		}
+		if err := s.insertSQLite(entry); err != nil {
+			return err
+		}
+	}
+	return scanner.Err()
 }
 
 func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string]any) {
@@ -258,6 +467,54 @@ func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string
 	}
 	entry.ImageURLs = imageURLs
 	entry.ImageNames = imageNames
+}
+
+func requestLogUserOption(item imageRequestLogEntry) (string, string) {
+	value := strings.TrimSpace(item.UserID)
+	label := strings.TrimSpace(item.Username)
+	if value == "" {
+		value = label
+	}
+	if label == "" {
+		label = value
+	}
+	if item.UserRole != "" && label != "" {
+		label += " · " + item.UserRole
+	}
+	return value, label
+}
+
+func requestLogAccountOption(item imageRequestLogEntry) (string, string) {
+	value := strings.TrimSpace(item.AccountEmail)
+	if value == "" {
+		value = strings.TrimSpace(item.AccountFile)
+	}
+	if value == "" {
+		value = strings.TrimSpace(item.AccountType)
+	}
+	label := strings.TrimSpace(item.AccountEmail)
+	if label == "" {
+		label = strings.TrimSpace(item.AccountFile)
+	}
+	if item.AccountType != "" && label != "" {
+		label += " · " + item.AccountType
+	}
+	return value, label
+}
+
+func requestLogOptionsFromMap(values map[string]string) []imageRequestLogFilterOption {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return strings.ToLower(values[keys[i]]) < strings.ToLower(values[keys[j]])
+	})
+	options := make([]imageRequestLogFilterOption, 0, len(keys))
+	for _, key := range keys {
+		options = append(options, imageRequestLogFilterOption{Value: key, Label: values[key]})
+	}
+	return options
 }
 
 func requestLogEntryMatches(item imageRequestLogEntry, query imageRequestLogQuery) bool {

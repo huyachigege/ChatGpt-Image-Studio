@@ -383,6 +383,16 @@ export type ConfigPayload = {
   };
 };
 
+export type RequestLogFilterOption = {
+  value: string;
+  label: string;
+};
+
+export type RequestLogFilterOptions = {
+  users: RequestLogFilterOption[];
+  accounts: RequestLogFilterOption[];
+};
+
 export type RequestLogItem = {
   id: string;
   startedAt: string;
@@ -916,7 +926,14 @@ export async function fetchRequestLogs(params: { page?: number; pageSize?: numbe
   if (params.account?.trim()) searchParams.set("account", params.account.trim());
   if (params.prompt?.trim()) searchParams.set("prompt", params.prompt.trim());
   const query = searchParams.toString();
-  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number }>(`/api/requests${query ? `?${query}` : ""}`);
+  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number; filters: RequestLogFilterOptions }>(`/api/requests${query ? `?${query}` : ""}`);
+}
+
+export async function deleteRequestLogs(ids: string[]) {
+  return httpRequest<{ ok: boolean; deleted: string[] }>("/api/requests/delete", {
+    method: "POST",
+    body: { ids },
+  });
 }
 
 export async function fetchVersionInfo() {

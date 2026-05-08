@@ -268,7 +268,24 @@ func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 		"total":    total,
 		"page":     query.Page,
 		"pageSize": query.PageSize,
+		"filters":  s.reqLogs.filterOptions(),
 	})
+}
+
+func (s *Server) handleDeleteRequestLogs(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		IDs []string `json:"ids"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	deleted, err := s.reqLogs.delete(payload.IDs)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": deleted})
 }
 
 func (s *Server) buildConfigPayload() configPayload {
