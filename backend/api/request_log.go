@@ -94,8 +94,19 @@ func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
 		legacyPath: cfg.ResolvePath("data/image_request_logs.jsonl"),
 		items:      make([]imageRequestLogEntry, 0, maxImageRequestLogEntries),
 	}
-	store.load()
+	store.initDB()
 	return store
+}
+
+func (s *imageRequestLogStore) initDB() {
+	if s == nil || strings.TrimSpace(s.path) == "" {
+		return
+	}
+	if err := s.openSQLite(); err != nil {
+		return
+	}
+	_ = s.importLegacyJSONL()
+	s.loadFromDB()
 }
 
 func (s *imageRequestLogStore) close() error {
@@ -161,11 +172,9 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 }
 
 func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequestLogEntry, int) {
-	if s == nil {
+	if s == nil || s.db == nil {
 		return nil, 0
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	page := query.Page
 	if page <= 0 {
@@ -179,29 +188,68 @@ func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequ
 		pageSize = 100
 	}
 
-	filtered := make([]imageRequestLogEntry, 0, len(s.items))
-	for _, item := range s.items {
-		if !requestLogEntryMatches(item, query) {
-			continue
-		}
-		filtered = append(filtered, item)
+	where, args := s.buildWhereClause(query)
+
+	var total int
+	countSQL := `SELECT COUNT(*) FROM image_request_logs` + where
+	if err := s.db.QueryRow(countSQL, args...).Scan(&total); err != nil {
+		return nil, 0
 	}
-	total := len(filtered)
-	start := (page - 1) * pageSize
-	if start >= total {
+
+	offset := (page - 1) * pageSize
+	if offset >= total {
 		return []imageRequestLogEntry{}, total
 	}
-	end := start + pageSize
-	if end > total {
-		end = total
+
+	dataSQL := `SELECT raw_json FROM image_request_logs` + where + ` ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?`
+	dataArgs := append(args, pageSize, offset)
+	rows, err := s.db.Query(dataSQL, dataArgs...)
+	if err != nil {
+		return nil, total
 	}
-	out := make([]imageRequestLogEntry, end-start)
-	copy(out, filtered[start:end])
-	return out, total
+	defer rows.Close()
+
+	items := make([]imageRequestLogEntry, 0, pageSize)
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			continue
+		}
+		var entry imageRequestLogEntry
+		if err := json.Unmarshal(raw, &entry); err != nil {
+			continue
+		}
+		items = append(items, entry)
+	}
+	return items, total
+}
+
+func (s *imageRequestLogStore) buildWhereClause(query imageRequestLogQuery) (string, []any) {
+	var conditions []string
+	var args []any
+	user := strings.ToLower(strings.TrimSpace(query.User))
+	if user != "" {
+		conditions = append(conditions, `user_key LIKE ?`)
+		args = append(args, "%"+user+"%")
+	}
+	account := strings.ToLower(strings.TrimSpace(query.Account))
+	if account != "" {
+		conditions = append(conditions, `account_key LIKE ?`)
+		args = append(args, "%"+account+"%")
+	}
+	prompt := strings.ToLower(strings.TrimSpace(query.Prompt))
+	if prompt != "" {
+		conditions = append(conditions, `prompt LIKE ?`)
+		args = append(args, "%"+prompt+"%")
+	}
+	if len(conditions) == 0 {
+		return "", nil
+	}
+	return " WHERE " + strings.Join(conditions, " AND "), args
 }
 
 func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
-	if s == nil {
+	if s == nil || s.db == nil {
 		return nil, nil
 	}
 	wanted := make(map[string]struct{}, len(ids))
@@ -218,6 +266,22 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	placeholders := make([]string, 0, len(wanted))
+	args := make([]any, 0, len(wanted))
+	for id := range wanted {
+		placeholders = append(placeholders, "?")
+		args = append(args, id)
+	}
+	query := `DELETE FROM image_request_logs WHERE id IN (` + strings.Join(placeholders, ",") + `)`
+	res, err := s.db.Exec(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return []string{}, nil
+	}
+
 	deleted := make([]string, 0, len(wanted))
 	next := make([]imageRequestLogEntry, 0, len(s.items))
 	for _, item := range s.items {
@@ -227,11 +291,8 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 		}
 		next = append(next, item)
 	}
-	if len(deleted) == 0 {
-		return deleted, nil
-	}
 	s.items = next
-	return deleted, s.rewriteLocked()
+	return deleted, nil
 }
 
 func (s *imageRequestLogStore) filterOptions() imageRequestLogFilterOptions {
@@ -257,19 +318,10 @@ func (s *imageRequestLogStore) filterOptions() imageRequestLogFilterOptions {
 	return options
 }
 
-func (s *imageRequestLogStore) load() {
-	if s == nil || strings.TrimSpace(s.path) == "" {
+func (s *imageRequestLogStore) loadFromDB() {
+	if s == nil || s.db == nil {
 		return
 	}
-	if err := s.openSQLite(); err != nil {
-		return
-	}
-	defer func() {
-		_ = s.db.Close()
-		s.db = nil
-	}()
-	_ = s.importLegacyJSONL()
-
 	rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
 	if err != nil {
 		return
@@ -292,40 +344,10 @@ func (s *imageRequestLogStore) load() {
 }
 
 func (s *imageRequestLogStore) append(entry imageRequestLogEntry) error {
-	if s == nil {
+	if s == nil || s.db == nil {
 		return nil
 	}
-	if err := s.openSQLite(); err != nil {
-		return err
-	}
-	defer func() {
-		_ = s.db.Close()
-		s.db = nil
-	}()
 	return s.insertSQLite(entry)
-}
-
-func (s *imageRequestLogStore) rewriteLocked() error {
-	if s == nil {
-		return nil
-	}
-	if err := s.openSQLite(); err != nil {
-		return err
-	}
-	defer func() {
-		_ = s.db.Close()
-		s.db = nil
-	}()
-	_, err := s.db.Exec(`DELETE FROM image_request_logs`)
-	if err != nil {
-		return err
-	}
-	for index := len(s.items) - 1; index >= 0; index-- {
-		if err := s.insertSQLite(s.items[index]); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *imageRequestLogStore) openSQLite() error {
@@ -515,20 +537,4 @@ func requestLogOptionsFromMap(values map[string]string) []imageRequestLogFilterO
 		options = append(options, imageRequestLogFilterOption{Value: key, Label: values[key]})
 	}
 	return options
-}
-
-func requestLogEntryMatches(item imageRequestLogEntry, query imageRequestLogQuery) bool {
-	user := strings.ToLower(strings.TrimSpace(query.User))
-	if user != "" && !strings.Contains(strings.ToLower(item.UserID+" "+item.Username+" "+item.UserRole), user) {
-		return false
-	}
-	account := strings.ToLower(strings.TrimSpace(query.Account))
-	if account != "" && !strings.Contains(strings.ToLower(item.AccountEmail+" "+item.AccountFile+" "+item.AccountType), account) {
-		return false
-	}
-	prompt := strings.ToLower(strings.TrimSpace(query.Prompt))
-	if prompt != "" && !strings.Contains(strings.ToLower(item.Prompt), prompt) {
-		return false
-	}
-	return true
 }

@@ -899,6 +899,7 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 			generateRelease: options.behavior.generateRelease,
 		}
 	}
+	t.Cleanup(func() { server.Close() })
 	return server, recorder
 }
 

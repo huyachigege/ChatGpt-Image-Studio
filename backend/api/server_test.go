@@ -115,6 +115,7 @@ func TestMigrateImageFilesSkipsNestedTargetDirectory(t *testing.T) {
 		t.Fatalf("Load() returned error: %v", err)
 	}
 	server := NewServer(cfg, nil, nil)
+	t.Cleanup(func() { server.Close() })
 
 	oldDir := filepath.Join(rootDir, "data", "tmp", "image")
 	if err := os.MkdirAll(oldDir, 0o755); err != nil {
@@ -150,6 +151,7 @@ func TestResolveImageFilePathFallsBackToOtherDataDirectories(t *testing.T) {
 	}
 	cfg.Storage.ImageDir = "data/new-images"
 	server := NewServer(cfg, nil, nil)
+	t.Cleanup(func() { server.Close() })
 
 	legacyDir := filepath.Join(rootDir, "data", "old-images")
 	if err := os.MkdirAll(legacyDir, 0o755); err != nil {
@@ -174,6 +176,7 @@ func TestImportImageConversationsIntoSQLiteTarget(t *testing.T) {
 	}
 	cfg.App.AuthKey = "test-auth"
 	server := NewServer(cfg, nil, nil)
+	t.Cleanup(func() { server.Close() })
 
 	body := map[string]any{
 		"items": []map[string]any{
@@ -279,6 +282,7 @@ func TestHandleCreateAccountsRejectsOutsideStudioMode(t *testing.T) {
 	defer store.Close()
 
 	server := NewServer(cfg, store, nil)
+	t.Cleanup(func() { server.Close() })
 	req := httptest.NewRequest(http.MethodPost, "/api/accounts", strings.NewReader(`{"tokens":["token-1"]}`))
 	req.Header.Set("Authorization", "Bearer "+cfg.App.AuthKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -309,6 +313,7 @@ func TestHandleRefreshAllAccountsWithEmptyStoreFinishesImmediately(t *testing.T)
 	defer store.Close()
 
 	server := NewServer(cfg, store, nil)
+	t.Cleanup(func() { server.Close() })
 	req := httptest.NewRequest(http.MethodPost, "/api/accounts/refresh-all", strings.NewReader(`{}`))
 	req.Header.Set("Authorization", "Bearer "+cfg.App.AuthKey)
 	req.Header.Set("Content-Type", "application/json")

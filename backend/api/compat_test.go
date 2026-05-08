@@ -253,7 +253,9 @@ func newCompatFreeOnlyStudioServer(t *testing.T) *Server {
 	if err != nil {
 		t.Fatalf("new account store: %v", err)
 	}
-	return NewServer(cfg, store, nil)
+	server := NewServer(cfg, store, nil)
+	t.Cleanup(func() { server.Close() })
+	return server
 }
 
 func writeCompatTestJSON(path string, payload any) error {
