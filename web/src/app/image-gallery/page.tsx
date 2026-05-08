@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Download, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Copy, Download, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -162,6 +162,16 @@ export default function ImageGalleryPage() {
     }
   };
 
+  const copyPrompt = async (prompt?: string) => {
+    const text = prompt?.trim();
+    if (!text) {
+      toast.error("当前图片没有可复制的提示词");
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    toast.success("提示词已复制");
+  };
+
   const handleEditImage = (item: ImageGalleryItem) => {
     navigate("/image/workspace", {
       state: {
@@ -200,14 +210,27 @@ export default function ImageGalleryPage() {
   };
 
   const galleryRows = useMemo(() => {
-    return Array.from({ length: GALLERY_ROWS }, (_, rowIndex) => {
-      const start = rowIndex * columnCount;
-      const rowItems = items.slice(start, start + columnCount);
-      const previousFolder = items[start - 1]?.folder || "";
-      const newFolder = rowItems.find((item) => (item.folder || "") !== previousFolder)?.folder || "";
-      const groupItems = newFolder ? items.filter((item) => item.folder === newFolder) : [];
-      return { groupItems, label: newFolder, rowItems };
-    });
+    const rows: { groupItems: ImageGalleryItem[]; label: string; rowItems: ImageGalleryItem[] }[] = [];
+    let cursor = 0;
+
+    while (rows.length < GALLERY_ROWS) {
+      const rowItems: ImageGalleryItem[] = [];
+      const rowFolder = items[cursor]?.folder || "";
+      const previousFolder = items[cursor - 1]?.folder || "";
+
+      while (cursor < items.length && rowItems.length < columnCount && (items[cursor].folder || "") === rowFolder) {
+        rowItems.push(items[cursor]);
+        cursor += 1;
+      }
+
+      rows.push({
+        groupItems: rowFolder ? items.filter((item) => item.folder === rowFolder) : [],
+        label: rowFolder && rowFolder !== previousFolder ? rowFolder : "",
+        rowItems,
+      });
+    }
+
+    return rows;
   }, [columnCount, items]);
 
   return (
@@ -291,8 +314,13 @@ export default function ImageGalleryPage() {
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-col gap-1 p-2">
-                        <div className="h-6 rounded-xl border border-stone-100 bg-stone-50 px-2 text-[11px] leading-6 text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]" title={item.prompt || "未绑定提示词"}>
-                          {item.prompt ? <div className="truncate">{item.prompt}</div> : <div className="text-stone-400">未绑定提示词</div>}
+                        <div className="flex h-6 items-center gap-1 rounded-xl border border-stone-100 bg-stone-50 px-2 text-[11px] text-stone-600 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]" title={item.prompt || "未绑定提示词"}>
+                          {item.prompt ? <div className="min-w-0 flex-1 truncate">{item.prompt}</div> : <div className="min-w-0 flex-1 text-stone-400">未绑定提示词</div>}
+                          {item.prompt ? (
+                            <button type="button" className="inline-flex size-4 shrink-0 items-center justify-center rounded text-stone-400 hover:bg-stone-200 hover:text-stone-700" onClick={() => void copyPrompt(item.prompt)} title="复制提示词" aria-label="复制提示词">
+                              <Copy className="size-3" />
+                            </button>
+                          ) : null}
                         </div>
                         <div className="grid shrink-0 grid-cols-2 gap-1 pt-0.5">
                           <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleEditImage(item)}>
@@ -340,6 +368,17 @@ export default function ImageGalleryPage() {
                 <div><dt className="text-xs text-stone-500">大小</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatSize(detailItem.size)} ({detailItem.size} B)</dd></div>
                 <div><dt className="text-xs text-stone-500">分辨率</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatResolution(detailItem)}</dd></div>
                 <div><dt className="text-xs text-stone-500">长宽比</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatAspectRatio(detailItem)}</dd></div>
+                <div>
+                  <dt className="text-xs text-stone-500">提示词</dt>
+                  <dd className="mt-1 flex items-start gap-2 text-stone-800 dark:text-[var(--studio-text)]">
+                    <span className="min-w-0 flex-1 break-all">{detailItem.prompt || "—"}</span>
+                    {detailItem.prompt ? (
+                      <Button type="button" variant="outline" className="h-7 rounded-full px-2 text-xs" onClick={() => void copyPrompt(detailItem.prompt)}>
+                        <Copy className="size-3.5" />复制
+                      </Button>
+                    ) : null}
+                  </dd>
+                </div>
                 <div><dt className="text-xs text-stone-500">URL</dt><dd className="mt-1 break-all font-mono text-xs text-stone-800 dark:text-[var(--studio-text)]">{detailItem.url}</dd></div>
               </dl>
             </div>

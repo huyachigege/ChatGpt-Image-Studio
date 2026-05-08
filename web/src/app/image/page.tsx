@@ -76,8 +76,8 @@ const imageAspectRatioOptions: Array<{
 ];
 
 const imageAutoResolutionPresets: ImageResolutionPreset[] = [
-  { tier: "auto-free", label: "Free（提示词指定）", value: "", access: "free" },
   { tier: "auto-paid", label: "Paid（提示词指定）", value: "", access: "paid" },
+  { tier: "auto-free", label: "Free（提示词指定）", value: "", access: "free" },
 ];
 
 const imageResolutionPresets: Record<
@@ -85,39 +85,39 @@ const imageResolutionPresets: Record<
   ImageResolutionPreset[]
 > = {
   "1:1": [
-    { tier: "sd", label: "Free 实际档", value: "1248x1248", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "2048x2048", access: "paid" },
     {
       tier: "4k",
       label: "Paid 高像素上限",
       value: "2880x2880",
       access: "paid",
     },
+    { tier: "2k", label: "Paid 2K", value: "2048x2048", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "1248x1248", access: "free" },
   ],
   "4:3": [
-    { tier: "sd", label: "Free 实际档", value: "1440x1072", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "2048x1536", access: "paid" },
     { tier: "4k", label: "Paid 高像素", value: "3264x2448", access: "paid" },
+    { tier: "2k", label: "Paid 2K", value: "2048x1536", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "1440x1072", access: "free" },
   ],
   "3:2": [
-    { tier: "sd", label: "Free 实际档", value: "1536x1024", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "2160x1440", access: "paid" },
     { tier: "4k", label: "Paid 高像素", value: "3456x2304", access: "paid" },
+    { tier: "2k", label: "Paid 2K", value: "2160x1440", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "1536x1024", access: "free" },
   ],
   "16:9": [
-    { tier: "sd", label: "Free 实际档", value: "1664x928", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "2560x1440", access: "paid" },
     { tier: "4k", label: "Paid 4K", value: "3840x2160", access: "paid" },
+    { tier: "2k", label: "Paid 2K", value: "2560x1440", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "1664x928", access: "free" },
   ],
   "21:9": [
-    { tier: "sd", label: "Free 实际档", value: "1904x816", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "3360x1440", access: "paid" },
     { tier: "4k", label: "Paid 高像素", value: "3808x1632", access: "paid" },
+    { tier: "2k", label: "Paid 2K", value: "3360x1440", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "1904x816", access: "free" },
   ],
   "9:16": [
-    { tier: "sd", label: "Free 实际档", value: "928x1664", access: "free" },
-    { tier: "2k", label: "Paid 2K", value: "1440x2560", access: "paid" },
     { tier: "4k", label: "Paid 4K", value: "2160x3840", access: "paid" },
+    { tier: "2k", label: "Paid 2K", value: "1440x2560", access: "paid" },
+    { tier: "sd", label: "Free 实际档", value: "928x1664", access: "free" },
   ],
 };
 
@@ -447,9 +447,9 @@ export default function ImagePage() {
   const [imagePrompt, setImagePrompt] = useState("");
   const [imageCount, setImageCount] = useState("1");
   const [imageAspectRatio, setImageAspectRatio] =
-    useState<ImageAspectRatio>("1:1");
+    useState<ImageAspectRatio>("auto");
   const [imageResolutionTier, setImageResolutionTier] =
-    useState<ImageResolutionTier>("sd");
+    useState<ImageResolutionTier>("auto-paid");
   const [imageQuality, setImageQuality] = useState<ImageQuality>("high");
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState(() =>
@@ -457,7 +457,8 @@ export default function ImagePage() {
       ? window.matchMedia("(min-width: 1024px)").matches
       : false,
   );
-  const [availableQuota, setAvailableQuota] = useState("Free 120/120 · Paid 30/30");
+  const [availableQuota, setAvailableQuota] = useState("Paid 30/30 · Free 120/120");
+  const [paidQuotaRemaining, setPaidQuotaRemaining] = useState<number | null>(null);
   const [submitElapsedSeconds, setSubmitElapsedSeconds] = useState(0);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [isMobileComposerCollapsed, setIsMobileComposerCollapsed] =
@@ -841,9 +842,10 @@ export default function ImagePage() {
     try {
       const payload = await fetchImageQuota();
       const quota = payload.item;
-      setAvailableQuota(`Free ${quota.freeRemaining}/${quota.freeLimit} · Paid ${quota.paidRemaining}/${quota.paidLimit}`);
+      setAvailableQuota(`Paid ${quota.paidRemaining}/${quota.paidLimit} · Free ${quota.freeRemaining}/${quota.freeLimit}`);
+      setPaidQuotaRemaining(quota.paidRemaining);
     } catch {
-      setAvailableQuota((prev) => (prev === "加载中" || !prev ? "Free 120/120 · Paid 30/30" : prev));
+      setAvailableQuota((prev) => (prev === "加载中" || !prev ? "Paid 30/30 · Free 120/120" : prev));
     }
   }, []);
 
@@ -859,14 +861,17 @@ export default function ImagePage() {
     const selectedPreset = currentResolutionPresets.find(
       (item) => item.tier === imageResolutionTier,
     );
-    if (selectedPreset) {
+    if (selectedPreset && (selectedPreset.access !== "paid" || paidQuotaRemaining !== 0)) {
       return;
     }
-    const nextPreset = currentResolutionPresets[0];
+    const nextPreset =
+      paidQuotaRemaining === 0
+        ? currentResolutionPresets.find((item) => item.access === "free")
+        : currentResolutionPresets[0];
     if (nextPreset && nextPreset.tier !== imageResolutionTier) {
       setImageResolutionTier(nextPreset.tier);
     }
-  }, [currentResolutionPresets, imageResolutionTier]);
+  }, [currentResolutionPresets, imageResolutionTier, paidQuotaRemaining]);
 
   useEffect(() => {
     let shouldRefresh = false;

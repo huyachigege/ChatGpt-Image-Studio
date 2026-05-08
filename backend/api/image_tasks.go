@@ -167,6 +167,7 @@ type imageTaskUnit struct {
 	DeferredCount int
 	NextAttemptAt time.Time
 	Cancel        context.CancelFunc
+	Attempted     map[string]struct{}
 }
 
 type imageTask struct {

@@ -280,23 +280,25 @@ func imageGalleryDimensions(filePath string) (int, int) {
 }
 
 func (s *Server) attachImageGalleryPrompts(ctx context.Context, identity authIdentity, items []imageGalleryItem) []imageGalleryItem {
-	if len(items) == 0 || !s.serverImageConversationStorageEnabled() {
+	if len(items) == 0 {
 		return items
 	}
-	userID := identity.UserID
-	if identity.Role == users.RoleAdmin {
-		userID = ""
+	metadataByName := s.reqLogs.imagePromptMetadata()
+	if s.serverImageConversationStorageEnabled() {
+		userID := identity.UserID
+		if identity.Role == users.RoleAdmin {
+			userID = ""
+		}
+		store, err := imagehistory.NewStoreForUser(s.cfg, userID)
+		if err == nil {
+			defer store.Close()
+			if conversations, err := store.List(ctx); err == nil {
+				for key, metadata := range buildImageGalleryPromptMetadata(conversations) {
+					metadataByName[key] = metadata
+				}
+			}
+		}
 	}
-	store, err := imagehistory.NewStoreForUser(s.cfg, userID)
-	if err != nil {
-		return items
-	}
-	defer store.Close()
-	conversations, err := store.List(ctx)
-	if err != nil {
-		return items
-	}
-	metadataByName := buildImageGalleryPromptMetadata(conversations)
 	for index := range items {
 		metadata, ok := lookupImageGalleryPromptMetadata(metadataByName, items[index])
 		if !ok {

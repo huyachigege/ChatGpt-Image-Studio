@@ -184,19 +184,20 @@ type importedAuthCandidate struct {
 }
 
 type Store struct {
-	cfg               *config.Config
-	authDir           string
-	stateFile         string
-	syncStateDir      string
-	backend           accountStorageBackend
-	defaultQuota      int
-	refreshWorkers    int
-	providerType      string
-	mu                sync.Mutex
-	states            map[string]RuntimeState
-	imageLeases       map[string]int
-	imageAccountUsers map[string]string
-	lastSyncRun       *SyncRunResult
+	cfg                       *config.Config
+	authDir                   string
+	stateFile                 string
+	syncStateDir              string
+	backend                   accountStorageBackend
+	defaultQuota              int
+	refreshWorkers            int
+	providerType              string
+	mu                        sync.Mutex
+	states                    map[string]RuntimeState
+	imageLeases               map[string]int
+	imageAccountUsers         map[string]string
+	imageConversationAccounts map[string]string
+	lastSyncRun               *SyncRunResult
 }
 
 type Snapshot struct {
@@ -216,16 +217,17 @@ type stateEnvelope struct {
 
 func NewStore(cfg *config.Config) (*Store, error) {
 	store := &Store{
-		cfg:               cfg,
-		authDir:           cfg.ResolvePath(cfg.Storage.AuthDir),
-		stateFile:         cfg.ResolvePath(cfg.Storage.StateFile),
-		syncStateDir:      cfg.ResolvePath(cfg.Storage.SyncStateDir),
-		defaultQuota:      max(1, cfg.Accounts.DefaultQuota),
-		refreshWorkers:    max(1, cfg.Accounts.RefreshWorkers),
-		providerType:      strings.TrimSpace(cfg.Sync.ProviderType),
-		states:            map[string]RuntimeState{},
-		imageLeases:       map[string]int{},
-		imageAccountUsers: map[string]string{},
+		cfg:                       cfg,
+		authDir:                   cfg.ResolvePath(cfg.Storage.AuthDir),
+		stateFile:                 cfg.ResolvePath(cfg.Storage.StateFile),
+		syncStateDir:              cfg.ResolvePath(cfg.Storage.SyncStateDir),
+		defaultQuota:              max(1, cfg.Accounts.DefaultQuota),
+		refreshWorkers:            max(1, cfg.Accounts.RefreshWorkers),
+		providerType:              strings.TrimSpace(cfg.Sync.ProviderType),
+		states:                    map[string]RuntimeState{},
+		imageLeases:               map[string]int{},
+		imageAccountUsers:         map[string]string{},
+		imageConversationAccounts: map[string]string{},
 	}
 
 	backend, err := newAccountStorageBackend(cfg, store.authDir, store.stateFile, store.syncStateDir, store.providerType)
@@ -709,33 +711,71 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 		}()
 	}
 
-	for _, token := range targets {
-		jobs <- token
-	}
-	close(jobs)
+	go func() {
+		defer close(jobs)
+		for _, token := range targets {
+			select {
+			case <-ctx.Done():
+				return
+			case jobs <- token:
+			}
+		}
+	}()
 
 	refreshed := 0
 	errors := make([]RefreshError, 0)
 	processed := 0
-	for range targets {
-		result := <-results
-		auth := authByToken[result.token]
-		if result.auth.Name != "" {
-			auth = result.auth
-		}
-		if result.err != nil {
-			message := result.err.Error()
-			if strings.Contains(message, "/backend-api/me failed: HTTP 401") {
-				s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-					state.Status = "异常"
-					state.Quota = 0
-					state.QuotaKnown = true
-					state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
-					return state
-				})
-				message = "检测到封号"
+	for processed < len(targets) {
+		select {
+		case <-ctx.Done():
+			return refreshed, errors, ctx.Err()
+		case result := <-results:
+			auth := authByToken[result.token]
+			if result.auth.Name != "" {
+				auth = result.auth
 			}
-			errors = append(errors, RefreshError{AccessToken: result.token, Error: message})
+			if result.err != nil {
+				message := result.err.Error()
+				if strings.Contains(message, "/backend-api/me failed: HTTP 401") {
+					s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+						state.Status = "异常"
+						state.Quota = 0
+						state.QuotaKnown = true
+						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
+						return state
+					})
+					message = "检测到封号"
+				}
+				errors = append(errors, RefreshError{AccessToken: result.token, Error: message})
+				processed++
+				if options.Progress != nil {
+					options.Progress(RefreshProgress{
+						Total:       len(targets),
+						Processed:   processed,
+						Refreshed:   refreshed,
+						Failed:      len(errors),
+						Current:     refreshProgressLabel(auth, result.token),
+						AccessToken: result.token,
+						Error:       message,
+					})
+				}
+				continue
+			}
+
+			s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+				state.Type = firstNonEmpty(result.info.AccountType, state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free")
+				state.Status = firstNonEmpty(result.info.Status, state.Status)
+				state.Quota = result.info.Quota
+				state.QuotaKnown = true
+				state.Email = firstNonEmpty(result.info.Email, state.Email, auth.Email)
+				state.UserID = firstNonEmpty(result.info.UserID, state.UserID, auth.UserID)
+				state.LimitsProgress = cloneSlice(result.info.LimitsProgress)
+				state.DefaultModelSlug = firstNonEmpty(result.info.DefaultModelSlug, state.DefaultModelSlug)
+				state.RestoreAt = firstNonEmpty(result.info.RestoreAt, state.RestoreAt)
+				state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
+				return syncImageQuotaDailyBaseState(state, result.info.Quota, result.info.LimitsProgress, result.info.RestoreAt)
+			})
+			refreshed++
 			processed++
 			if options.Progress != nil {
 				options.Progress(RefreshProgress{
@@ -745,36 +785,8 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 					Failed:      len(errors),
 					Current:     refreshProgressLabel(auth, result.token),
 					AccessToken: result.token,
-					Error:       message,
 				})
 			}
-			continue
-		}
-
-		s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-			state.Type = firstNonEmpty(result.info.AccountType, state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free")
-			state.Status = firstNonEmpty(result.info.Status, state.Status)
-			state.Quota = result.info.Quota
-			state.QuotaKnown = true
-			state.Email = firstNonEmpty(result.info.Email, state.Email, auth.Email)
-			state.UserID = firstNonEmpty(result.info.UserID, state.UserID, auth.UserID)
-			state.LimitsProgress = cloneSlice(result.info.LimitsProgress)
-			state.DefaultModelSlug = firstNonEmpty(result.info.DefaultModelSlug, state.DefaultModelSlug)
-			state.RestoreAt = firstNonEmpty(result.info.RestoreAt, state.RestoreAt)
-			state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
-			return syncImageQuotaDailyBaseState(state, result.info.Quota, result.info.LimitsProgress, result.info.RestoreAt)
-		})
-		refreshed++
-		processed++
-		if options.Progress != nil {
-			options.Progress(RefreshProgress{
-				Total:       len(targets),
-				Processed:   processed,
-				Refreshed:   refreshed,
-				Failed:      len(errors),
-				Current:     refreshProgressLabel(auth, result.token),
-				AccessToken: result.token,
-			})
 		}
 	}
 
@@ -905,11 +917,15 @@ func (s *Store) AcquireImageAuthFilteredWithDisabledOption(excluded map[string]s
 }
 
 func (s *Store) AcquireImageAuthLeaseFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, "")
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, "", "")
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID string) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID)
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, "")
+}
+
+func (s *Store) AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID string) (*LocalAuth, PublicAccount, func(), error) {
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, conversationID)
 }
 
 func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, error) {
@@ -975,7 +991,7 @@ func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(Public
 	return &selected.auth, selected.account, nil
 }
 
-func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID string) (*LocalAuth, PublicAccount, func(), error) {
+func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID string) (*LocalAuth, PublicAccount, func(), error) {
 	localAuths, err := s.loadAuths()
 	if err != nil {
 		return nil, PublicAccount{}, nil, err
@@ -1026,6 +1042,11 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		if candidates[i].ready != candidates[j].ready {
 			return candidates[i].ready
 		}
+		leftConversationMatch := s.imageAccountMatchesConversationLocked(candidates[i].auth.AccessToken, userID, conversationID)
+		rightConversationMatch := s.imageAccountMatchesConversationLocked(candidates[j].auth.AccessToken, userID, conversationID)
+		if leftConversationMatch != rightConversationMatch {
+			return leftConversationMatch
+		}
 		leftOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[i].auth.AccessToken, userID)
 		rightOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[j].auth.AccessToken, userID)
 		if leftOtherUser != rightOtherUser {
@@ -1046,6 +1067,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		return nil, PublicAccount{}, nil, leaseErr
 	}
 	s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID)
+	s.rememberImageConversationAccountLocked(selected.auth.AccessToken, userID, conversationID)
 	return &selected.auth, selected.account, release, nil
 }
 
@@ -1105,6 +1127,36 @@ func (s *Store) rememberImageAccountUserLocked(accessToken, userID string) {
 		s.imageAccountUsers = map[string]string{}
 	}
 	s.imageAccountUsers[token] = user
+}
+
+func (s *Store) imageAccountMatchesConversationLocked(accessToken, userID, conversationID string) bool {
+	token := strings.TrimSpace(accessToken)
+	key := imageConversationAccountKey(userID, conversationID)
+	if token == "" || key == "" || s.imageConversationAccounts == nil {
+		return false
+	}
+	return strings.TrimSpace(s.imageConversationAccounts[key]) == token
+}
+
+func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conversationID string) {
+	token := strings.TrimSpace(accessToken)
+	key := imageConversationAccountKey(userID, conversationID)
+	if token == "" || key == "" {
+		return
+	}
+	if s.imageConversationAccounts == nil {
+		s.imageConversationAccounts = map[string]string{}
+	}
+	s.imageConversationAccounts[key] = token
+}
+
+func imageConversationAccountKey(userID, conversationID string) string {
+	user := strings.TrimSpace(userID)
+	conversation := strings.TrimSpace(conversationID)
+	if user == "" || conversation == "" {
+		return ""
+	}
+	return user + "\x00" + conversation
 }
 
 func (s *Store) RecordImageResult(accessToken string, success bool) {
@@ -1321,6 +1373,7 @@ func (s *Store) RunSync(ctx context.Context, client *cliproxy.Client, direction 
 
 	toUpload := make([]string, 0)
 	toDownload := make([]string, 0)
+	toDeleteLocal := make([]string, 0)
 	disabledMismatch := make([]SyncAccountStatus, 0)
 	remoteDeleted := 0
 	for _, item := range status.Accounts {
@@ -1335,7 +1388,9 @@ func (s *Store) RunSync(ctx context.Context, client *cliproxy.Client, direction 
 			}
 		case "remote_deleted":
 			remoteDeleted++
-			if mode == "push" {
+			if mode == "pull" {
+				toDeleteLocal = append(toDeleteLocal, item.Name)
+			} else {
 				toUpload = append(toUpload, item.Name)
 			}
 		case "synced":
@@ -1354,7 +1409,7 @@ func (s *Store) RunSync(ctx context.Context, client *cliproxy.Client, direction 
 		UpdatedAt:     time.Now().UTC().Format(time.RFC3339),
 	}
 	if mode == "pull" {
-		result.Total = len(toDownload) + len(disabledMismatch)
+		result.Total = len(toDownload) + len(toDeleteLocal) + len(disabledMismatch)
 		result.Phase = "准备从 CPA 拉取"
 	} else {
 		result.Total = len(toUpload) + len(disabledMismatch)
@@ -1402,6 +1457,25 @@ func (s *Store) RunSync(ctx context.Context, client *cliproxy.Client, direction 
 		} else {
 			result.Downloaded++
 			s.markSynced(name, "remote")
+		}
+		result.Processed++
+		result.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		s.setLastSyncRun(result)
+	}
+
+	for _, name := range toDeleteLocal {
+		result.Phase = "删除本地账号"
+		result.Current = name
+		result.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		s.setLastSyncRun(result)
+		if err := s.deleteAuth(name); err != nil {
+			result.OK = false
+			result.DownloadFailed++
+			slog.Warn("sync local delete failed", "file", name, "error", err)
+		} else {
+			s.deleteSyncState(name)
+			s.removeState(name)
+			result.Downloaded++
 		}
 		result.Processed++
 		result.UpdatedAt = time.Now().UTC().Format(time.RFC3339)

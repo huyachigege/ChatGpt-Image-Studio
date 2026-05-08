@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -14,39 +15,41 @@ import (
 const maxImageRequestLogEntries = 5000
 
 type imageRequestLogEntry struct {
-	ID                    string `json:"id"`
-	StartedAt             string `json:"startedAt"`
-	FinishedAt            string `json:"finishedAt"`
-	Endpoint              string `json:"endpoint"`
-	Operation             string `json:"operation"`
-	ImageMode             string `json:"imageMode"`
-	Direction             string `json:"direction"`
-	Route                 string `json:"route"`
-	CPASubroute           string `json:"cpaSubroute,omitempty"`
-	QueueWaitMS           int64  `json:"queueWaitMs,omitempty"`
-	InflightCountAtStart  int    `json:"inflightCountAtStart,omitempty"`
-	LeaseAcquired         bool   `json:"leaseAcquired,omitempty"`
-	ErrorCode             string `json:"errorCode,omitempty"`
-	RoutingPolicyApplied  bool   `json:"routingPolicyApplied,omitempty"`
-	RoutingGroupIndex     int    `json:"routingGroupIndex,omitempty"`
-	RoutingSortMode       string `json:"routingSortMode,omitempty"`
-	RoutingReservePercent int    `json:"routingReservePercent,omitempty"`
-	AccountType           string `json:"accountType,omitempty"`
-	AccountEmail          string `json:"accountEmail,omitempty"`
-	AccountFile           string `json:"accountFile,omitempty"`
-	RequestedModel        string `json:"requestedModel,omitempty"`
-	UpstreamModel         string `json:"upstreamModel,omitempty"`
-	ImageToolModel        string `json:"imageToolModel,omitempty"`
-	UserID                string `json:"userId,omitempty"`
-	Username              string `json:"username,omitempty"`
-	UserRole              string `json:"userRole,omitempty"`
-	Size                  string `json:"size,omitempty"`
-	Quality               string `json:"quality,omitempty"`
-	Prompt                string `json:"prompt,omitempty"`
-	PromptLength          int    `json:"promptLength,omitempty"`
-	Preferred             bool   `json:"preferred"`
-	Success               bool   `json:"success"`
-	Error                 string `json:"error,omitempty"`
+	ID                    string   `json:"id"`
+	StartedAt             string   `json:"startedAt"`
+	FinishedAt            string   `json:"finishedAt"`
+	Endpoint              string   `json:"endpoint"`
+	Operation             string   `json:"operation"`
+	ImageMode             string   `json:"imageMode"`
+	Direction             string   `json:"direction"`
+	Route                 string   `json:"route"`
+	CPASubroute           string   `json:"cpaSubroute,omitempty"`
+	QueueWaitMS           int64    `json:"queueWaitMs,omitempty"`
+	InflightCountAtStart  int      `json:"inflightCountAtStart,omitempty"`
+	LeaseAcquired         bool     `json:"leaseAcquired,omitempty"`
+	ErrorCode             string   `json:"errorCode,omitempty"`
+	RoutingPolicyApplied  bool     `json:"routingPolicyApplied,omitempty"`
+	RoutingGroupIndex     int      `json:"routingGroupIndex,omitempty"`
+	RoutingSortMode       string   `json:"routingSortMode,omitempty"`
+	RoutingReservePercent int      `json:"routingReservePercent,omitempty"`
+	AccountType           string   `json:"accountType,omitempty"`
+	AccountEmail          string   `json:"accountEmail,omitempty"`
+	AccountFile           string   `json:"accountFile,omitempty"`
+	RequestedModel        string   `json:"requestedModel,omitempty"`
+	UpstreamModel         string   `json:"upstreamModel,omitempty"`
+	ImageToolModel        string   `json:"imageToolModel,omitempty"`
+	UserID                string   `json:"userId,omitempty"`
+	Username              string   `json:"username,omitempty"`
+	UserRole              string   `json:"userRole,omitempty"`
+	Size                  string   `json:"size,omitempty"`
+	Quality               string   `json:"quality,omitempty"`
+	Prompt                string   `json:"prompt,omitempty"`
+	PromptLength          int      `json:"promptLength,omitempty"`
+	ImageURLs             []string `json:"imageUrls,omitempty"`
+	ImageNames            []string `json:"imageNames,omitempty"`
+	Preferred             bool     `json:"preferred"`
+	Success               bool     `json:"success"`
+	Error                 string   `json:"error,omitempty"`
 }
 
 type imageRequestLogQuery struct {
@@ -102,6 +105,29 @@ func (s *imageRequestLogStore) list(limit int) []imageRequestLogEntry {
 	out := make([]imageRequestLogEntry, limit)
 	copy(out, s.items[:limit])
 	return out
+}
+
+func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryPromptMetadata {
+	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	if s == nil {
+		return metadataByName
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, entry := range s.items {
+		prompt := strings.TrimSpace(entry.Prompt)
+		if prompt == "" || !entry.Success {
+			continue
+		}
+		metadata := imageGalleryPromptMetadata{Prompt: prompt}
+		for _, imageURL := range entry.ImageURLs {
+			addImageGalleryPromptMetadata(metadataByName, imageURL, metadata)
+		}
+		for _, imageName := range entry.ImageNames {
+			addImageGalleryPromptMetadata(metadataByName, imageName, metadata)
+		}
+	}
+	return metadataByName
 }
 
 func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequestLogEntry, int) {
@@ -188,6 +214,50 @@ func (s *imageRequestLogStore) append(entry imageRequestLogEntry) error {
 	}
 	_, err = file.Write(append(payload, '\n'))
 	return err
+}
+
+func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string]any) {
+	if entry == nil || len(items) == 0 {
+		return
+	}
+	imageURLs := make([]string, 0, len(items))
+	imageNames := make([]string, 0, len(items)*3)
+	seenURLs := make(map[string]struct{})
+	seenNames := make(map[string]struct{})
+	for _, item := range items {
+		url := strings.TrimSpace(stringValue(item["url"]))
+		if url != "" {
+			if _, ok := seenURLs[url]; !ok {
+				seenURLs[url] = struct{}{}
+				imageURLs = append(imageURLs, url)
+			}
+			withoutQuery := strings.Split(url, "?")[0]
+			for _, name := range []string{strings.TrimPrefix(withoutQuery, "/v1/files/image/"), path.Base(withoutQuery)} {
+				name = strings.Trim(strings.TrimSpace(name), "/")
+				if name == "" || name == "." {
+					continue
+				}
+				if _, ok := seenNames[name]; ok {
+					continue
+				}
+				seenNames[name] = struct{}{}
+				imageNames = append(imageNames, name)
+			}
+		}
+		for _, key := range []string{"id", "file_id", "gen_id"} {
+			name := strings.TrimSpace(stringValue(item[key]))
+			if name == "" {
+				continue
+			}
+			if _, ok := seenNames[name]; ok {
+				continue
+			}
+			seenNames[name] = struct{}{}
+			imageNames = append(imageNames, name)
+		}
+	}
+	entry.ImageURLs = imageURLs
+	entry.ImageNames = imageNames
 }
 
 func requestLogEntryMatches(item imageRequestLogEntry, query imageRequestLogQuery) bool {

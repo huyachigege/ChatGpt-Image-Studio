@@ -368,7 +368,11 @@ func (m *imageTaskManager) tryScheduleOne() bool {
 		if task == nil {
 			continue
 		}
-		lease, blocker, fatalErr := m.acquireLeaseForTask(task)
+		unitIndex, _ := m.nextReadyQueuedUnitIndexFromSnapshot(task, time.Now().UTC())
+		if unitIndex < 0 {
+			continue
+		}
+		lease, blocker, fatalErr := m.acquireLeaseForTask(task, unitIndex)
 		if fatalErr != nil {
 			m.failTask(id, fatalErr)
 			return true
@@ -472,6 +476,9 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		task.Images[unitIndex].Status = "error"
 		task.Images[unitIndex].Error = "任务已取消"
 	} else if errors.As(err, &deferredErr) {
+		if isInvalidImageTokenError(deferredErr) || isImageRateLimitError(deferredErr) {
+			imageTaskUnitRememberAttempt(&task.Units[unitIndex], deferredErr.accessToken)
+		}
 		task.Units[unitIndex].DeferredCount++
 		if task.Units[unitIndex].DeferredCount > maxImageTaskDeferredAttempts {
 			message := "临时失败重试次数过多，请稍后重试"
@@ -642,6 +649,17 @@ func (m *imageTaskManager) updateTaskBlocker(taskID string, blocker imageTaskBlo
 	})
 }
 
+func cloneStringSet(values map[string]struct{}) map[string]struct{} {
+	if len(values) == 0 {
+		return nil
+	}
+	clone := make(map[string]struct{}, len(values))
+	for value := range values {
+		clone[value] = struct{}{}
+	}
+	return clone
+}
+
 func (m *imageTaskManager) copyTask(taskID string) *imageTask {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -652,6 +670,9 @@ func (m *imageTaskManager) copyTask(taskID string) *imageTask {
 	copy := *task
 	copy.Images = append([]imagehistory.Image(nil), task.Images...)
 	copy.Units = append([]imageTaskUnit(nil), task.Units...)
+	for index := range copy.Units {
+		copy.Units[index].Attempted = cloneStringSet(task.Units[index].Attempted)
+	}
 	copy.SourceImages = append([]imageTaskSourceImage(nil), task.SourceImages...)
 	copy.Blockers = append([]imageTaskBlocker(nil), task.Blockers...)
 	return &copy
@@ -671,7 +692,7 @@ func (m *imageTaskManager) removeTaskIDFromOrderLocked(taskID string) {
 	m.order = nextOrder
 }
 
-func (m *imageTaskManager) acquireLeaseForTask(task *imageTask) (*imageTaskLease, imageTaskBlocker, error) {
+func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (*imageTaskLease, imageTaskBlocker, error) {
 	store := m.server.getStore()
 	allowDisabled := m.server.allowDisabledStudioImageAccounts()
 
@@ -694,13 +715,15 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask) (*imageTaskLease
 	}
 
 	allowAccount := m.allowAccountFn(task)
+	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
-		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(
-			nil,
+		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(
+			excluded,
 			allowAccount,
 			allowDisabled,
 			task.Requirement.PolicySnapshot,
 			task.UserID,
+			task.ConversationID,
 		)
 		if err == nil {
 			return &imageTaskLease{
@@ -716,11 +739,12 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask) (*imageTaskLease
 		return nil, imageTaskBlocker{}, err
 	}
 
-	auth, account, release, err := store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(
-		nil,
+	auth, account, release, err := store.AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(
+		excluded,
 		allowAccount,
 		allowDisabled,
 		task.UserID,
+		task.ConversationID,
 	)
 	if err == nil {
 		return &imageTaskLease{
@@ -855,8 +879,9 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 			Status: "loading",
 		})
 		units = append(units, imageTaskUnit{
-			Index:  index,
-			Status: imageTaskStatusQueued,
+			Index:     index,
+			Status:    imageTaskStatusQueued,
+			Attempted: map[string]struct{}{},
 		})
 	}
 
@@ -888,6 +913,28 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	}, nil
 }
 
+func imageTaskUnitAttemptedTokens(task *imageTask, unitIndex int) map[string]struct{} {
+	if task == nil || unitIndex < 0 || unitIndex >= len(task.Units) || len(task.Units[unitIndex].Attempted) == 0 {
+		return nil
+	}
+	attempted := make(map[string]struct{}, len(task.Units[unitIndex].Attempted))
+	for token := range task.Units[unitIndex].Attempted {
+		attempted[token] = struct{}{}
+	}
+	return attempted
+}
+
+func imageTaskUnitRememberAttempt(unit *imageTaskUnit, accessToken string) {
+	token := strings.TrimSpace(accessToken)
+	if unit == nil || token == "" {
+		return
+	}
+	if unit.Attempted == nil {
+		unit.Attempted = map[string]struct{}{}
+	}
+	unit.Attempted[token] = struct{}{}
+}
+
 func (m *imageTaskManager) nextQueuedUnitIndexLocked(task *imageTask) int {
 	for index := range task.Units {
 		if task.Units[index].Status == imageTaskStatusQueued {
@@ -898,6 +945,10 @@ func (m *imageTaskManager) nextQueuedUnitIndexLocked(task *imageTask) int {
 }
 
 func (m *imageTaskManager) nextReadyQueuedUnitIndexLocked(task *imageTask, now time.Time) (int, time.Time) {
+	return m.nextReadyQueuedUnitIndexFromSnapshot(task, now)
+}
+
+func (m *imageTaskManager) nextReadyQueuedUnitIndexFromSnapshot(task *imageTask, now time.Time) (int, time.Time) {
 	earliestRetryAt := time.Time{}
 	for index := range task.Units {
 		unit := task.Units[index]

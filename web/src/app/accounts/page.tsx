@@ -16,6 +16,7 @@ import {
   Pencil,
   RefreshCw,
   Search,
+  Square,
   Trash2,
   Shield,
   UserRound,
@@ -55,6 +56,7 @@ import {
   refreshAllAccounts,
   refreshAccounts,
   runSync,
+  stopAccountRefresh,
   updateAccount,
   type AccountImportResponse,
   type Account,
@@ -86,6 +88,14 @@ const accountStatusOptions: { label: string; value: AccountStatus | "all" }[] =
     { label: "异常", value: "异常" },
     { label: "禁用", value: "禁用" },
   ];
+
+const accountSortOptions = [
+  { label: "默认排序", value: "default" },
+  { label: "额度从高到低", value: "quota_desc" },
+  { label: "额度从低到高", value: "quota_asc" },
+] as const;
+
+type AccountSortMode = (typeof accountSortOptions)[number]["value"];
 
 const statusMeta: Record<
   AccountStatus,
@@ -248,6 +258,10 @@ function extractImageGenLimit(account: Account) {
   };
 }
 
+function getAccountRemainingQuota(account: Account) {
+  return extractImageGenLimit(account).remaining ?? account.quota;
+}
+
 function mergeImageGenLimit(
   limitsProgress: Account["limits_progress"],
   remaining: number | null | undefined,
@@ -320,6 +334,7 @@ export default function AccountsPage() {
   const [statusFilter, setStatusFilter] = useState<AccountStatus | "all">(
     "all",
   );
+  const [sortMode, setSortMode] = useState<AccountSortMode>("default");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState("10");
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
@@ -349,6 +364,7 @@ export default function AccountsPage() {
   const [isTokenImporting, setIsTokenImporting] = useState(false);
   const [refreshAllRun, setRefreshAllRun] =
     useState<AccountRefreshProgress | null>(null);
+  const [isStoppingRefreshAll, setIsStoppingRefreshAll] = useState(false);
 
   const loadAccounts = async (silent = false) => {
     if (!silent) {
@@ -519,7 +535,7 @@ export default function AccountsPage() {
 
   const filteredAccounts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-    return accounts.filter((account) => {
+    const filtered = accounts.filter((account) => {
       const searchMatched =
         normalizedQuery.length === 0 ||
         (account.email ?? "").toLowerCase().includes(normalizedQuery) ||
@@ -530,7 +546,19 @@ export default function AccountsPage() {
         statusFilter === "all" || account.status === statusFilter;
       return searchMatched && typeMatched && statusMatched;
     });
-  }, [accounts, query, statusFilter, typeFilter]);
+
+    if (sortMode === "default") {
+      return filtered;
+    }
+
+    return [...filtered].sort((left, right) => {
+      const diff = getAccountRemainingQuota(right) - getAccountRemainingQuota(left);
+      if (diff !== 0) {
+        return sortMode === "quota_desc" ? diff : -diff;
+      }
+      return (left.email || left.fileName).localeCompare(right.email || right.fileName);
+    });
+  }, [accounts, query, sortMode, statusFilter, typeFilter]);
 
   const pageCount = Math.max(
     1,
@@ -593,6 +621,10 @@ export default function AccountsPage() {
   const syncProgress = syncView.lastRun;
   const syncIsRunning = Boolean(syncRunningDirection || syncProgress?.running);
   const refreshAllRunning = Boolean(refreshAllRun?.running);
+  const isRefreshingAllAccounts =
+    refreshAllRunning && refreshAllRun?.scope !== "routing_groups";
+  const isRefreshingRoutingGroups =
+    refreshAllRunning && refreshAllRun?.scope === "routing_groups";
   const refreshAllPercent =
     refreshAllRun && refreshAllRun.total > 0
       ? Math.max(
@@ -807,7 +839,9 @@ export default function AccountsPage() {
     }
   };
 
-  const handleRefreshAllAccounts = async () => {
+  const handleRefreshAllAccounts = async (
+    scope: "all" | "routing_groups" = "all",
+  ) => {
     if (accounts.length === 0) {
       toast.error("当前没有可刷新的账户");
       return;
@@ -818,10 +852,12 @@ export default function AccountsPage() {
     }
 
     try {
-      const data = await refreshAllAccounts();
+      const data = await refreshAllAccounts({ scope });
       setRefreshAllRun(data.progress ?? null);
       if (data.alreadyRunning) {
         toast.success("批量刷新任务已在进行中");
+      } else if (scope === "routing_groups") {
+        toast.success("已开始刷新参与轮询分组的账号额度");
       } else {
         toast.success("已开始按批次刷新所有账户额度");
       }
@@ -829,6 +865,23 @@ export default function AccountsPage() {
       const message =
         error instanceof Error ? error.message : "启动批量刷新失败";
       toast.error(message);
+    }
+  };
+
+  const handleStopAccountRefresh = async () => {
+    if (!refreshAllRunning) {
+      return;
+    }
+    setIsStoppingRefreshAll(true);
+    try {
+      const data = await stopAccountRefresh();
+      setRefreshAllRun(data.progress ?? null);
+      toast.success(data.stopped ? "已请求停止刷新任务" : "当前没有正在运行的刷新任务");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "停止刷新任务失败";
+      toast.error(message);
+    } finally {
+      setIsStoppingRefreshAll(false);
     }
   };
 
@@ -1449,6 +1502,24 @@ export default function AccountsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select
+              value={sortMode}
+              onValueChange={(value) => {
+                setSortMode(value as AccountSortMode);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-10 w-full rounded-xl border-stone-200 bg-white/85 lg:w-[160px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {accountSortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               className="h-10 w-full rounded-xl bg-stone-950 px-4 text-white hover:bg-stone-800 sm:w-auto"
               onClick={() => importInputRef.current?.click()}
@@ -1509,13 +1580,19 @@ export default function AccountsPage() {
                       <RefreshCw className="size-4" />
                     )}
                     {refreshAllRunning
-                      ? "正在按批次刷新全部额度"
+                      ? refreshAllRun.scope === "routing_groups"
+                        ? "正在刷新轮询分组额度"
+                        : "正在按批次刷新全部额度"
                       : "最近一次批量刷新"}
                   </div>
                   <div className="text-xs leading-5 text-stone-500">
-                    {refreshAllRun.current
-                      ? `当前处理：${refreshAllRun.current}`
-                      : "等待下一次批量刷新"}
+                    {refreshAllRun.cancelRequested
+                      ? "正在停止刷新任务"
+                      : refreshAllRun.current
+                        ? `当前处理：${refreshAllRun.current}`
+                        : refreshAllRun.scope === "routing_groups"
+                          ? "仅刷新当前轮询策略启用分组中的账号"
+                          : "等待下一次批量刷新"}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600">
@@ -1529,6 +1606,22 @@ export default function AccountsPage() {
                   <Badge variant="danger" className="rounded-lg px-3 py-1">
                     失败 {refreshAllRun.failed}
                   </Badge>
+                  {refreshAllRunning ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 rounded-lg border-rose-200 bg-white px-3 text-rose-600 hover:bg-rose-50"
+                      onClick={() => void handleStopAccountRefresh()}
+                      disabled={isStoppingRefreshAll || refreshAllRun.cancelRequested}
+                    >
+                      {isStoppingRefreshAll || refreshAllRun.cancelRequested ? (
+                        <LoaderCircle className="size-3.5 animate-spin" />
+                      ) : (
+                        <Square className="size-3.5" />
+                      )}
+                      停止刷新
+                    </Button>
+                  ) : null}
                 </div>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-stone-100">
@@ -1612,12 +1705,30 @@ export default function AccountsPage() {
                     quotaRefreshingId !== null
                   }
                 >
-                  {refreshAllRunning ? (
+                  {isRefreshingAllAccounts ? (
                     <LoaderCircle className="size-4 animate-spin" />
                   ) : (
                     <RefreshCw className="size-4" />
                   )}
                   一键刷新所有额度
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="h-8 rounded-lg px-3 text-stone-500 hover:bg-stone-100"
+                  onClick={() => void handleRefreshAllAccounts("routing_groups")}
+                  disabled={
+                    accounts.length === 0 ||
+                    refreshAllRunning ||
+                    isRefreshing ||
+                    quotaRefreshingId !== null
+                  }
+                >
+                  {isRefreshingRoutingGroups ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-4" />
+                  )}
+                  刷新轮询分组额度
                 </Button>
                 <Button
                   variant="ghost"

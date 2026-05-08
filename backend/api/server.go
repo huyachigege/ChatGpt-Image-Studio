@@ -37,6 +37,7 @@ type Server struct {
 	syncRunCache           map[string]*sourceSyncRunResult
 	accountRefreshMu       sync.RWMutex
 	accountRefreshRun      *accountRefreshRunResult
+	accountRefreshCancel   context.CancelFunc
 	staticDir              string
 	reqLogs                *imageRequestLogStore
 	imageAdmission         *imageAdmissionController
@@ -59,17 +60,19 @@ type requestError struct {
 }
 
 type accountRefreshRunResult struct {
-	OK         bool   `json:"ok"`
-	Running    bool   `json:"running"`
-	Error      string `json:"error,omitempty"`
-	Total      int    `json:"total"`
-	Processed  int    `json:"processed"`
-	Refreshed  int    `json:"refreshed"`
-	Failed     int    `json:"failed"`
-	Current    string `json:"current,omitempty"`
-	StartedAt  string `json:"started_at"`
-	FinishedAt string `json:"finished_at"`
-	UpdatedAt  string `json:"updated_at,omitempty"`
+	OK              bool   `json:"ok"`
+	Running         bool   `json:"running"`
+	CancelRequested bool   `json:"cancelRequested,omitempty"`
+	Error           string `json:"error,omitempty"`
+	Scope           string `json:"scope,omitempty"`
+	Total           int    `json:"total"`
+	Processed       int    `json:"processed"`
+	Refreshed       int    `json:"refreshed"`
+	Failed          int    `json:"failed"`
+	Current         string `json:"current,omitempty"`
+	StartedAt       string `json:"started_at"`
+	FinishedAt      string `json:"finished_at"`
+	UpdatedAt       string `json:"updated_at,omitempty"`
 }
 
 const cpaFixedImageModel = "gpt-image-2"
@@ -220,6 +223,27 @@ func (s *Server) setAccountRefreshRun(run *accountRefreshRunResult) {
 	s.accountRefreshRun = &copy
 }
 
+func (s *Server) setAccountRefreshCancel(cancel context.CancelFunc) {
+	s.accountRefreshMu.Lock()
+	defer s.accountRefreshMu.Unlock()
+	s.accountRefreshCancel = cancel
+}
+
+func (s *Server) requestCancelAccountRefreshRun() *accountRefreshRunResult {
+	s.accountRefreshMu.Lock()
+	defer s.accountRefreshMu.Unlock()
+	if s.accountRefreshRun == nil || !s.accountRefreshRun.Running {
+		return nil
+	}
+	s.accountRefreshRun.CancelRequested = true
+	s.accountRefreshRun.UpdatedAt = time.Now().UTC().Format(time.RFC3339)
+	if s.accountRefreshCancel != nil {
+		s.accountRefreshCancel()
+	}
+	copy := *s.accountRefreshRun
+	return &copy
+}
+
 func (s *Server) finishAccountRefreshRun(run *accountRefreshRunResult) {
 	if run == nil {
 		return
@@ -228,6 +252,7 @@ func (s *Server) finishAccountRefreshRun(run *accountRefreshRunResult) {
 	run.Current = ""
 	run.FinishedAt = time.Now().UTC().Format(time.RFC3339)
 	run.UpdatedAt = run.FinishedAt
+	s.setAccountRefreshCancel(nil)
 	s.setAccountRefreshRun(run)
 }
 
@@ -397,6 +422,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("DELETE /api/accounts", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteAccounts)))
 	mux.Handle("POST /api/accounts/refresh", s.requireAdminAuth(http.HandlerFunc(s.handleRefreshAccounts)))
 	mux.Handle("POST /api/accounts/refresh-all", s.requireAdminAuth(http.HandlerFunc(s.handleRefreshAllAccounts)))
+	mux.Handle("POST /api/accounts/refresh-stop", s.requireAdminAuth(http.HandlerFunc(s.handleStopAccountRefresh)))
 	mux.Handle("GET /api/accounts/refresh-progress", s.requireAdminAuth(http.HandlerFunc(s.handleAccountRefreshProgress)))
 	mux.Handle("POST /api/accounts/update", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateAccount)))
 	mux.Handle("GET /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
@@ -899,23 +925,60 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	items, err := s.getStore().ListAccounts()
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
+	var body struct {
+		Scope string `json:"scope"`
 	}
-	tokens := make([]string, 0, len(items))
-	for _, item := range items {
-		if strings.TrimSpace(item.AccessToken) == "" {
-			continue
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil && !errors.Is(err, io.EOF) {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+			return
 		}
-		tokens = append(tokens, item.AccessToken)
+	}
+	scope := strings.ToLower(strings.TrimSpace(body.Scope))
+	if scope != "routing_groups" {
+		scope = "all"
+	}
+
+	var tokens []string
+	if scope == "routing_groups" {
+		policy, err := parseRequestImageAccountRoutingPolicy(r)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		if policy == nil {
+			storedPolicy, err := s.getStore().GetImageRoutingPolicy()
+			if err != nil {
+				writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+				return
+			}
+			policy = &storedPolicy
+		}
+		tokens, err = s.getStore().ImageRoutingGroupRefreshTokensWithPolicy(*policy)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+			return
+		}
+	} else {
+		items, err := s.getStore().ListAccounts()
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+			return
+		}
+		tokens = make([]string, 0, len(items))
+		for _, item := range items {
+			if strings.TrimSpace(item.AccessToken) == "" {
+				continue
+			}
+			tokens = append(tokens, item.AccessToken)
+		}
 	}
 
 	startedAt := time.Now().UTC().Format(time.RFC3339)
 	run := &accountRefreshRunResult{
 		OK:        true,
 		Running:   true,
+		Scope:     scope,
 		Total:     len(tokens),
 		StartedAt: startedAt,
 		UpdatedAt: startedAt,
@@ -929,8 +992,10 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 	}
 
 	store := s.getStore()
+	refreshCtx, cancel := context.WithCancel(context.Background())
+	s.setAccountRefreshCancel(cancel)
 	go func(tokens []string) {
-		refreshed, refreshErrors, refreshErr := store.RefreshAccountsWithOptions(context.Background(), tokens, accounts.RefreshOptions{
+		refreshed, refreshErrors, refreshErr := store.RefreshAccountsWithOptions(refreshCtx, tokens, accounts.RefreshOptions{
 			MaxWorkers: maxBulkAccountRefreshWorkers,
 			Progress: func(progress accounts.RefreshProgress) {
 				run.Refreshed = progress.Refreshed
@@ -941,7 +1006,11 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 				s.setAccountRefreshRun(run)
 			},
 		})
-		if refreshErr != nil {
+		if errors.Is(refreshErr, context.Canceled) || run.CancelRequested {
+			run.OK = false
+			run.CancelRequested = true
+			run.Error = "刷新任务已停止"
+		} else if refreshErr != nil {
 			run.OK = false
 			run.Error = refreshErr.Error()
 		} else if len(refreshErrors) > 0 {
@@ -955,6 +1024,15 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 	}(append([]string(nil), tokens...))
 
 	writeJSON(w, http.StatusOK, map[string]any{"progress": run})
+}
+
+func (s *Server) handleStopAccountRefresh(w http.ResponseWriter, r *http.Request) {
+	run := s.requestCancelAccountRefreshRun()
+	if run == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"progress": s.getAccountRefreshRun(), "stopped": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"progress": run, "stopped": true})
 }
 
 func (s *Server) handleAccountRefreshProgress(w http.ResponseWriter, r *http.Request) {
@@ -1255,11 +1333,13 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			decision     accounts.ImageAccountRoutingDecision
 			err          error
 		)
-		userID := identityFromContext(ctx).UserID
+		identity := identityFromContext(ctx)
+		userID := identity.UserID
+		conversationID := strings.TrimSpace(r.Header.Get("X-Studio-Conversation-ID"))
 		if policy != nil {
-			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID)
+			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID)
 		} else {
-			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID)
+			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID)
 		}
 		if err != nil {
 			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
@@ -1497,8 +1577,10 @@ func (s *Server) runPureCPAImageRequest(
 		InflightCountAtStart: admissionInfo.InflightCountAtStart,
 	}
 	metadata.applyTo(&entry)
+	items := buildImageResponse(r, client, results, responseFormat, "", s.cfg.ResolvePath(s.cfg.Storage.ImageDir))
+	applyImageResponseLogFields(&entry, items)
 	s.logImageRequestWithContext(ctx, entry)
-	return buildImageResponse(r, client, results, responseFormat, "", s.cfg.ResolvePath(s.cfg.Storage.ImageDir)), nil
+	return items, nil
 }
 
 func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, releaseLease func(), routingDecision accounts.ImageAccountRoutingDecision, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, metadata imageRequestMetadata, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request) ([]map[string]any, bool, error) {
@@ -1823,8 +1905,10 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 	applyImageRoutingLogFields(routingDecision, &entry)
 	metadata.applyTo(&entry)
+	items := buildImageResponse(r, client, results, responseFormat, account.ID, s.cfg.ResolvePath(s.cfg.Storage.ImageDir))
+	applyImageResponseLogFields(&entry, items)
 	s.logImageRequestWithContext(ctx, entry)
-	return buildImageResponse(r, client, results, responseFormat, account.ID, s.cfg.ResolvePath(s.cfg.Storage.ImageDir)), false, nil
+	return items, false, nil
 }
 
 func normalizeRequestedImageModel(requested, fallback string) string {
@@ -1994,6 +2078,9 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 		return authIdentity{}, false
 	}
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
+		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
+	}
+	if strings.TrimSpace(s.cfg.App.APIKey) != "" && token == strings.TrimSpace(s.cfg.App.APIKey) {
 		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
 	store, err := users.NewStore(s.cfg)

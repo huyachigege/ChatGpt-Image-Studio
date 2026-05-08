@@ -228,7 +228,9 @@ type AccountRefreshResponse = {
 export type AccountRefreshProgress = {
   ok: boolean;
   running: boolean;
+  cancelRequested?: boolean;
   error?: string;
+  scope?: "all" | "routing_groups" | string;
   total: number;
   processed: number;
   refreshed: number;
@@ -242,6 +244,7 @@ export type AccountRefreshProgress = {
 type AccountRefreshAllResponse = {
   progress: AccountRefreshProgress | null;
   alreadyRunning?: boolean;
+  stopped?: boolean;
 };
 
 type AccountUpdateResponse = {
@@ -411,6 +414,8 @@ export type RequestLogItem = {
   quality?: string;
   prompt?: string;
   promptLength?: number;
+  imageUrls?: string[];
+  imageNames?: string[];
   preferred: boolean;
   success: boolean;
   error?: string;
@@ -525,7 +530,7 @@ export async function updateImageAccountPolicy(
   return normalized;
 }
 
-async function getImageAccountPolicyForRequest() {
+export async function getImageAccountPolicyForRequest() {
   if (cachedImageAccountPolicy) {
     return cachedImageAccountPolicy;
   }
@@ -775,8 +780,19 @@ export async function refreshAccounts(accessTokens: string[]) {
   });
 }
 
-export async function refreshAllAccounts() {
+export async function refreshAllAccounts(options: { scope?: "all" | "routing_groups" } = {}) {
+  const scope = options.scope ?? "all";
+  const policy = scope === "routing_groups" ? await getImageAccountPolicyForRequest() : null;
+  const policyHeader = policy ? buildImageAccountPolicyHeader(policy) : "";
   return httpRequest<AccountRefreshAllResponse>("/api/accounts/refresh-all", {
+    method: "POST",
+    body: { scope },
+    headers: policyHeader ? { "X-Studio-Account-Policy": policyHeader } : undefined,
+  });
+}
+
+export async function stopAccountRefresh() {
+  return httpRequest<AccountRefreshAllResponse>("/api/accounts/refresh-stop", {
     method: "POST",
     body: {},
   });
