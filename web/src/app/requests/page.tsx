@@ -358,6 +358,26 @@ export default function RequestsPage() {
                     <InfoBox title="路由策略" main={detailItem.routingPolicyApplied ? "已应用" : "未应用"} sub={`分组：${detailItem.routingGroupIndex ?? "—"} · 排序：${detailItem.routingSortMode || "—"}`} />
                     <InfoBox title="错误码" main={detailItem.errorCode || "—"} />
                   </div>
+                  {detailItem.imageNames && detailItem.imageNames.length > 0 ? (
+                    <div className="mt-3 rounded-xl bg-white px-3 py-2">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">生成文件</div>
+                      <div className="mt-1 space-y-1">
+                        {detailItem.imageNames.map((name) => (
+                          <div key={name} className="break-all text-xs text-stone-700">{name}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {detailItem.imageUrls && detailItem.imageUrls.length > 0 ? (
+                    <div className="mt-3 rounded-xl bg-white px-3 py-2">
+                      <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">文件路径</div>
+                      <div className="mt-1 space-y-1">
+                        {detailItem.imageUrls.map((url) => (
+                          <div key={url} className="break-all text-xs text-stone-700">{url}</div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             ) : null}

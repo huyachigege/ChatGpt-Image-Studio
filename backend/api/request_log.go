@@ -463,7 +463,8 @@ func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string
 				imageURLs = append(imageURLs, url)
 			}
 			withoutQuery := strings.Split(url, "?")[0]
-			for _, name := range []string{strings.TrimPrefix(withoutQuery, "/v1/files/image/"), path.Base(withoutQuery)} {
+			imagePath := extractImagePathFromURL(withoutQuery)
+			for _, name := range []string{imagePath, path.Base(withoutQuery)} {
 				name = strings.Trim(strings.TrimSpace(name), "/")
 				if name == "" || name == "." {
 					continue
@@ -489,6 +490,15 @@ func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string
 	}
 	entry.ImageURLs = imageURLs
 	entry.ImageNames = imageNames
+}
+
+const imagePathMarker = "/v1/files/image/"
+
+func extractImagePathFromURL(rawURL string) string {
+	if idx := strings.Index(rawURL, imagePathMarker); idx >= 0 {
+		return rawURL[idx+len(imagePathMarker):]
+	}
+	return strings.TrimPrefix(rawURL, imagePathMarker)
 }
 
 func requestLogUserOption(item imageRequestLogEntry) (string, string) {

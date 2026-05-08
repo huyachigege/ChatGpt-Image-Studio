@@ -36,10 +36,16 @@ type imageGalleryItem struct {
 }
 
 type imageGalleryListResponse struct {
-	Items    []imageGalleryItem `json:"items"`
-	Total    int                `json:"total"`
-	Page     int                `json:"page"`
-	PageSize int                `json:"pageSize"`
+	Items   []imageGalleryItem       `json:"items"`
+	Total   int                      `json:"total"`
+	Page    int                      `json:"page"`
+	PageSize int                     `json:"pageSize"`
+	Folders []imageGalleryFolderOption `json:"folders,omitempty"`
+}
+
+type imageGalleryFolderOption struct {
+	Value string `json:"value"`
+	Label string `json:"label"`
 }
 
 type imageGalleryPromptMetadata struct {
@@ -56,10 +62,18 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 		pageSize = 100
 	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	folderFilter := strings.TrimSpace(r.URL.Query().Get("folder"))
 	items, err := s.listImageGalleryItems(r.Context(), identity)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
+	}
+	var folders []imageGalleryFolderOption
+	if identity.Role == users.RoleAdmin {
+		folders = collectImageGalleryFolders(items)
+	}
+	if folderFilter != "" {
+		items = filterImageGalleryItemsByFolder(items, folderFilter)
 	}
 	if query != "" {
 		items = filterImageGalleryItemsByPrompt(items, query)
@@ -73,7 +87,7 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 	if end > total {
 		end = total
 	}
-	writeJSON(w, http.StatusOK, imageGalleryListResponse{Items: items[start:end], Total: total, Page: page, PageSize: pageSize})
+	writeJSON(w, http.StatusOK, imageGalleryListResponse{Items: items[start:end], Total: total, Page: page, PageSize: pageSize, Folders: folders})
 }
 
 func (s *Server) handleDeleteImageGalleryItem(w http.ResponseWriter, r *http.Request) {
@@ -128,6 +142,32 @@ func filterImageGalleryItemsByPrompt(items []imageGalleryItem, query string) []i
 		}
 	}
 	return filtered
+}
+
+func filterImageGalleryItemsByFolder(items []imageGalleryItem, folder string) []imageGalleryItem {
+	filtered := make([]imageGalleryItem, 0, len(items))
+	for _, item := range items {
+		if item.Folder == folder {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered
+}
+
+func collectImageGalleryFolders(items []imageGalleryItem) []imageGalleryFolderOption {
+	seen := map[string]struct{}{}
+	var folders []imageGalleryFolderOption
+	for _, item := range items {
+		if item.Folder == "" {
+			continue
+		}
+		if _, ok := seen[item.Folder]; ok {
+			continue
+		}
+		seen[item.Folder] = struct{}{}
+		folders = append(folders, imageGalleryFolderOption{Value: item.Folder, Label: item.Folder})
+	}
+	return folders
 }
 
 func (s *Server) deleteImageGalleryNames(identity authIdentity, names []string) ([]string, error) {
@@ -343,7 +383,7 @@ func addImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptM
 	withoutQuery := strings.Split(imageURL, "?")[0]
 	keys := []string{
 		withoutQuery,
-		strings.TrimPrefix(withoutQuery, "/v1/files/image/"),
+		extractImagePathFromURL(withoutQuery),
 		path.Base(withoutQuery),
 	}
 	for _, key := range keys {

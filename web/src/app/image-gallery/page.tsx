@@ -8,6 +8,13 @@ import { toast } from "sonner";
 import { OriginalImagePreview } from "@/components/original-image-preview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
 
 const GALLERY_ROWS = 3;
@@ -79,18 +86,23 @@ export default function ImageGalleryPage() {
   const [total, setTotal] = useState(0);
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [folderFilter, setFolderFilter] = useState("");
+  const [folderOptions, setFolderOptions] = useState<{ value: string; label: string }[]>([]);
   const [detailItem, setDetailItem] = useState<ImageGalleryItem | null>(null);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number) => {
+  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string) => {
     setIsLoading(true);
     try {
-      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery });
+      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined });
       setItems(payload.items || []);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);
       setSelectedNames([]);
+      if (payload.folders) {
+        setFolderOptions(payload.folders);
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "读取历史图库失败");
     } finally {
@@ -111,8 +123,8 @@ export default function ImageGalleryPage() {
   }, []);
 
   useEffect(() => {
-    void loadItems(page, searchQuery, pageSize);
-  }, [loadItems, page, pageSize, searchQuery]);
+    void loadItems(page, searchQuery, pageSize, folderFilter);
+  }, [loadItems, page, pageSize, searchQuery, folderFilter]);
 
   const totalSize = useMemo(() => items.reduce((sum, item) => sum + (Number.isFinite(item.size) ? item.size : 0), 0), [items]);
   const previewItems = useMemo(() => items.map((item) => ({ originalUrl: item.url, title: basename(item.name) })), [items]);
@@ -152,7 +164,7 @@ export default function ImageGalleryPage() {
     try {
       await deleteImageGalleryItems([item.name]);
       toast.success("图片已删除");
-      void loadItems(page, searchQuery, pageSize);
+      void loadItems(page, searchQuery, pageSize, folderFilter);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除图片失败");
     } finally {
@@ -197,7 +209,7 @@ export default function ImageGalleryPage() {
       const payload = await deleteImageGalleryItems(selectedNames);
       const deleted = payload.deleted || selectedNames;
       toast.success(`已删除 ${deleted.length} 张图片`);
-      void loadItems(page, searchQuery, pageSize);
+      void loadItems(page, searchQuery, pageSize, folderFilter);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "批量删除失败");
     } finally {
@@ -244,6 +256,15 @@ export default function ImageGalleryPage() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {folderOptions.length > 0 ? (
+                <Select value={folderFilter || "all"} onValueChange={(value) => { setFolderFilter(value === "all" ? "" : value); setPage(1); }}>
+                  <SelectTrigger className="h-10 w-[150px] rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none"><SelectValue placeholder="选择用户" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">全部用户</SelectItem>
+                    {folderOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              ) : null}
               <form className="flex items-center gap-2" onSubmit={handleSearchSubmit}>
                 <Input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="搜索提示词" className="h-10 w-44 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none" />
                 <Button type="submit" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none">
@@ -257,7 +278,7 @@ export default function ImageGalleryPage() {
                 {isBatchDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                 删除选中 {selectedNames.length > 0 ? selectedNames.length : ""}
               </Button>
-              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize)} disabled={isLoading}>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize, folderFilter)} disabled={isLoading}>
                 {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 刷新
               </Button>

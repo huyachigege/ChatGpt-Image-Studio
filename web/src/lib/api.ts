@@ -710,13 +710,14 @@ export async function fetchImageQuota() {
   return httpRequest<{ item: DailyImageQuota }>("/api/image/quota");
 }
 
-export async function listImageGallery(params: { page?: number; pageSize?: number; q?: string } = {}) {
+export async function listImageGallery(params: { page?: number; pageSize?: number; q?: string; folder?: string } = {}) {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
   if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params.q?.trim()) searchParams.set("q", params.q.trim());
+  if (params.folder?.trim()) searchParams.set("folder", params.folder.trim());
   const query = searchParams.toString();
-  return httpRequest<{ items: ImageGalleryItem[]; total: number; page: number; pageSize: number }>(`/api/image/gallery${query ? `?${query}` : ""}`);
+  return httpRequest<{ items: ImageGalleryItem[]; total: number; page: number; pageSize: number; folders?: { value: string; label: string }[] }>(`/api/image/gallery${query ? `?${query}` : ""}`);
 }
 
 export async function deleteImageGalleryItem(name: string) {
