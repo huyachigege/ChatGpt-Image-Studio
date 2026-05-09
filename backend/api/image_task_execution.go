@@ -55,8 +55,12 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
 	effectivePrompt := task.Prompt
-	if strings.TrimSpace(task.SystemHint) != "" {
-		effectivePrompt = strings.TrimSpace(task.SystemHint) + "\n\n" + effectivePrompt
+	systemHint := strings.TrimSpace(task.SystemHint)
+	if systemHint == "" {
+		systemHint = s.cfg.ImageSystemHint()
+	}
+	if systemHint != "" {
+		effectivePrompt = systemHint + "\n\n" + effectivePrompt
 	}
 
 	var (

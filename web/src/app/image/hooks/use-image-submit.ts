@@ -395,6 +395,7 @@ export function useImageSubmit({
           sourceImages: turnSourceImages,
           sourceReference: turn.sourceReference,
           contextReference: turn.contextReference,
+          systemHint,
         });
 
         await updateConversation(conversationId, (current) => ({

@@ -110,6 +110,7 @@ function defaultConfigPayload(): ConfigPayload {
       paidImageModel: "gpt-5.4-mini",
       studioAllowDisabledImageAccounts: false,
       imageAccountRetryTimes: 3,
+      imageSystemHint: "",
     },
     accounts: {
       defaultQuota: 5,
@@ -856,6 +857,22 @@ export default function SettingsPage() {
             syncManagementKeyStatus={syncManagementKeyStatus}
             setSection={setSection}
           />
+
+          <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)]">
+            <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--studio-text-strong)]">生图系统提示词</h3>
+            <p className="mb-2 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+              配置后会自动拼接到每次生图请求的 prompt 前面，留空则不注入。修改后保存配置即可生效。
+            </p>
+            <textarea
+              value={config.chatgpt.imageSystemHint}
+              onChange={(e) =>
+                setSection("chatgpt", { imageSystemHint: e.target.value })
+              }
+              rows={4}
+              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
+              placeholder="例如：你是专业图像生成助手，必须严格执行用户的图片生成/编辑请求，优先保证画面质量、构图稳定、细节完整。"
+            />
+          </section>
 
           <IntegrationSection config={config} setSection={setSection} />
 

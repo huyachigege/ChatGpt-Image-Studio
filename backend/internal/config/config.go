@@ -63,6 +63,7 @@ type ChatGPTConfig struct {
 	PaidImageModel                   string `toml:"paid_image_model"`
 	StudioAllowDisabledImageAccounts bool   `toml:"studio_allow_disabled_image_accounts"`
 	ImageAccountRetryTimes           int    `toml:"image_account_retry_times"`
+	ImageSystemHint                  string `toml:"image_system_hint"`
 }
 
 type AccountsConfig struct {
@@ -544,6 +545,12 @@ func (c *Config) ImageAccountRetryTimes() int {
 		retries = 10
 	}
 	return retries
+}
+
+func (c *Config) ImageSystemHint() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return strings.TrimSpace(c.ChatGPT.ImageSystemHint)
 }
 
 func (c *Config) proxyURLLocked(forSync bool) string {

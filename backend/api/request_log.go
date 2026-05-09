@@ -77,6 +77,7 @@ type imageRequestLogSummary struct {
 	AccountType       string `json:"accountType,omitempty"`
 	AccountFile       string `json:"accountFile,omitempty"`
 	Success           bool   `json:"success"`
+	ErrorCode         string `json:"errorCode,omitempty"`
 	Error             string `json:"error,omitempty"`
 }
 
@@ -99,6 +100,7 @@ func (e *imageRequestLogEntry) summary() imageRequestLogSummary {
 		AccountType:       e.AccountType,
 		AccountFile:       e.AccountFile,
 		Success:           e.Success,
+		ErrorCode:         e.ErrorCode,
 		Error:             e.Error,
 	}
 }

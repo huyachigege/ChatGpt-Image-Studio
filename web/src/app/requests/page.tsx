@@ -248,7 +248,7 @@ export default function RequestsPage() {
                     <InfoBox title="路由" main={item.route || "—"} sub={`CPA 子路由：${item.cpaSubroute || "—"}`} />
                     <InfoBox title="参数" main={item.size || "—"} sub={item.quality ? `quality: ${item.quality}` : "quality: —"} />
                     <InfoBox title="结果" main={item.success ? "成功" : "失败"} />
-                    <InfoBox title="错误" main={item.error || "—"} breakAll />
+                    <InfoBox title="错误" main={item.error || "—"} sub={item.errorCode ? `错误码：${item.errorCode}` : undefined} breakAll />
                     <InfoBox title="提示词" main={promptText(item)} />
                     <InfoBox title="用户" main={item.username || item.userId || "—"} sub={item.userRole || "—"} />
                     <InfoBox title="账号" main={item.accountEmail || "—"} sub={item.accountType ? `${item.accountType} · ${item.accountFile || "—"}` : item.accountFile || "—"} />
@@ -385,21 +385,21 @@ export default function RequestsPage() {
                           <div className="mt-1 break-all text-xs text-stone-700">{detailItem.prompt}</div>
                         </div>
                       ) : null}
-                      {detailItem.imageNames && detailItem.imageNames.length > 0 ? (
+                      {detailItem.imageNames && detailItem.imageNames.filter((n) => !n.startsWith("data:")).length > 0 ? (
                         <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
                           <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">生成文件</div>
                           <div className="mt-1 space-y-1">
-                            {detailItem.imageNames.map((name) => (
+                            {detailItem.imageNames.filter((n) => !n.startsWith("data:")).map((name) => (
                               <div key={name} className="break-all text-xs text-stone-700">{name}</div>
                             ))}
                           </div>
                         </div>
                       ) : null}
-                      {detailItem.imageUrls && detailItem.imageUrls.length > 0 ? (
+                      {detailItem.imageUrls && detailItem.imageUrls.filter((u) => !u.startsWith("data:")).length > 0 ? (
                         <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
                           <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">文件路径</div>
                           <div className="mt-1 space-y-1">
-                            {detailItem.imageUrls.map((url) => (
+                            {detailItem.imageUrls.filter((u) => !u.startsWith("data:")).map((url) => (
                               <div key={url} className="break-all text-xs text-stone-700">{url}</div>
                             ))}
                           </div>

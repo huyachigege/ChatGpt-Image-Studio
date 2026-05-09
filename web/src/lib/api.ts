@@ -313,6 +313,7 @@ export type ConfigPayload = {
     paidImageModel: string;
     studioAllowDisabledImageAccounts: boolean;
     imageAccountRetryTimes: number;
+    imageSystemHint: string;
   };
   accounts: {
     defaultQuota: number;
