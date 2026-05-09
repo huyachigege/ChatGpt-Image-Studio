@@ -449,6 +449,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/integration/sub2api/groups", s.requireAdminAuth(http.HandlerFunc(s.handleSub2APIGroups)))
 	mux.Handle("GET /api/requests", s.requireAdminAuth(http.HandlerFunc(s.handleListRequestLogs)))
 	mux.Handle("GET /api/requests/filters", s.requireAdminAuth(http.HandlerFunc(s.handleRequestLogFilters)))
+	mux.Handle("GET /api/requests/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleGetRequestLog)))
 	mux.Handle("POST /api/requests/delete", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteRequestLogs)))
 	mux.Handle("GET /api/startup/check", s.requireAdminAuth(http.HandlerFunc(s.handleStartupCheck)))
 	mux.Handle("GET /api/runtime/status", s.requireAdminAuth(http.HandlerFunc(s.handleRuntimeStatus)))

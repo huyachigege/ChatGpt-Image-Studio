@@ -58,6 +58,48 @@ type imageRequestLogEntry struct {
 	Error                 string   `json:"error,omitempty"`
 }
 
+type imageRequestLogSummary struct {
+	ID           string `json:"id"`
+	StartedAt    string `json:"startedAt"`
+	FinishedAt   string `json:"finishedAt"`
+	Operation    string `json:"operation"`
+	Route        string `json:"route"`
+	CPASubroute  string `json:"cpaSubroute,omitempty"`
+	Size         string `json:"size,omitempty"`
+	Quality      string `json:"quality,omitempty"`
+	PromptLength int    `json:"promptLength,omitempty"`
+	UserID       string `json:"userId,omitempty"`
+	Username     string `json:"username,omitempty"`
+	UserRole     string `json:"userRole,omitempty"`
+	AccountEmail string `json:"accountEmail,omitempty"`
+	AccountType  string `json:"accountType,omitempty"`
+	AccountFile  string `json:"accountFile,omitempty"`
+	Success      bool   `json:"success"`
+	Error        string `json:"error,omitempty"`
+}
+
+func (e *imageRequestLogEntry) summary() imageRequestLogSummary {
+	return imageRequestLogSummary{
+		ID:           e.ID,
+		StartedAt:    e.StartedAt,
+		FinishedAt:   e.FinishedAt,
+		Operation:    e.Operation,
+		Route:        e.Route,
+		CPASubroute:  e.CPASubroute,
+		Size:         e.Size,
+		Quality:      e.Quality,
+		PromptLength: e.PromptLength,
+		UserID:       e.UserID,
+		Username:     e.Username,
+		UserRole:     e.UserRole,
+		AccountEmail: e.AccountEmail,
+		AccountType:  e.AccountType,
+		AccountFile:  e.AccountFile,
+		Success:      e.Success,
+		Error:        e.Error,
+	}
+}
+
 type imageRequestLogQuery struct {
 	Page     int
 	PageSize int
@@ -246,6 +288,25 @@ func (s *imageRequestLogStore) buildWhereClause(query imageRequestLogQuery) (str
 		return "", nil
 	}
 	return " WHERE " + strings.Join(conditions, " AND "), args
+}
+
+func (s *imageRequestLogStore) getByID(id string) (*imageRequestLogEntry, bool) {
+	if s == nil || s.db == nil {
+		return nil, false
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, false
+	}
+	var raw []byte
+	if err := s.db.QueryRow(`SELECT raw_json FROM image_request_logs WHERE id = ?`, id).Scan(&raw); err != nil {
+		return nil, false
+	}
+	var entry imageRequestLogEntry
+	if err := json.Unmarshal(raw, &entry); err != nil {
+		return nil, false
+	}
+	return &entry, true
 }
 
 func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {

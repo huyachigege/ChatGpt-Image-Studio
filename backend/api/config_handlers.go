@@ -263,12 +263,30 @@ func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 		Prompt:   r.URL.Query().Get("prompt"),
 	}
 	items, total := s.reqLogs.listPage(query)
+	summaries := make([]imageRequestLogSummary, len(items))
+	for i := range items {
+		summaries[i] = items[i].summary()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"items":    items,
+		"items":    summaries,
 		"total":    total,
 		"page":     query.Page,
 		"pageSize": query.PageSize,
 	})
+}
+
+func (s *Server) handleGetRequestLog(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(r.PathValue("id"))
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "id is required"})
+		return
+	}
+	entry, ok := s.reqLogs.getByID(id)
+	if !ok {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": "not found"})
+		return
+	}
+	writeJSON(w, http.StatusOK, entry)
 }
 
 func (s *Server) handleRequestLogFilters(w http.ResponseWriter, r *http.Request) {

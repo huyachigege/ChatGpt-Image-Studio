@@ -397,12 +397,32 @@ export type RequestLogItem = {
   id: string;
   startedAt: string;
   finishedAt: string;
+  operation: string;
+  route: string;
+  cpaSubroute?: string;
+  size?: string;
+  quality?: string;
+  promptLength?: number;
+  userId?: string;
+  username?: string;
+  userRole?: string;
+  accountEmail?: string;
+  accountType?: string;
+  accountFile?: string;
+  success: boolean;
+  error?: string;
+};
+
+export type RequestLogDetail = {
+  id: string;
+  startedAt: string;
+  finishedAt: string;
   endpoint: string;
   operation: string;
   imageMode: ImageMode | string;
   direction: "official" | "cpa" | string;
   route: string;
-  cpaSubroute?: "images_api" | "codex_responses" | "auto" | string;
+  cpaSubroute?: string;
   queueWaitMs?: number;
   inflightCountAtStart?: number;
   leaseAcquired?: boolean;
@@ -932,6 +952,10 @@ export async function fetchRequestLogs(params: { page?: number; pageSize?: numbe
 
 export async function fetchRequestLogFilters() {
   return httpRequest<RequestLogFilterOptions>("/api/requests/filters");
+}
+
+export async function fetchRequestLogDetail(id: string) {
+  return httpRequest<RequestLogDetail>(`/api/requests/${encodeURIComponent(id)}`);
 }
 
 export async function deleteRequestLogs(ids: string[]) {

@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteRequestLogs, fetchRequestLogFilters, fetchRequestLogs, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
+import { deleteRequestLogs, fetchRequestLogDetail, fetchRequestLogFilters, fetchRequestLogs, type RequestLogDetail, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatTime(value: string) {
@@ -33,7 +33,6 @@ function formatTime(value: string) {
 }
 
 function promptText(item: RequestLogItem) {
-  if (item.prompt?.trim()) return item.prompt.trim();
   if (typeof item.promptLength === "number" && item.promptLength > 0) return `${item.promptLength} 字`;
   return "—";
 }
@@ -49,7 +48,8 @@ export default function RequestsPage() {
   const [promptDraft, setPromptDraft] = useState("");
   const [filters, setFilters] = useState({ user: "", account: "", prompt: "" });
   const [filterOptions, setFilterOptions] = useState<RequestLogFilterOptions>({ users: [], accounts: [] });
-  const [detailItem, setDetailItem] = useState<RequestLogItem | null>(null);
+  const [detailItem, setDetailItem] = useState<RequestLogDetail | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -111,14 +111,26 @@ export default function RequestsPage() {
   const currentPageIds = useMemo(() => items.map((item) => item.id), [items]);
   const isAllCurrentPageSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIds.includes(id));
 
-  const copyPrompt = async (item: RequestLogItem) => {
-    const prompt = item.prompt?.trim();
-    if (!prompt) {
+  const copyPrompt = async (prompt?: string) => {
+    if (!prompt?.trim()) {
       toast.error("当前记录没有可复制的提示词");
       return;
     }
-    await navigator.clipboard.writeText(prompt);
+    await navigator.clipboard.writeText(prompt.trim());
     toast.success("提示词已复制");
+  };
+
+  const showDetail = async (id: string) => {
+    setIsDetailLoading(true);
+    setDetailItem(null);
+    try {
+      const detail = await fetchRequestLogDetail(id);
+      setDetailItem(detail);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "读取详情失败");
+    } finally {
+      setIsDetailLoading(false);
+    }
   };
 
   const toggleSelected = (id: string, checked: boolean) => {
@@ -227,7 +239,7 @@ export default function RequestsPage() {
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge variant="secondary" className="rounded-md bg-stone-100 text-stone-700">{item.operation || "—"}</Badge>
                     <Badge variant={item.success ? "success" : "danger"} className="rounded-md px-2 py-1">{item.success ? "成功" : "失败"}</Badge>
-                    <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => setDetailItem(item)}>
+                    <Button type="button" variant="outline" size="sm" className="h-7 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => void showDetail(item.id)}>
                       <Info className="size-3.5" />详情
                     </Button>
                   </div>
@@ -237,7 +249,7 @@ export default function RequestsPage() {
                     <InfoBox title="参数" main={item.size || "—"} sub={item.quality ? `quality: ${item.quality}` : "quality: —"} />
                     <InfoBox title="结果" main={item.success ? "成功" : "失败"} />
                     <InfoBox title="错误" main={item.error || "—"} breakAll />
-                    <PromptBox item={item} onCopy={copyPrompt} className="sm:col-span-2" />
+                    <InfoBox title="提示词" main={promptText(item)} />
                     <InfoBox title="用户" main={item.username || item.userId || "—"} sub={item.userRole || "—"} />
                     <InfoBox title="账号" main={item.accountEmail || "—"} sub={item.accountType ? `${item.accountType} · ${item.accountFile || "—"}` : item.accountFile || "—"} />
                   </div>
@@ -288,7 +300,7 @@ export default function RequestsPage() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap"><Badge variant={item.success ? "success" : "danger"} className="rounded-md px-2 py-1">{item.success ? "成功" : "失败"}</Badge></td>
                           <td className="px-4 py-3 whitespace-nowrap"><div className="max-w-[80px] truncate text-xs text-stone-500" title={item.error || ""}>{item.error || "—"}</div></td>
-                          <td className="px-4 py-3"><PromptCell item={item} onCopy={copyPrompt} /></td>
+                          <td className="px-4 py-3 whitespace-nowrap"><div className="text-xs text-stone-500">{promptText(item)}</div></td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="truncate text-stone-700" title={item.username || item.userId || ""}>{item.username || item.userId || "—"}</div>
                             <div className="truncate text-xs text-stone-400">{item.userRole || "—"}</div>
@@ -299,7 +311,7 @@ export default function RequestsPage() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => setDetailItem(item)}>
+                              <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-stone-200 bg-white px-2 text-xs" onClick={() => void showDetail(item.id)}>
                                 <Info className="size-3.5" />详情
                               </Button>
                               <Button type="button" variant="outline" size="sm" className="h-8 rounded-lg border-red-200 bg-white px-2 text-xs text-red-600" onClick={() => void handleDeleteSelected([item.id])} disabled={isDeleting}>
@@ -340,43 +352,60 @@ export default function RequestsPage() {
               </div>
             ) : null}
 
-            {detailItem ? (
+            {(detailItem || isDetailLoading) ? (
               <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4" onClick={() => setDetailItem(null)}>
-                <div className="w-full max-w-2xl rounded-[24px] border border-stone-200 bg-white p-5 shadow-xl" onClick={(event) => event.stopPropagation()}>
+                <div className="hide-scrollbar max-h-[80vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-stone-200 bg-white p-5 shadow-xl" onClick={(event) => event.stopPropagation()}>
                   <div className="mb-4 flex items-center justify-between gap-3">
                     <h2 className="text-base font-semibold text-stone-950">调用详情</h2>
                     <Button type="button" variant="outline" className="h-8 rounded-full px-3 text-xs" onClick={() => setDetailItem(null)}>关闭</Button>
                   </div>
-                  <div className="grid gap-3 text-sm sm:grid-cols-2">
-                    <InfoBox title="模式" main={detailItem.imageMode || "studio"} />
-                    <InfoBox title="方向" main={detailItem.direction === "cpa" ? "CPA" : detailItem.direction || "官方"} />
-                    <InfoBox title="接口" main={detailItem.endpoint || "—"} className="sm:col-span-2" breakAll />
-                    <InfoBox title="请求模型" main={detailItem.requestedModel || "—"} />
-                    <InfoBox title="上游模型" main={detailItem.upstreamModel || "—"} />
-                    <InfoBox title="工具模型" main={detailItem.imageToolModel || "—"} />
-                    <InfoBox title="排队" main={`${detailItem.queueWaitMs ?? 0} ms`} sub={`并发：${detailItem.inflightCountAtStart ?? 0}`} />
-                    <InfoBox title="路由策略" main={detailItem.routingPolicyApplied ? "已应用" : "未应用"} sub={`分组：${detailItem.routingGroupIndex ?? "—"} · 排序：${detailItem.routingSortMode || "—"}`} />
-                    <InfoBox title="错误码" main={detailItem.errorCode || "—"} />
-                  </div>
-                  {detailItem.imageNames && detailItem.imageNames.length > 0 ? (
-                    <div className="mt-3 rounded-xl bg-white px-3 py-2">
-                      <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">生成文件</div>
-                      <div className="mt-1 space-y-1">
-                        {detailItem.imageNames.map((name) => (
-                          <div key={name} className="break-all text-xs text-stone-700">{name}</div>
-                        ))}
+                  {isDetailLoading ? (
+                    <div className="flex items-center justify-center py-8 text-sm text-stone-500">加载中...</div>
+                  ) : detailItem ? (
+                    <>
+                      <div className="grid gap-3 text-sm sm:grid-cols-2">
+                        <InfoBox title="模式" main={detailItem.imageMode || "studio"} />
+                        <InfoBox title="方向" main={detailItem.direction === "cpa" ? "CPA" : detailItem.direction || "官方"} />
+                        <InfoBox title="接口" main={detailItem.endpoint || "—"} className="sm:col-span-2" breakAll />
+                        <InfoBox title="请求模型" main={detailItem.requestedModel || "—"} />
+                        <InfoBox title="上游模型" main={detailItem.upstreamModel || "—"} />
+                        <InfoBox title="工具模型" main={detailItem.imageToolModel || "—"} />
+                        <InfoBox title="排队" main={`${detailItem.queueWaitMs ?? 0} ms`} sub={`并发：${detailItem.inflightCountAtStart ?? 0}`} />
+                        <InfoBox title="路由策略" main={detailItem.routingPolicyApplied ? "已应用" : "未应用"} sub={`分组：${detailItem.routingGroupIndex ?? "—"} · 排序：${detailItem.routingSortMode || "—"}`} />
+                        <InfoBox title="错误码" main={detailItem.errorCode || "—"} />
                       </div>
-                    </div>
-                  ) : null}
-                  {detailItem.imageUrls && detailItem.imageUrls.length > 0 ? (
-                    <div className="mt-3 rounded-xl bg-white px-3 py-2">
-                      <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">文件路径</div>
-                      <div className="mt-1 space-y-1">
-                        {detailItem.imageUrls.map((url) => (
-                          <div key={url} className="break-all text-xs text-stone-700">{url}</div>
-                        ))}
-                      </div>
-                    </div>
+                      {detailItem.prompt ? (
+                        <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
+                          <div className="flex items-center justify-between">
+                            <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">提示词</div>
+                            <button type="button" className="inline-flex size-6 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-200 hover:text-stone-700" onClick={() => void copyPrompt(detailItem.prompt)} title="复制提示词" aria-label="复制提示词">
+                              <Copy className="size-3.5" />
+                            </button>
+                          </div>
+                          <div className="mt-1 break-all text-xs text-stone-700">{detailItem.prompt}</div>
+                        </div>
+                      ) : null}
+                      {detailItem.imageNames && detailItem.imageNames.length > 0 ? (
+                        <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">生成文件</div>
+                          <div className="mt-1 space-y-1">
+                            {detailItem.imageNames.map((name) => (
+                              <div key={name} className="break-all text-xs text-stone-700">{name}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      {detailItem.imageUrls && detailItem.imageUrls.length > 0 ? (
+                        <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">文件路径</div>
+                          <div className="mt-1 space-y-1">
+                            {detailItem.imageUrls.map((url) => (
+                              <div key={url} className="break-all text-xs text-stone-700">{url}</div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
                   ) : null}
                 </div>
               </div>
@@ -395,35 +424,6 @@ export default function RequestsPage() {
         </Card>
       </div>
     </section>
-  );
-}
-
-function PromptCell({ item, onCopy }: { item: RequestLogItem; onCopy: (item: RequestLogItem) => void }) {
-  return (
-    <div className="flex max-w-[280px] items-center gap-2">
-      <div className="min-w-0 flex-1 truncate text-xs text-stone-500" title={item.prompt || ""}>{promptText(item)}</div>
-      {item.prompt?.trim() ? (
-        <button type="button" className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700" onClick={() => void onCopy(item)} title="复制提示词" aria-label="复制提示词">
-          <Copy className="size-3.5" />
-        </button>
-      ) : null}
-    </div>
-  );
-}
-
-function PromptBox({ item, onCopy, className }: { item: RequestLogItem; onCopy: (item: RequestLogItem) => void; className?: string }) {
-  return (
-    <div className={cn("rounded-xl bg-white px-3 py-2", className)}>
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">提示词</div>
-        {item.prompt?.trim() ? (
-          <button type="button" className="inline-flex size-7 items-center justify-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700" onClick={() => void onCopy(item)} title="复制提示词" aria-label="复制提示词">
-            <Copy className="size-3.5" />
-          </button>
-        ) : null}
-      </div>
-      <div className="mt-1 break-all text-stone-700" title={item.prompt || ""}>{promptText(item)}</div>
-    </div>
   );
 }
 
