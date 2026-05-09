@@ -5,6 +5,7 @@ import {
   Copy,
   KeyRound,
   LoaderCircle,
+  Megaphone,
   Plus,
   RefreshCcw,
   Trash2,
@@ -21,11 +22,14 @@ import { Input } from "@/components/ui/input";
 import {
   adjustUserQuota,
   createInvite,
+  deleteAnnouncement,
   deleteUser,
+  fetchAnnouncement,
   fetchConfig,
   fetchDefaultConfig,
   fetchInvites,
   fetchUsers,
+  setAnnouncement,
   updateConfig,
   updateUserDisabled,
   type AppUserItem,
@@ -658,6 +662,8 @@ export default function SettingsPage() {
         ) : null}
 
         <div className="mt-5 space-y-5">
+          <AnnouncementSection />
+
           <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
@@ -863,6 +869,128 @@ export default function SettingsPage() {
           />
         </div>
       </div>
+    </section>
+  );
+}
+
+function AnnouncementSection() {
+  const [content, setContent] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasExisting, setHasExisting] = useState(false);
+
+  useEffect(() => {
+    fetchAnnouncement()
+      .then((data) => {
+        if (data.active && data.content) {
+          setContent(data.content);
+          setExpiresAt(data.expiresAt ?? "");
+          setHasExisting(true);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    const trimmed = content.trim();
+    if (!trimmed) {
+      toast.error("请输入公告内容");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await setAnnouncement(trimmed, expiresAt);
+      setHasExisting(true);
+      toast.success("公告已保存");
+    } catch {
+      toast.error("保存失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsSaving(true);
+    try {
+      await deleteAnnouncement();
+      setContent("");
+      setExpiresAt("");
+      setHasExisting(false);
+      toast.success("公告已清除");
+    } catch {
+      toast.error("清除失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-stone-950 dark:text-[var(--studio-text-strong)]">
+          <Megaphone className="size-4" />
+          <h2 className="text-lg font-semibold tracking-tight">公告管理</h2>
+        </div>
+        <p className="text-sm leading-6 text-stone-500 dark:text-[var(--studio-text-muted)]">
+          设置登录时弹窗公告，支持设定过期时间。用户登录成功后会看到弹窗提示。
+        </p>
+      </div>
+
+      {isLoading ? (
+        <div className="mt-4 flex items-center gap-2 text-sm text-stone-400">
+          <LoaderCircle className="size-4 animate-spin" />
+          加载中…
+        </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="输入公告内容…"
+            rows={3}
+            className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm leading-6 text-stone-900 shadow-none outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-bg)] dark:text-[var(--studio-text)]"
+          />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-2">
+              <label className="shrink-0 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">过期时间</label>
+              <Input
+                type="datetime-local"
+                value={expiresAt ? expiresAt.slice(0, 16) : ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setExpiresAt(v ? new Date(v).toISOString() : "");
+                }}
+                className="h-10 w-auto rounded-xl border-stone-200 bg-stone-50 px-3 text-sm shadow-none focus-visible:ring-1"
+              />
+            </div>
+            <div className="flex gap-2 sm:ml-auto">
+              {hasExisting ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none"
+                  onClick={() => void handleDelete()}
+                  disabled={isSaving}
+                >
+                  <Trash2 className="mr-1.5 size-3.5" />
+                  清除公告
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                className="h-10 rounded-full bg-stone-950 px-5 text-[13px] text-white shadow-none hover:bg-stone-800"
+                onClick={() => void handleSave()}
+                disabled={isSaving}
+              >
+                {isSaving ? <LoaderCircle className="mr-1.5 size-3.5 animate-spin" /> : <Save className="mr-1.5 size-3.5" />}
+                保存公告
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CircleAlert, LoaderCircle, LockKeyhole, Sparkles } from "lucide-react";
+import { CircleAlert, LoaderCircle, LockKeyhole, Megaphone, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { login, registerUser } from "@/lib/api";
+import { fetchAnnouncement, login, registerUser } from "@/lib/api";
 import { setStoredAuthKey, setStoredAuthUser } from "@/store/auth";
 
 export default function LoginPage() {
@@ -18,11 +18,24 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [announcementContent, setAnnouncementContent] = useState("");
+  const [pendingNavigate, setPendingNavigate] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchAnnouncement().then((data) => {
+      if (data.active && data.content) setAnnouncementContent(data.content);
+    }).catch(() => {});
+  }, []);
 
   const handleAuthSuccess = async (payload: Awaited<ReturnType<typeof login>>) => {
     await setStoredAuthKey(payload.token);
     await setStoredAuthUser(payload.user);
-    navigate(payload.user.role === "admin" ? "/accounts" : "/image", { replace: true });
+    const target = payload.user.role === "admin" ? "/accounts" : "/image";
+    if (announcementContent) {
+      setPendingNavigate(target);
+    } else {
+      navigate(target, { replace: true });
+    }
   };
 
   const handleSubmit = async () => {
@@ -184,6 +197,26 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {pendingNavigate ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 px-4">
+          <div className="w-full max-w-md rounded-[24px] border border-stone-200 bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="inline-flex size-10 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <Megaphone className="size-5" />
+              </div>
+              <h2 className="text-base font-semibold text-stone-950">系统公告</h2>
+            </div>
+            <div className="whitespace-pre-wrap text-sm leading-7 text-stone-700">{announcementContent}</div>
+            <Button
+              className="mt-5 h-11 w-full rounded-2xl bg-stone-950 text-white hover:bg-stone-800"
+              onClick={() => navigate(pendingNavigate, { replace: true })}
+            >
+              我知道了
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"chatgpt2api/internal/imaging"
 	"chatgpt2api/internal/users"
 )
 
@@ -61,6 +62,32 @@ func imageTaskQuotaKind(mode, resolutionAccess, size string) string {
 		return "paid"
 	}
 	return "free"
+}
+
+func (s *Server) normalizeCreateImageTaskRequest(ctx context.Context, req createImageTaskRequest) createImageTaskRequest {
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
+	if mode == "" {
+		mode = "generate"
+	}
+	if strings.TrimSpace(req.Quality) == "" {
+		req.Quality = "high"
+	}
+	if mode != "generate" || req.SourceReference != nil || req.ContextReference != nil {
+		return req
+	}
+	if strings.TrimSpace(req.ResolutionAccess) == "" {
+		req.ResolutionAccess = "paid"
+	}
+	req.Size = normalizeGenerateImageSize(req.Size)
+	if imageTaskQuotaKind(mode, req.ResolutionAccess, req.Size) == "paid" {
+		if err := s.ensureUserImageQuotaAvailable(ctx, "paid", imageTaskQuotaCount(req.Count)); requestErrorCode(err) == "user_paid_quota_exhausted" {
+			req.ResolutionAccess = "free"
+			if requiresPaidGenerateTask(req.Size) {
+				req.Size = imaging.DefaultGenerateSize
+			}
+		}
+	}
+	return req
 }
 
 func withUserImageQuotaKind(ctx context.Context, quotaKind string) context.Context {

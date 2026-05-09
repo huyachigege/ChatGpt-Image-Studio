@@ -1251,3 +1251,27 @@ export async function editImage({
     body: formData,
   });
 }
+
+// Announcement
+
+export type AnnouncementData = {
+  active: boolean;
+  content?: string;
+  expiresAt?: string;
+  createdAt?: string;
+};
+
+export async function fetchAnnouncement() {
+  return httpRequest<AnnouncementData>("/api/announcement", { redirectOnUnauthorized: false });
+}
+
+export async function setAnnouncement(content: string, expiresAt: string) {
+  return httpRequest<{ ok: boolean }>("/api/announcement", {
+    method: "PUT",
+    body: { content, expiresAt },
+  });
+}
+
+export async function deleteAnnouncement() {
+  return httpRequest<{ ok: boolean }>("/api/announcement", { method: "DELETE" });
+}

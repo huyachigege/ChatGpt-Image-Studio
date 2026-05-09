@@ -147,6 +147,7 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 		},
 	}
 	server.imageTasks = newImageTaskManager(server)
+	server.initAnnouncementTable()
 	return server
 }
 
@@ -421,6 +422,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /auth/register", http.HandlerFunc(s.handleRegister))
 	mux.Handle("GET /version", http.HandlerFunc(s.handleVersion))
 	mux.Handle("GET /health", http.HandlerFunc(handleHealth))
+	mux.Handle("GET /api/announcement", http.HandlerFunc(s.handleGetAnnouncement))
+	mux.Handle("PUT /api/announcement", s.requireAdminAuth(http.HandlerFunc(s.handleSetAnnouncement)))
+	mux.Handle("DELETE /api/announcement", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteAnnouncement)))
 
 	mux.Handle("GET /api/accounts", s.requireAdminAuth(http.HandlerFunc(s.handleListAccounts)))
 	mux.Handle("GET /api/accounts/{id}/quota", s.requireAdminAuth(http.HandlerFunc(s.handleAccountQuota)))

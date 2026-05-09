@@ -861,17 +861,14 @@ export default function ImagePage() {
     const selectedPreset = currentResolutionPresets.find(
       (item) => item.tier === imageResolutionTier,
     );
-    if (selectedPreset && (selectedPreset.access !== "paid" || paidQuotaRemaining !== 0)) {
+    if (selectedPreset) {
       return;
     }
-    const nextPreset =
-      paidQuotaRemaining === 0
-        ? currentResolutionPresets.find((item) => item.access === "free")
-        : currentResolutionPresets[0];
+    const nextPreset = currentResolutionPresets[0];
     if (nextPreset && nextPreset.tier !== imageResolutionTier) {
       setImageResolutionTier(nextPreset.tier);
     }
-  }, [currentResolutionPresets, imageResolutionTier, paidQuotaRemaining]);
+  }, [currentResolutionPresets, imageResolutionTier]);
 
   useEffect(() => {
     let shouldRefresh = false;

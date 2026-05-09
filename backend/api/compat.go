@@ -109,6 +109,17 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 		req.N = 1
 	}
 	size := normalizeGenerateImageSize(req.Size)
+	quality := strings.TrimSpace(req.Quality)
+	if quality == "" {
+		quality = "high"
+	}
+	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, "paid", req.N); requestErrorCode(quotaErr) == "user_paid_quota_exhausted" {
+		if imaging.RequiresPaidGenerateAccount(size) {
+			size = imaging.DefaultGenerateSize
+		}
+	} else if quotaErr != nil {
+		return nil, quotaErr
+	}
 	requirePaidAccount := s.configuredImageMode() == "studio" && imaging.RequiresPaidGenerateAccount(size)
 	var allowAccount func(accounts.PublicAccount) bool
 	if requirePaidAccount {
@@ -148,7 +159,7 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 		Model:          normalizeRequestedImageModel(req.Model, s.cfg.ChatGPT.Model),
 		Count:          req.N,
 		Size:           size,
-		Quality:        strings.TrimSpace(req.Quality),
+		Quality:        quality,
 		Background:     strings.TrimSpace(req.Background),
 		ResponseFormat: "url",
 		Policy:         policy,
