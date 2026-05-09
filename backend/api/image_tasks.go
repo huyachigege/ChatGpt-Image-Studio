@@ -74,6 +74,7 @@ type createImageTaskRequest struct {
 	SourceReference  *imageTaskSourceReferencePayload    `json:"sourceReference,omitempty"`
 	ContextReference *imageTaskContextReferencePayload   `json:"contextReference,omitempty"`
 	Policy           *accounts.ImageAccountRoutingPolicy `json:"policy,omitempty"`
+	SystemHint       string                              `json:"systemHint,omitempty"`
 }
 
 type imageTaskBlocker struct {
@@ -187,6 +188,7 @@ type imageTask struct {
 	Quality          string
 	Background       string
 	ResponseFormat   string
+	SystemHint       string
 	SourceImages     []imageTaskSourceImage
 	SourceReference  *imageTaskSourceReference
 	ContextReference *imageTaskContextReference

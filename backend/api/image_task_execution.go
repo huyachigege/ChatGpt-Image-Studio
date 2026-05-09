@@ -54,6 +54,11 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
+	effectivePrompt := task.Prompt
+	if strings.TrimSpace(task.SystemHint) != "" {
+		effectivePrompt = strings.TrimSpace(task.SystemHint) + "\n\n" + effectivePrompt
+	}
+
 	var (
 		items     []map[string]any
 		retryable bool
@@ -84,7 +89,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 				return client.InpaintImageByMask(
 					taskCtx,
-					task.Prompt,
+					effectivePrompt,
 					upstreamModel,
 					task.SourceReference.OriginalFileID,
 					task.SourceReference.OriginalGenID,
@@ -118,7 +123,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			responsesEligible,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				return client.EditImageByUpload(taskCtx, task.Prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				return client.EditImageByUpload(taskCtx, effectivePrompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			},
 			fakeReq,
 			false,
@@ -141,10 +146,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if generator, ok := client.(interface {
 						GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
 					}); ok {
-						return generator.GenerateImageWithContext(taskCtx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+						return generator.GenerateImageWithContext(taskCtx, effectivePrompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
 					}
 				}
-				return client.GenerateImage(taskCtx, task.Prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+				return client.GenerateImage(taskCtx, effectivePrompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
 			},
 			fakeReq,
 			false,

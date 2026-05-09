@@ -55,6 +55,7 @@ type PromptComposerProps = {
   onAppendFiles: (files: FileList | null, role: "image" | "mask") => Promise<void>;
   onMobileCollapsedChange?: (collapsed: boolean) => void;
   onSubmit: () => Promise<void>;
+  privatePhotoMode?: boolean;
 };
 
 export function PromptComposer({
@@ -90,6 +91,7 @@ export function PromptComposer({
   onAppendFiles,
   onMobileCollapsedChange,
   onSubmit,
+  privatePhotoMode,
 }: PromptComposerProps) {
   const imageQualityLabel = imageQualityOptions.find((item) => item.value === imageQuality)?.label ?? imageQuality;
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
@@ -556,7 +558,11 @@ export function PromptComposer({
               <button
                 type="button"
                 onClick={() => void onSubmit()}
-                className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-stone-950 text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)] dark:disabled:bg-[var(--studio-panel-muted)] dark:disabled:text-[var(--studio-text-muted)] sm:size-9"
+                className={cn(
+                  "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-stone-300 dark:disabled:bg-[var(--studio-panel-muted)] dark:disabled:text-[var(--studio-text-muted)] sm:size-9",
+                  !privatePhotoMode && "bg-stone-950 hover:bg-stone-800 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)]",
+                )}
+                style={privatePhotoMode ? { backgroundColor: "#f59e0b" } : undefined}
                 aria-label="提交图片任务"
               >
                 <ArrowUp className="size-4" />

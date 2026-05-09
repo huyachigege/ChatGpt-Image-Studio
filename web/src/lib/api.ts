@@ -1086,6 +1086,7 @@ export async function createImageTask(payload: {
   sourceReference?: InpaintSourceReference;
   contextReference?: ImageContextReference;
   policy?: StoredImageAccountPolicy;
+  systemHint?: string;
 }) {
   const policy = payload.policy ?? (await getImageAccountPolicyForRequest());
   return httpRequest<ImageTaskResponse>("/api/image/tasks", {
@@ -1109,6 +1110,7 @@ export async function createImageTask(payload: {
       sourceReference: payload.sourceReference,
       contextReference: payload.contextReference,
       policy: normalizeImageAccountPolicy(policy),
+      systemHint: payload.systemHint || undefined,
     },
   });
 }

@@ -902,6 +902,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		Quality:          strings.TrimSpace(req.Quality),
 		Background:       strings.TrimSpace(req.Background),
 		ResponseFormat:   "url",
+		SystemHint:       strings.TrimSpace(req.SystemHint),
 		SourceImages:     sourceImages,
 		SourceReference:  sourceReference,
 		ContextReference: contextReference,

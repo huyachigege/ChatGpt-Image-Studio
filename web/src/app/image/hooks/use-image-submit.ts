@@ -53,6 +53,7 @@ type UseImageSubmitOptions = {
     updater: (current: ImageConversation | null) => ImageConversation,
   ) => Promise<void>;
   resetComposer: (nextMode?: ImageMode) => void;
+  systemHint?: string;
 };
 
 function buildConversationBase(
@@ -132,6 +133,7 @@ export function useImageSubmit({
   persistConversation,
   updateConversation,
   resetComposer,
+  systemHint,
 }: UseImageSubmitOptions) {
   const isSelectionEditDispatchingRef = useRef(false);
   const isSubmitDispatchingRef = useRef(false);
@@ -238,6 +240,7 @@ export function useImageSubmit({
           quality: nextQuality,
           sourceImages: draftTurn.sourceImages,
           sourceReference,
+          systemHint,
         });
 
         await updateConversation(conversationId, (current) => ({
@@ -530,6 +533,7 @@ export function useImageSubmit({
         quality: imageQuality,
         sourceImages,
         contextReference,
+        systemHint,
       });
 
       await updateConversation(conversationId, (current) => ({
@@ -591,6 +595,7 @@ export function useImageSubmit({
     setSourceImages,
     setSubmitElapsedSeconds,
     sourceImages,
+    systemHint,
     updateConversation,
   ]);
 
