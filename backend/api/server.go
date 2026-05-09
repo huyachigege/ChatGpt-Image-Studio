@@ -436,6 +436,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /api/accounts/refresh-stop", s.requireAdminAuth(http.HandlerFunc(s.handleStopAccountRefresh)))
 	mux.Handle("GET /api/accounts/refresh-progress", s.requireAdminAuth(http.HandlerFunc(s.handleAccountRefreshProgress)))
 	mux.Handle("POST /api/accounts/update", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateAccount)))
+	mux.Handle("POST /api/accounts/{id}/image-test", s.requireAdminAuth(http.HandlerFunc(s.handleAccountImageTest)))
 	mux.Handle("GET /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleGetImageAccountPolicy)))
 	mux.Handle("PUT /api/accounts/image-policy", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateImageAccountPolicy)))
 	mux.Handle("GET /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleListInvites)))
@@ -447,6 +448,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleGetConfig)))
 	mux.Handle("GET /api/config/defaults", s.requireAdminAuth(http.HandlerFunc(s.handleGetDefaultConfig)))
 	mux.Handle("PUT /api/config", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateConfig)))
+	mux.Handle("GET /api/config/image-system-hint", s.requireAdminAuth(http.HandlerFunc(s.handleGetImageSystemHint)))
+	mux.Handle("PUT /api/config/image-system-hint", s.requireAdminAuth(http.HandlerFunc(s.handleSetImageSystemHint)))
 	mux.Handle("POST /api/proxy/test", s.requireAdminAuth(http.HandlerFunc(s.handleProxyTest)))
 	mux.Handle("POST /api/integration/test", s.requireAdminAuth(http.HandlerFunc(s.handleIntegrationTest)))
 	mux.Handle("POST /api/integration/newapi/token", s.requireAdminAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
@@ -1258,10 +1261,11 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 }
 
 type imageRequestMetadata struct {
-	size         string
-	quality      string
-	prompt       string
-	promptLength int
+	size            string
+	quality         string
+	prompt          string
+	promptLength    int
+	upstreamRequest string
 }
 
 func (m imageRequestMetadata) applyTo(entry *imageRequestLogEntry) {
@@ -1272,6 +1276,7 @@ func (m imageRequestMetadata) applyTo(entry *imageRequestLogEntry) {
 	entry.Quality = strings.TrimSpace(m.quality)
 	entry.Prompt = strings.TrimSpace(m.prompt)
 	entry.PromptLength = m.promptLength
+	entry.UpstreamRequest = m.upstreamRequest
 }
 
 func newImageRequestMetadata(prompt, size, quality string) imageRequestMetadata {
@@ -1480,6 +1485,8 @@ func (s *Server) runPureCPAImageRequest(
 		}
 		if requestErr, ok := err.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(err)
 		}
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
@@ -1506,6 +1513,8 @@ func (s *Server) runPureCPAImageRequest(
 		}
 		if requestErr, ok := quotaErr.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(quotaErr)
 		}
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
@@ -1517,6 +1526,9 @@ func (s *Server) runPureCPAImageRequest(
 	results, err := run(client, upstreamModel)
 	cpaSubroute := client.LastRoute()
 	cpaFallbackReason := client.LastFallbackReason()
+	if reqBodyProvider, ok := client.(interface{ LastRequestBody() string }); ok {
+		metadata.upstreamRequest = reqBodyProvider.LastRequestBody()
+	}
 	if label := strings.TrimSpace(client.LastModelLabel()); label != "" {
 		upstreamModel = label
 	}
@@ -1542,6 +1554,8 @@ func (s *Server) runPureCPAImageRequest(
 		}
 		if requestErr, ok := err.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(err)
 		}
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
@@ -1570,6 +1584,8 @@ func (s *Server) runPureCPAImageRequest(
 		}
 		if requestErr, ok := quotaErr.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(quotaErr)
 		}
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
@@ -1778,6 +1794,8 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		}
 		if requestErr, ok := quotaErr.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(quotaErr)
 		}
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
@@ -1791,6 +1809,9 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		imageToolModel = strings.TrimSpace(toolModelProvider.ImageToolModel())
 	}
 	results, err := run(client, upstreamModel)
+	if reqBodyProvider, ok := client.(interface{ LastRequestBody() string }); ok {
+		metadata.upstreamRequest = reqBodyProvider.LastRequestBody()
+	}
 	cpaSubroute := ""
 	cpaFallbackReason := ""
 	if cpaClient, ok := client.(cpaRouteAwareImageWorkflowClient); ok {
@@ -1842,6 +1863,8 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		}
 		if requestErr, ok := err.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(err)
 		}
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
@@ -1896,6 +1919,8 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		}
 		if requestErr, ok := quotaErr.(*requestError); ok {
 			entry.ErrorCode = requestErr.code
+		} else {
+			entry.ErrorCode = inferErrorCode(quotaErr)
 		}
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
@@ -2386,6 +2411,31 @@ func requestErrorCode(err error) string {
 	return ""
 }
 
+func inferErrorCode(err error) string {
+	if code := requestErrorCode(err); code != "" {
+		return code
+	}
+	if err == nil {
+		return ""
+	}
+	msg := strings.ToLower(err.Error())
+	for _, status := range []string{"401", "403", "429", "500", "502", "503", "504"} {
+		if strings.Contains(msg, "returned "+status) || strings.Contains(msg, "http "+status) || strings.Contains(msg, "status "+status) {
+			return "http_" + status
+		}
+	}
+	if strings.Contains(msg, "safety") || strings.Contains(msg, "content_policy") || strings.Contains(msg, "safety_violation") {
+		return "content_policy_violation"
+	}
+	if strings.Contains(msg, "timeout") || strings.Contains(msg, "deadline exceeded") {
+		return "timeout"
+	}
+	if strings.Contains(msg, "refused") || strings.Contains(msg, "refusal") {
+		return "model_refused"
+	}
+	return ""
+}
+
 func writeImageRequestError(w http.ResponseWriter, err error) {
 	if code := requestErrorCode(err); code != "" {
 		writeAPIError(w, http.StatusBadGateway, code, err.Error())
@@ -2553,11 +2603,27 @@ func (s *Server) configuredImageRouteForAccount(account accounts.PublicAccount) 
 }
 
 func (s *Server) imageRequestConfig() handler.ImageRequestConfig {
+	requestTimeout := s.cfg.ChatGPT.RequestTimeout
+	if requestTimeout <= 0 {
+		requestTimeout = 120
+	}
+	sseTimeout := s.cfg.ChatGPT.SSETimeout
+	if sseTimeout <= 0 {
+		sseTimeout = 600
+	}
+	pollInterval := s.cfg.ChatGPT.PollInterval
+	if pollInterval <= 0 {
+		pollInterval = 3
+	}
+	pollMaxWait := s.cfg.ChatGPT.PollMaxWait
+	if pollMaxWait <= 0 {
+		pollMaxWait = 600
+	}
 	return handler.ImageRequestConfig{
-		RequestTimeout: time.Duration(max(1, s.cfg.ChatGPT.RequestTimeout)) * time.Second,
-		SSETimeout:     time.Duration(max(1, s.cfg.ChatGPT.SSETimeout)) * time.Second,
-		PollInterval:   time.Duration(max(1, s.cfg.ChatGPT.PollInterval)) * time.Second,
-		PollMaxWait:    time.Duration(max(1, s.cfg.ChatGPT.PollMaxWait)) * time.Second,
+		RequestTimeout: time.Duration(requestTimeout) * time.Second,
+		SSETimeout:     time.Duration(sseTimeout) * time.Second,
+		PollInterval:   time.Duration(pollInterval) * time.Second,
+		PollMaxWait:    time.Duration(pollMaxWait) * time.Second,
 	}
 }
 

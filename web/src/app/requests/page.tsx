@@ -374,6 +374,12 @@ export default function RequestsPage() {
                         <InfoBox title="路由策略" main={detailItem.routingPolicyApplied ? "已应用" : "未应用"} sub={`分组：${detailItem.routingGroupIndex ?? "—"} · 排序：${detailItem.routingSortMode || "—"}`} />
                         <InfoBox title="错误码" main={detailItem.errorCode || "—"} />
                       </div>
+                      {detailItem.error ? (
+                        <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2">
+                          <div className="text-[11px] uppercase tracking-[0.14em] text-rose-400">完整错误</div>
+                          <div className="mt-1 break-all text-xs text-rose-700">{detailItem.error}</div>
+                        </div>
+                      ) : null}
                       {detailItem.prompt ? (
                         <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
                           <div className="flex items-center justify-between">
@@ -384,6 +390,12 @@ export default function RequestsPage() {
                           </div>
                           <div className="mt-1 break-all text-xs text-stone-700">{detailItem.prompt}</div>
                         </div>
+                      ) : null}
+                      {detailItem.upstreamRequest ? (
+                        <details className="mt-3 rounded-xl bg-stone-50 px-3 py-2">
+                          <summary className="cursor-pointer text-[11px] uppercase tracking-[0.14em] text-stone-400 hover:text-stone-600">上游请求体</summary>
+                          <pre className="mt-1 max-h-60 overflow-auto whitespace-pre-wrap break-all text-[11px] text-stone-600">{detailItem.upstreamRequest}</pre>
+                        </details>
                       ) : null}
                       {detailItem.imageNames && detailItem.imageNames.filter((n) => !n.startsWith("data:")).length > 0 ? (
                         <div className="mt-3 rounded-xl bg-stone-50 px-3 py-2">

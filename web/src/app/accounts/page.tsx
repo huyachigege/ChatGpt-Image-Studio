@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -14,6 +14,7 @@ import {
   FileUp,
   LoaderCircle,
   Pencil,
+  Play,
   RefreshCw,
   Search,
   Square,
@@ -57,6 +58,7 @@ import {
   refreshAccounts,
   runSync,
   stopAccountRefresh,
+  testAccountImage,
   updateAccount,
   type AccountImportResponse,
   type Account,
@@ -349,6 +351,8 @@ export default function AccountsPage() {
   const [quotaRefreshingId, setQuotaRefreshingId] = useState<string | null>(
     null,
   );
+  const [imageTestingId, setImageTestingId] = useState<string | null>(null);
+  const [imageTestResult, setImageTestResult] = useState<Record<string, any>>({});
   const [accountQuotaMap, setAccountQuotaMap] = useState<
     Record<string, AccountQuotaResponse>
   >({});
@@ -914,6 +918,28 @@ export default function AccountsPage() {
       toast.error(message);
     } finally {
       setQuotaRefreshingId(null);
+    }
+  };
+
+  const handleImageTest = async (account: Account, route = "responses") => {
+    setImageTestingId(account.id);
+    setImageTestResult((prev) => { const next = { ...prev }; delete next[account.id]; return next; });
+    toast(`正在检测 ${route} 路线...`, { duration: 60000, id: `image-test-${account.id}` });
+    try {
+      const result = await testAccountImage(account.id, route);
+      setImageTestResult((prev) => ({ ...prev, [account.id]: result }));
+      toast.dismiss(`image-test-${account.id}`);
+      if (result.ok) {
+        toast.success(`${route} 检测成功 (${result.latencyMs}ms)`);
+      } else {
+        toast.error(`${route} 检测失败: ${result.error?.slice(0, 100) || "未知错误"}`);
+      }
+    } catch (error) {
+      toast.dismiss(`image-test-${account.id}`);
+      const message = error instanceof Error ? error.message : "检测请求失败";
+      toast.error(message);
+    } finally {
+      setImageTestingId(null);
     }
   };
 
@@ -1858,6 +1884,21 @@ export default function AccountsPage() {
                               )}
                             />
                           </button>
+                          <button
+                            type="button"
+                            className="shrink-0 rounded-lg p-2 text-stone-400 transition hover:bg-emerald-100 hover:text-emerald-700"
+                            onClick={() => void handleImageTest(account)}
+                            disabled={imageTestingId === account.id}
+                            aria-label="检测生图"
+                            title="检测生图"
+                          >
+                            <Play
+                              className={cn(
+                                "size-4",
+                                imageTestingId === account.id ? "animate-pulse" : "",
+                              )}
+                            />
+                          </button>
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -1942,6 +1983,32 @@ export default function AccountsPage() {
                             </div>
                           </div>
                         </div>
+
+                        {imageTestResult[account.id] ? (
+                          <div className="mt-3 rounded-xl border border-stone-200 bg-white p-3 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className={imageTestResult[account.id].ok ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                                {imageTestResult[account.id].ok ? "检测成功" : "检测失败"}
+                              </span>
+                              <span className="text-stone-400">{imageTestResult[account.id].latencyMs}ms</span>
+                            </div>
+                            {imageTestResult[account.id].error ? (
+                              <div className="mt-2 break-all text-rose-600">{imageTestResult[account.id].error}</div>
+                            ) : null}
+                            {imageTestResult[account.id].requestBody ? (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-stone-500 hover:text-stone-700">请求体</summary>
+                                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-stone-50 p-2 text-[11px] text-stone-600">{imageTestResult[account.id].requestBody}</pre>
+                              </details>
+                            ) : null}
+                            {imageTestResult[account.id].responseBody ? (
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-stone-500 hover:text-stone-700">响应体 (HTTP {imageTestResult[account.id].responseStatus || "?"})</summary>
+                                <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded bg-stone-50 p-2 text-[11px] text-stone-600">{imageTestResult[account.id].responseBody}</pre>
+                              </details>
+                            ) : null}
+                          </div>
+                        ) : null}
 
                         <div className="mt-4 flex items-center justify-end gap-1 border-t border-stone-200/70 pt-3 text-stone-400">
                           <button
@@ -2042,8 +2109,8 @@ export default function AccountsPage() {
                     const isQuotaRefreshing = quotaRefreshingId === account.id;
 
                     return (
+                      <Fragment key={account.id}>
                       <tr
-                        key={account.id}
                         className="border-b border-stone-100/80 text-sm text-stone-600 transition-colors hover:bg-stone-50/70"
                       >
                         <td className="px-4 py-3 text-center">
@@ -2228,11 +2295,75 @@ export default function AccountsPage() {
                             >
                               <Trash2 className="size-4" />
                             </button>
+                            <button
+                              type="button"
+                              className={cn(
+                                "rounded-lg px-1.5 py-1 text-[10px] font-medium transition",
+                                imageTestingId === account.id
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : "text-stone-400 hover:bg-emerald-100 hover:text-emerald-700",
+                              )}
+                              onClick={() => void handleImageTest(account, "responses")}
+                              disabled={imageTestingId !== null}
+                              title="检测 responses 路线"
+                            >
+                              {imageTestingId === account.id ? <LoaderCircle className="inline size-3 animate-spin" /> : "R"}
+                            </button>
+                            <button
+                              type="button"
+                              className={cn(
+                                "rounded-lg px-1.5 py-1 text-[10px] font-medium transition",
+                                imageTestingId === account.id
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "text-stone-400 hover:bg-amber-100 hover:text-amber-700",
+                              )}
+                              onClick={() => void handleImageTest(account, "legacy")}
+                              disabled={imageTestingId !== null}
+                              title="检测 legacy 路线"
+                            >
+                              L
+                            </button>
                           </div>
+                          {imageTestResult[account.id] ? (
+                            <div className="mt-1 max-w-xs text-left text-[11px]">
+                              <span className={imageTestResult[account.id].ok ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                                {imageTestResult[account.id].ok ? "成功" : "失败"}
+                              </span>
+                              <span className="ml-1 text-stone-400">{imageTestResult[account.id].latencyMs}ms</span>
+                            </div>
+                          ) : null}
                         </td>
                       </tr>
-                    );
-                  })}
+                      {imageTestResult[account.id] ? (
+                        <tr className="border-b border-stone-100 bg-stone-50">
+                          <td colSpan={10} className="px-4 py-3">
+                            <div className="text-xs">
+                              <div className="flex items-center gap-3">
+                                <span className={imageTestResult[account.id].ok ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>
+                                  {imageTestResult[account.id].ok ? "检测成功" : "检测失败"}
+                                </span>
+                                <span className="text-stone-400">耗时 {imageTestResult[account.id].latencyMs}ms</span>
+                                <span className="text-stone-400">HTTP {imageTestResult[account.id].responseStatus || "—"}</span>
+                                <button type="button" className="text-stone-400 hover:text-stone-700" onClick={() => setImageTestResult((prev) => { const next = { ...prev }; delete next[account.id]; return next; })}>关闭</button>
+                              </div>
+                              {imageTestResult[account.id].error ? (
+                                <div className="mt-2 break-all text-rose-600">{imageTestResult[account.id].error}</div>
+                              ) : null}
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-stone-500 hover:text-stone-700">请求体</summary>
+                                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-white p-2 text-[11px] text-stone-600 border border-stone-200">{imageTestResult[account.id].requestBody || "—"}</pre>
+                              </details>
+                              <details className="mt-2">
+                                <summary className="cursor-pointer text-stone-500 hover:text-stone-700">响应体</summary>
+                                <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-white p-2 text-[11px] text-stone-600 border border-stone-200">{imageTestResult[account.id].responseBody || "—"}</pre>
+                              </details>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
                 </tbody>
               </table>
 

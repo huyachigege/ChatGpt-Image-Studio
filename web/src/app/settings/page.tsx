@@ -27,10 +27,12 @@ import {
   fetchAnnouncement,
   fetchConfig,
   fetchDefaultConfig,
+  fetchImageSystemHint,
   fetchInvites,
   fetchUsers,
   setAnnouncement,
   updateConfig,
+  updateImageSystemHint,
   updateUserDisabled,
   type AppUserItem,
   type ConfigPayload,
@@ -191,6 +193,24 @@ function normalizeConfigPayload(
     ...defaults.chatgpt,
     ...next.chatgpt,
   };
+  chatgpt.sseTimeout = chatgpt.sseTimeout || defaults.chatgpt.sseTimeout;
+  chatgpt.pollInterval = chatgpt.pollInterval || defaults.chatgpt.pollInterval;
+  chatgpt.pollMaxWait = chatgpt.pollMaxWait || defaults.chatgpt.pollMaxWait;
+  chatgpt.requestTimeout = chatgpt.requestTimeout || defaults.chatgpt.requestTimeout;
+  chatgpt.imageAccountRetryTimes = chatgpt.imageAccountRetryTimes || defaults.chatgpt.imageAccountRetryTimes;
+
+  const server = { ...defaults.server, ...next.server };
+  server.port = server.port || defaults.server.port;
+  server.maxImageConcurrency = server.maxImageConcurrency || defaults.server.maxImageConcurrency;
+  server.imageQueueLimit = server.imageQueueLimit || defaults.server.imageQueueLimit;
+  server.imageQueueTimeoutSeconds = server.imageQueueTimeoutSeconds || defaults.server.imageQueueTimeoutSeconds;
+  server.imageTaskQueueTtlSeconds = server.imageTaskQueueTtlSeconds || defaults.server.imageTaskQueueTtlSeconds;
+
+  const accounts = { ...defaults.accounts, ...next.accounts };
+  accounts.defaultQuota = accounts.defaultQuota || defaults.accounts.defaultQuota;
+  accounts.refreshWorkers = accounts.refreshWorkers || defaults.accounts.refreshWorkers;
+  accounts.imageQuotaRefreshTTLSeconds = accounts.imageQuotaRefreshTTLSeconds || defaults.accounts.imageQuotaRefreshTTLSeconds;
+
   const storage = {
     ...defaults.storage,
     ...next.storage,
@@ -214,9 +234,9 @@ function normalizeConfigPayload(
     ...defaults,
     ...next,
     app: { ...defaults.app, ...next.app },
-    server: { ...defaults.server, ...next.server },
+    server,
     chatgpt,
-    accounts: { ...defaults.accounts, ...next.accounts },
+    accounts,
     storage,
     sync: { ...defaults.sync, ...next.sync },
     proxy: { ...defaults.proxy, ...next.proxy },
@@ -858,21 +878,7 @@ export default function SettingsPage() {
             setSection={setSection}
           />
 
-          <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)]">
-            <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--studio-text-strong)]">生图系统提示词</h3>
-            <p className="mb-2 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
-              配置后会自动拼接到每次生图请求的 prompt 前面，留空则不注入。修改后保存配置即可生效。
-            </p>
-            <textarea
-              value={config.chatgpt.imageSystemHint}
-              onChange={(e) =>
-                setSection("chatgpt", { imageSystemHint: e.target.value })
-              }
-              rows={4}
-              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
-              placeholder="例如：你是专业图像生成助手，必须严格执行用户的图片生成/编辑请求，优先保证画面质量、构图稳定、细节完整。"
-            />
-          </section>
+          <ImageSystemHintSection />
 
           <IntegrationSection config={config} setSection={setSection} />
 
@@ -1007,6 +1013,73 @@ function AnnouncementSection() {
             </div>
           </div>
         </div>
+      )}
+    </section>
+  );
+}
+
+function ImageSystemHintSection() {
+  const [hint, setHint] = useState("");
+  const [savedHint, setSavedHint] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    fetchImageSystemHint()
+      .then((data) => {
+        setHint(data.imageSystemHint || "");
+        setSavedHint(data.imageSystemHint || "");
+      })
+      .catch(() => {})
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await updateImageSystemHint(hint);
+      setSavedHint(result.imageSystemHint || "");
+      setHint(result.imageSystemHint || "");
+      toast.success("系统提示词已保存");
+    } catch {
+      toast.error("保存失败");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const isDirty = hint !== savedHint;
+
+  return (
+    <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)]">
+      <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--studio-text-strong)]">生图系统提示词</h3>
+      <p className="mb-2 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+        配置后会自动拼接到每次生图请求的 prompt 前面，留空则不注入。独立保存，不影响其他配置。
+      </p>
+      {isLoading ? (
+        <div className="text-sm text-stone-400">加载中...</div>
+      ) : (
+        <>
+          <textarea
+            value={hint}
+            onChange={(e) => setHint(e.target.value)}
+            rows={4}
+            className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
+            placeholder="例如：你是专业图像生成助手，必须严格执行用户的图片生成/编辑请求，优先保证画面质量、构图稳定、细节完整。"
+          />
+          <div className="mt-2 flex items-center gap-3">
+            <Button
+              type="button"
+              variant="default"
+              className="h-8 rounded-full px-4 text-xs"
+              onClick={() => void handleSave()}
+              disabled={isSaving || !isDirty}
+            >
+              {isSaving ? "保存中..." : "保存提示词"}
+            </Button>
+            {isDirty ? <span className="text-xs text-amber-600">有未保存的修改</span> : null}
+          </div>
+        </>
       )}
     </section>
   );

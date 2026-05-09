@@ -51,6 +51,8 @@ type ResponsesClient struct {
 	accountID           string
 	httpClient          *http.Client
 	requestedImageModel string
+	lastRequestBody     string
+	customInstructions  string
 }
 
 func NewResponsesClientWithProxy(accessToken, proxyURL string, authData map[string]any) *ResponsesClient {
@@ -164,12 +166,16 @@ func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, mode
 			"image_url": encodeImageDataURL(image, detectMIME(image)),
 		})
 	}
+	instructions := "You generate and edit images for the user."
+	if strings.TrimSpace(c.customInstructions) != "" {
+		instructions = strings.TrimSpace(c.customInstructions)
+	}
 	payload := map[string]any{
 		"model":               model,
 		"input":               []any{map[string]any{"role": "user", "content": content}},
 		"tools":               []any{tool},
 		"tool_choice":         map[string]any{"type": "image_generation"},
-		"instructions":        "You generate and edit images for the user.",
+		"instructions":        instructions,
 		"stream":              true,
 		"store":               false,
 		"parallel_tool_calls": true,
@@ -180,6 +186,7 @@ func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, mode
 	if err != nil {
 		return nil, fmt.Errorf("marshal responses payload: %w", err)
 	}
+	c.lastRequestBody = string(body)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, codexResponsesBaseURL+"/responses", bytes.NewReader(body))
 	if err != nil {
@@ -493,6 +500,20 @@ func (c *ResponsesClient) SetRequestedImageModel(model string) {
 		return
 	}
 	c.requestedImageModel = strings.TrimSpace(model)
+}
+
+func (c *ResponsesClient) LastRequestBody() string {
+	if c == nil {
+		return ""
+	}
+	return c.lastRequestBody
+}
+
+func (c *ResponsesClient) SetInstructions(instructions string) {
+	if c == nil {
+		return
+	}
+	c.customInstructions = instructions
 }
 
 func (c *ResponsesClient) resolveRequestedImageToolModel() string {

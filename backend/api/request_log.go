@@ -57,6 +57,7 @@ type imageRequestLogEntry struct {
 	Preferred             bool     `json:"preferred"`
 	Success               bool     `json:"success"`
 	Error                 string   `json:"error,omitempty"`
+	UpstreamRequest       string   `json:"upstreamRequest,omitempty"`
 }
 
 type imageRequestLogSummary struct {

@@ -77,6 +77,8 @@ type ChatGPTClient struct {
 	pollInterval   time.Duration
 	pollMaxWait    time.Duration
 	lastImageRoute string
+	lastRequestBody string
+	customInstructions string
 }
 
 func NewChatGPTClient(accessToken, cookies string) *ChatGPTClient {
@@ -127,6 +129,32 @@ func NewChatGPTClientWithAuthData(accessToken, proxyURL string, authData map[str
 		streamClient: &http.Client{
 			Timeout:   requestConfig.SSETimeout + 30*time.Second,
 			Transport: newChromeTransport(proxyURL),
+		},
+		pollInterval: requestConfig.PollInterval,
+		pollMaxWait:  requestConfig.PollMaxWait,
+	}
+}
+
+func NewChatGPTClientWithTransport(accessToken, proxyURL string, authData map[string]any, requestConfig ImageRequestConfig, transport http.RoundTripper) *ChatGPTClient {
+	requestConfig = normalizeImageRequestConfig(requestConfig)
+	cookies := firstString(authData, "cookies", "cookie")
+	deviceID := firstString(authData, "oai-device-id", "oai_device_id", "device_id")
+	if deviceID == "" {
+		deviceID = uuid.NewString()
+	}
+	return &ChatGPTClient{
+		accessToken: accessToken,
+		cookies:     cookies,
+		oaiDeviceID: deviceID,
+		authData:    authData,
+		proxyURL:    strings.TrimSpace(proxyURL),
+		httpClient: &http.Client{
+			Timeout:   requestConfig.RequestTimeout,
+			Transport: transport,
+		},
+		streamClient: &http.Client{
+			Timeout:   requestConfig.SSETimeout + 30*time.Second,
+			Transport: transport,
 		},
 		pollInterval: requestConfig.PollInterval,
 		pollMaxWait:  requestConfig.PollMaxWait,
@@ -711,9 +739,27 @@ func (c *ChatGPTClient) buildConversationBody(prompt, model, conversationID, par
 		"metadata": metadata,
 	}
 
+	messages := []any{msg}
+	if strings.TrimSpace(c.customInstructions) != "" {
+		sysMsg := map[string]any{
+			"id":     uuid.NewString(),
+			"author": map[string]any{"role": "system"},
+			"content": map[string]any{
+				"content_type": "text",
+				"parts":        []string{c.customInstructions},
+			},
+			"metadata": map[string]any{
+				"serialization_metadata": map[string]any{
+					"custom_symbol_offsets": []any{},
+				},
+			},
+		}
+		messages = []any{sysMsg, msg}
+	}
+
 	body := map[string]any{
 		"action":                   "next",
-		"messages":                 []any{msg},
+		"messages":                 messages,
 		"parent_message_id":        parentMsgID,
 		"model":                    model,
 		"timezone_offset_min":      c.timezoneOffsetMin(),
@@ -765,6 +811,7 @@ func (c *ChatGPTClient) doConversationRequest(ctx context.Context, body map[stri
 	if err != nil {
 		return nil, fmt.Errorf("marshal body: %w", err)
 	}
+	c.lastRequestBody = string(jsonBody)
 
 	req, _ := http.NewRequestWithContext(ctx, "POST", baseURL+path, bytes.NewReader(jsonBody))
 	c.setHeaders(req)
@@ -898,9 +945,13 @@ func (c *ChatGPTClient) parseSSE(ctx context.Context, reader io.Reader, requestC
 		images = append(images, c.extractImages(ctx, msg, conversationID)...)
 
 		// Detect model refusal: assistant text message that finished without producing images
+		// Only count as refusal if recipient is "all" or empty (not a tool call)
 		if msg.Author.Role == "assistant" && msg.Status == "finished_successfully" && msg.Content.ContentType == "text" {
-			if text := extractSSETextContent(msg); text != "" {
-				refusalText = text
+			recipient := strings.TrimSpace(msg.Recipient)
+			if recipient == "" || recipient == "all" {
+				if text := extractSSETextContent(msg); text != "" {
+					refusalText = text
+				}
 			}
 		}
 	}
@@ -919,7 +970,7 @@ func (c *ChatGPTClient) parseSSE(ctx context.Context, reader io.Reader, requestC
 
 	// If the model produced a text reply without images, it refused the request
 	if refusalText != "" {
-		return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusalText, 200))
+		return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusalText, 2000))
 	}
 
 	// If async mode, poll the conversation until images appear
@@ -1005,7 +1056,7 @@ func (c *ChatGPTClient) pollForImages(ctx context.Context, conversationID, rootM
 			return images, nil
 		}
 		if refusal != "" {
-			return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusal, 200))
+			return nil, fmt.Errorf("image generation refused: %s", truncateRefusal(refusal, 2000))
 		}
 		log.Printf("[poll] still waiting for images...")
 	}
@@ -1067,8 +1118,11 @@ func (c *ChatGPTClient) fetchConversationImagesWithRefusal(ctx context.Context, 
 				node.Message.Content.ContentType, len(node.Message.Content.Parts))
 			images = append(images, c.extractImages(ctx, node.Message, conversationID)...)
 			if node.Message.Author.Role == "assistant" && node.Message.Status == "finished_successfully" && node.Message.Content.ContentType == "text" {
-				if text := extractSSETextContent(node.Message); text != "" {
-					refusal = text
+				recipient := strings.TrimSpace(node.Message.Recipient)
+				if recipient == "" || recipient == "all" {
+					if text := extractSSETextContent(node.Message); text != "" {
+						refusal = text
+					}
 				}
 			}
 		}
@@ -1193,6 +1247,20 @@ func (c *ChatGPTClient) LastRoute() string {
 	return strings.TrimSpace(c.lastImageRoute)
 }
 
+func (c *ChatGPTClient) LastRequestBody() string {
+	if c == nil {
+		return ""
+	}
+	return c.lastRequestBody
+}
+
+func (c *ChatGPTClient) SetInstructions(instructions string) {
+	if c == nil {
+		return
+	}
+	c.customInstructions = strings.TrimSpace(instructions)
+}
+
 func (c *ChatGPTClient) setLastImageRoute(route string) {
 	if c == nil {
 		return
@@ -1294,8 +1362,9 @@ type sseMessage struct {
 	Author struct {
 		Role string `json:"role"`
 	} `json:"author"`
-	Status  string `json:"status"`
-	Content struct {
+	Status    string `json:"status"`
+	Recipient string `json:"recipient"`
+	Content   struct {
 		ContentType string            `json:"content_type"`
 		Parts       []json.RawMessage `json:"parts"`
 	} `json:"content"`

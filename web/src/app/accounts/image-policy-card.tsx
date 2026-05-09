@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp, LoaderCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, LoaderCircle, Play } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   fetchImageAccountPolicy,
   setCachedImageAccountPolicy,
+  testAccountImage,
   updateImageAccountPolicy,
   type Account,
+  type AccountImageTestResult,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -56,6 +58,9 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
   const [isCollapsed, setIsCollapsed] = useState(() =>
     getImageAccountPolicyCollapsed(),
   );
+  const [expandedGroupIndex, setExpandedGroupIndex] = useState<number | null>(null);
+  const [testingAccountId, setTestingAccountId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, AccountImageTestResult>>({});
 
   useEffect(() => {
     const loadPolicy = async () => {
@@ -151,6 +156,26 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
       ...imagePolicy,
       enabledGroupIndexes: nextGroupIndexes,
     });
+  };
+
+  const handleGroupTest = async (accountId: string, route: string) => {
+    setTestingAccountId(accountId);
+    toast(`正在检测 ${route}...`, { duration: 60000, id: `gtest-${accountId}` });
+    try {
+      const result = await testAccountImage(accountId, route);
+      setTestResults((prev) => ({ ...prev, [accountId]: result }));
+      toast.dismiss(`gtest-${accountId}`);
+      if (result.ok) {
+        toast.success(`检测成功 (${result.latencyMs}ms)`);
+      } else {
+        toast.error(`检测失败: ${result.error?.slice(0, 80) || "未知"}`);
+      }
+    } catch (error) {
+      toast.dismiss(`gtest-${accountId}`);
+      toast.error(error instanceof Error ? error.message : "检测失败");
+    } finally {
+      setTestingAccountId(null);
+    }
   };
 
   const shouldShowGroups = imagePolicy.enabled && !isCollapsed;
@@ -361,6 +386,13 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                             <Badge variant={group.enabled ? "success" : "secondary"}>
                               {group.enabled ? "参与轮询" : "不参与"}
                             </Badge>
+                            <button
+                              type="button"
+                              className="text-xs text-blue-500 hover:underline"
+                              onClick={() => setExpandedGroupIndex(expandedGroupIndex === group.index ? null : group.index)}
+                            >
+                              {expandedGroupIndex === group.index ? "收起账号" : "查看账号"}
+                            </button>
                           </div>
                           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
                             <span>账号 {group.accounts.length}</span>
@@ -379,6 +411,44 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                           </div>
                         </div>
                       </div>
+                      {expandedGroupIndex === group.index ? (
+                        <div className="mt-3 max-h-80 overflow-y-auto rounded-xl border border-stone-200 bg-white">
+                          <table className="w-full text-xs">
+                            <thead className="sticky top-0 bg-stone-50 text-stone-500">
+                              <tr>
+                                <th className="px-3 py-2 text-left font-medium">邮箱 / 文件</th>
+                                <th className="px-3 py-2 text-center font-medium">状态</th>
+                                <th className="px-3 py-2 text-center font-medium">额度</th>
+                                <th className="px-3 py-2 text-center font-medium">检测</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.accounts.map((acc) => (
+                                <tr key={acc.id} className="border-t border-stone-100">
+                                  <td className="px-3 py-2 text-stone-700">{acc.email || acc.fileName}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <Badge variant={acc.status === "正常" ? "success" : acc.status === "限流" ? "warning" : "destructive"} className="text-[10px]">{acc.status}</Badge>
+                                  </td>
+                                  <td className="px-3 py-2 text-center text-stone-600">{acc.quota}</td>
+                                  <td className="px-3 py-2 text-center">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-emerald-100 hover:text-emerald-700" onClick={() => void handleGroupTest(acc.id, "responses")} disabled={testingAccountId !== null} title="responses">R</button>
+                                      <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-amber-100 hover:text-amber-700" onClick={() => void handleGroupTest(acc.id, "legacy")} disabled={testingAccountId !== null} title="legacy">L</button>
+                                    </div>
+                                    {testingAccountId === acc.id ? <LoaderCircle className="mx-auto mt-1 size-3 animate-spin text-stone-400" /> : null}
+                                    {testResults[acc.id] ? (
+                                      <div className="mt-1">
+                                        <span className={testResults[acc.id].ok ? "text-emerald-600" : "text-rose-600"}>{testResults[acc.id].ok ? "成功" : "失败"}</span>
+                                        {testResults[acc.id].error ? <div className="mt-0.5 max-w-[200px] truncate text-rose-500" title={testResults[acc.id].error}>{testResults[acc.id].error}</div> : null}
+                                      </div>
+                                    ) : null}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : null}
                     </div>
                   ))
                 )}

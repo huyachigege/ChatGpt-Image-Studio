@@ -865,6 +865,39 @@ export async function fetchAccountQuota(
   );
 }
 
+export type AccountImageTestResult = {
+  ok: boolean;
+  accountId: string;
+  accountEmail: string;
+  route: string;
+  model: string;
+  prompt: string;
+  requestBody?: string;
+  responseStatus?: number;
+  responseBody?: string;
+  imageUrl?: string;
+  error?: string;
+  latencyMs: number;
+};
+
+export async function fetchImageSystemHint() {
+  return httpRequest<{ imageSystemHint: string }>("/api/config/image-system-hint");
+}
+
+export async function updateImageSystemHint(hint: string) {
+  return httpRequest<{ imageSystemHint: string }>("/api/config/image-system-hint", {
+    method: "PUT",
+    body: { imageSystemHint: hint },
+  });
+}
+
+export async function testAccountImage(accountId: string, route?: string) {
+  return httpRequest<AccountImageTestResult>(
+    `/api/accounts/${encodeURIComponent(accountId)}/image-test`,
+    { method: "POST", body: { route: route || "responses" } },
+  );
+}
+
 export async function fetchSyncStatus(
   source: SyncSource = "cpa",
   options: { progressOnly?: boolean } = {},

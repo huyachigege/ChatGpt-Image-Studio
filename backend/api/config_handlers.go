@@ -256,6 +256,35 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleGetImageSystemHint(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"imageSystemHint": s.cfg.ImageSystemHint(),
+	})
+}
+
+func (s *Server) handleSetImageSystemHint(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ImageSystemHint string `json:"imageSystemHint"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	overrides := map[string]map[string]any{
+		"chatgpt": {
+			"image_system_hint": body.ImageSystemHint,
+		},
+	}
+	target := configSaveTarget{ConfigBackend: s.cfg.Storage.ConfigBackend, RedisAddr: s.cfg.Storage.RedisAddr, RedisPassword: s.cfg.Storage.RedisPassword, RedisDB: s.cfg.Storage.RedisDB, RedisPrefix: s.cfg.Storage.RedisPrefix}
+	if err := s.saveConfigOverrides(r.Context(), overrides, target); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"imageSystemHint": s.cfg.ImageSystemHint(),
+	})
+}
+
 func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
 	query := imageRequestLogQuery{
 		Page:     parsePositiveQueryInt(r, "page", 1),

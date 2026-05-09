@@ -56,11 +56,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 
 	effectivePrompt := task.Prompt
 	systemHint := strings.TrimSpace(task.SystemHint)
-	if systemHint == "" {
-		systemHint = s.cfg.ImageSystemHint()
-	}
-	if systemHint != "" {
-		effectivePrompt = systemHint + "\n\n" + effectivePrompt
+
+	applySystemHint := func(client imageWorkflowClient) {
+		if systemHint == "" {
+			return
+		}
+		if setter, ok := client.(interface{ SetInstructions(string) }); ok {
+			setter.SetInstructions(systemHint)
+		}
 	}
 
 	var (
@@ -91,9 +94,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			false,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+				applySystemHint(client)
+				prompt := effectivePrompt
+				if systemHint != "" {
+					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+						prompt = systemHint + "\n\n" + prompt
+					}
+				}
 				return client.InpaintImageByMask(
 					taskCtx,
-					effectivePrompt,
+					prompt,
 					upstreamModel,
 					task.SourceReference.OriginalFileID,
 					task.SourceReference.OriginalGenID,
@@ -127,7 +137,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			responsesEligible,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				return client.EditImageByUpload(taskCtx, effectivePrompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				applySystemHint(client)
+				prompt := effectivePrompt
+				if systemHint != "" {
+					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+						prompt = systemHint + "\n\n" + prompt
+					}
+				}
+				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			},
 			fakeReq,
 			false,
@@ -146,14 +163,21 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			true,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+				applySystemHint(client)
+				prompt := effectivePrompt
+				if systemHint != "" {
+					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+						prompt = systemHint + "\n\n" + prompt
+					}
+				}
 				if task.ContextReference != nil && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
 					if generator, ok := client.(interface {
 						GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
 					}); ok {
-						return generator.GenerateImageWithContext(taskCtx, effectivePrompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+						return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
 					}
 				}
-				return client.GenerateImage(taskCtx, effectivePrompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+				return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
 			},
 			fakeReq,
 			false,
