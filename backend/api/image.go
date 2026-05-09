@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -10,8 +11,6 @@ import (
 	"chatgpt2api/internal/imagehistory"
 )
 
-// buildImageResponse converts ImageResults to the OpenAI-compatible response format.
-// Only includes url/b64_json and revised_prompt — no internal ChatGPT fields.
 func buildImageResponse(r *http.Request, client imageDownloader, results []handler.ImageResult, responseFormat string, sourceAccountID string, cacheDir string) []map[string]any {
 	userID := identityFromContext(r.Context()).UserID
 	cacheDir = imageCacheDirForUser(cacheDir, userID)
@@ -47,7 +46,6 @@ func buildImageHistoryImages(ctx context.Context, client imageDownloader, result
 		historyImages = append(historyImages, imagehistory.Image{
 			ID:              firstNonEmpty(stringValue(item["id"]), stringValue(item["file_id"]), stringValue(item["gen_id"]), "image-"+stringValue(index)),
 			Status:          "success",
-			B64JSON:         stringValue(item["b64_json"]),
 			URL:             stringValue(item["url"]),
 			RevisedPrompt:   stringValue(item["revised_prompt"]),
 			FileID:          stringValue(item["file_id"]),
@@ -86,6 +84,8 @@ func buildImageResponseItems(
 	cacheDir string,
 	urlBuilder func(string) string,
 ) []map[string]any {
+	_ = ctx
+	_ = responseFormat
 	data := make([]map[string]any, 0, len(results))
 	for index, img := range results {
 		item := map[string]any{
@@ -100,23 +100,15 @@ func buildImageResponseItems(
 			item["source_account_id"] = sourceAccountID
 		}
 		filename, cacheErr := downloadAndCache(client, img.URL, cacheDir)
-		if responseFormat == "b64_json" {
-			b64, err := client.DownloadAsBase64(ctx, img.URL)
-			if err != nil {
-				if cacheErr != nil {
-					item["url"] = img.URL
-				} else {
-					item["url"] = urlBuilder(filename)
-				}
+		if cacheErr != nil {
+			if isImageDataURL(img.URL) {
+				item["status"] = "error"
+				item["error"] = fmt.Sprintf("cache image: %v", cacheErr)
 			} else {
-				item["b64_json"] = b64
+				item["url"] = img.URL
 			}
 		} else {
-			if cacheErr != nil {
-				item["url"] = img.URL
-			} else {
-				item["url"] = urlBuilder(filename)
-			}
+			item["url"] = urlBuilder(filename)
 		}
 		if item["id"] == "" {
 			item["id"] = "image-" + stringValue(index)
@@ -124,4 +116,8 @@ func buildImageResponseItems(
 		data = append(data, item)
 	}
 	return data
+}
+
+func isImageDataURL(value string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(value)), "data:image/")
 }

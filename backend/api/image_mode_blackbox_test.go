@@ -163,6 +163,10 @@ func (c *compatStubWorkflowClient) LastModelLabel() string {
 	return c.model
 }
 
+func (c *compatStubWorkflowClient) LastFallbackReason() string {
+	return ""
+}
+
 type parallelGenerateWorkflowClient struct {
 	token     string
 	active    *int32

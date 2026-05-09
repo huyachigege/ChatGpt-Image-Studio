@@ -502,6 +502,9 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if candidate.account.Status == "异常" {
 				continue
 			}
+			if s.isImageAccountCoolingDownLocked(candidate.auth.Name, now) {
+				continue
+			}
 			if !candidate.ready && !refreshNeeded {
 				continue
 			}
@@ -586,6 +589,7 @@ func (s *Store) countAvailableImageAuthLeaseCandidates(
 			(auth.Disabled && !allowDisabled) ||
 			(account.Status == "禁用" && !allowDisabled) ||
 			account.Status == "异常" ||
+			s.isImageAccountCoolingDownLocked(auth.Name, now) ||
 			(!ready && !refreshNeeded) {
 			continue
 		}
@@ -620,6 +624,7 @@ func (s *Store) countPotentialImageAuthCandidates(
 			(auth.Disabled && !allowDisabled) ||
 			(account.Status == "禁用" && !allowDisabled) ||
 			account.Status == "异常" ||
+			s.isImageAccountCoolingDownLocked(auth.Name, now) ||
 			(!ready && !refreshNeeded) {
 			continue
 		}
@@ -659,6 +664,9 @@ func (s *Store) countImageRoutingCandidatesFromGroups(
 				continue
 			}
 			if candidate.account.Status == "异常" {
+				continue
+			}
+			if s.isImageAccountCoolingDownLocked(candidate.auth.Name, now) {
 				continue
 			}
 			if !candidate.ready && !refreshNeeded {
@@ -701,6 +709,9 @@ func (s *Store) countPotentialImageRoutingCandidatesFromGroups(
 				continue
 			}
 			if candidate.account.Status == "异常" {
+				continue
+			}
+			if s.isImageAccountCoolingDownLocked(candidate.auth.Name, now) {
 				continue
 			}
 			if !candidate.ready && !refreshNeeded {

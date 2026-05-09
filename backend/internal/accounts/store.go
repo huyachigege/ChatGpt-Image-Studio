@@ -25,6 +25,9 @@ const (
 	proFallbackImageGenQuota  = 999
 	AccountSourceKindAuthFile = "auth_file"
 	AccountSourceKindToken    = "token"
+
+	imageAccountCooldownFailureThreshold = 3
+	imageAccountCooldownDuration         = 5 * time.Minute
 )
 
 type LocalAuth struct {
@@ -54,6 +57,8 @@ type RuntimeState struct {
 	RestoreAt                  string           `json:"restore_at,omitempty"`
 	Success                    int              `json:"success"`
 	Fail                       int              `json:"fail"`
+	ImageConsecutiveFailures   int              `json:"image_consecutive_failures,omitempty"`
+	ImageCooldownUntil         string           `json:"image_cooldown_until,omitempty"`
 	LastUsedAt                 string           `json:"last_used_at,omitempty"`
 	LastRefreshedAt            string           `json:"last_refreshed_at,omitempty"`
 	ImageQuotaDailyBase        int              `json:"image_quota_daily_base,omitempty"`
@@ -958,6 +963,7 @@ func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(Public
 			(auth.Disabled && !allowDisabled) ||
 			(account.Status == "禁用" && !allowDisabled) ||
 			account.Status == "异常" ||
+			s.isImageAccountCoolingDownLocked(auth.Name, now) ||
 			(!ready && !refreshNeeded) {
 			continue
 		}
@@ -1024,6 +1030,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 			(auth.Disabled && !allowDisabled) ||
 			(account.Status == "禁用" && !allowDisabled) ||
 			account.Status == "异常" ||
+			s.isImageAccountCoolingDownLocked(auth.Name, now) ||
 			(!ready && !refreshNeeded) {
 			continue
 		}
@@ -1165,10 +1172,13 @@ func (s *Store) RecordImageResult(accessToken string, success bool) {
 		return
 	}
 
+	now := time.Now()
 	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-		state.LastUsedAt = time.Now().Format("2006-01-02 15:04:05")
+		state.LastUsedAt = now.Format("2006-01-02 15:04:05")
 		if success {
 			state.Success++
+			state.ImageConsecutiveFailures = 0
+			state.ImageCooldownUntil = ""
 			if state.QuotaKnown && state.Quota > 0 {
 				state.Quota--
 				if state.Quota == 0 && state.Status != "禁用" && state.Status != "异常" {
@@ -1181,9 +1191,22 @@ func (s *Store) RecordImageResult(accessToken string, success bool) {
 			}
 		} else {
 			state.Fail++
+			state.ImageConsecutiveFailures++
+			if state.ImageConsecutiveFailures >= imageAccountCooldownFailureThreshold {
+				state.ImageCooldownUntil = now.Add(imageAccountCooldownDuration).UTC().Format(time.RFC3339)
+			}
 		}
 		return state
 	})
+}
+
+func (s *Store) isImageAccountCoolingDownLocked(name string, now time.Time) bool {
+	state, ok := s.states[strings.TrimSpace(name)]
+	if !ok || strings.TrimSpace(state.ImageCooldownUntil) == "" {
+		return false
+	}
+	cooldownUntil, ok := parseFlexibleTime(state.ImageCooldownUntil)
+	return ok && now.Before(cooldownUntil)
 }
 
 func (s *Store) MarkImageTokenAbnormal(accessToken string) {
@@ -1191,8 +1214,7 @@ func (s *Store) MarkImageTokenAbnormal(accessToken string) {
 	if err != nil {
 		return
 	}
-	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-		state.Status = "异常"
+	s.disableImageAuth(auth, "异常", func(state RuntimeState) RuntimeState {
 		state.Quota = 0
 		state.QuotaKnown = true
 		return state
@@ -1204,11 +1226,29 @@ func (s *Store) MarkImageAccountLimited(accessToken string) {
 	if err != nil {
 		return
 	}
-	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-		state.Status = "限流"
+	s.disableImageAuth(auth, "限流", func(state RuntimeState) RuntimeState {
 		state.Quota = 0
 		state.QuotaKnown = true
 		state.LimitsProgress = setLimitRemaining(state.LimitsProgress, "image_gen", 0)
+		return state
+	})
+}
+
+func (s *Store) disableImageAuth(auth LocalAuth, status string, update func(RuntimeState) RuntimeState) {
+	if s == nil {
+		return
+	}
+	auth.Disabled = true
+	if auth.Data == nil {
+		auth.Data = map[string]any{}
+	}
+	auth.Data["disabled"] = true
+	_ = s.saveAuthData(auth.Name, auth.Data)
+	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+		state.Status = status
+		if update != nil {
+			state = update(state)
+		}
 		return state
 	})
 }

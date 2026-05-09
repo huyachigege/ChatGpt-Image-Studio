@@ -19,4 +19,5 @@ type cpaRouteAwareImageWorkflowClient interface {
 	imageWorkflowClient
 	LastRoute() string
 	LastModelLabel() string
+	LastFallbackReason() string
 }

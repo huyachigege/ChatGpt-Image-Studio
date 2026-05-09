@@ -17,13 +17,14 @@ import (
 )
 
 type cpaImageClient struct {
-	baseURL       string
-	apiKey        string
-	httpClient    *http.Client
-	routeStrategy string
-	lastRoute     string
-	lastModel     string
-	lastToolModel string
+	baseURL            string
+	apiKey             string
+	httpClient         *http.Client
+	routeStrategy      string
+	lastRoute          string
+	lastModel          string
+	lastToolModel      string
+	lastFallbackReason string
 }
 
 const maxCPAResponsesSSELineBytes = 128 << 20
@@ -61,6 +62,13 @@ func (c *cpaImageClient) ImageToolModel() string {
 		return ""
 	}
 	return strings.TrimSpace(c.lastToolModel)
+}
+
+func (c *cpaImageClient) LastFallbackReason() string {
+	if c == nil {
+		return ""
+	}
+	return strings.TrimSpace(c.lastFallbackReason)
 }
 
 func (c *cpaImageClient) DownloadBytes(url string) ([]byte, error) {
@@ -131,8 +139,10 @@ func (c *cpaImageClient) GenerateImage(ctx context.Context, prompt, model string
 		body["background"] = strings.TrimSpace(background)
 	}
 	c.setLastRoute("images_api")
+	c.clearFallbackReason()
 	results, err := c.executeJSONRequest(ctx, "/v1/images/generations", body)
 	if err != nil && c.shouldFallbackToResponses(err) {
+		c.setFallbackReason(err)
 		fallbackResults, fallbackErr := c.generateViaResponses(ctx, prompt, size, quality, background)
 		if fallbackErr == nil {
 			return fallbackResults, nil
@@ -197,8 +207,10 @@ func (c *cpaImageClient) EditImageByUpload(ctx context.Context, prompt, model st
 	}
 	defer resp.Body.Close()
 	c.setLastRoute("images_api")
+	c.clearFallbackReason()
 	results, parseErr := c.parseImageAPIResponse(resp)
 	if parseErr != nil && c.shouldFallbackToResponses(parseErr) {
+		c.setFallbackReason(parseErr)
 		fallbackResults, fallbackErr := c.editViaResponses(ctx, prompt, images, mask, size, quality)
 		if fallbackErr == nil {
 			return fallbackResults, nil
@@ -255,6 +267,20 @@ func (c *cpaImageClient) setLastRoute(route string) {
 	c.lastModel = cpaFixedImageModel
 }
 
+func (c *cpaImageClient) setFallbackReason(err error) {
+	if c == nil || err == nil {
+		return
+	}
+	c.lastFallbackReason = strings.TrimSpace(err.Error())
+}
+
+func (c *cpaImageClient) clearFallbackReason() {
+	if c == nil {
+		return
+	}
+	c.lastFallbackReason = ""
+}
+
 func (c *cpaImageClient) parseImageAPIResponse(resp *http.Response) ([]handler.ImageResult, error) {
 	body, err := io.ReadAll(io.LimitReader(resp.Body, 16<<20))
 	if err != nil {
@@ -282,9 +308,6 @@ func (c *cpaImageClient) parseImageAPIResponse(resp *http.Response) ([]handler.I
 	results := make([]handler.ImageResult, 0, len(payload.Data))
 	for _, item := range payload.Data {
 		imageURL := strings.TrimSpace(item.URL)
-		if imageURL == "" && strings.TrimSpace(item.B64JSON) != "" {
-			imageURL = encodeCPAImageDataURLFromBase64(strings.TrimSpace(item.B64JSON), "image/png")
-		}
 		if imageURL == "" {
 			continue
 		}

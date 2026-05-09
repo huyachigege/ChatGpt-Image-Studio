@@ -1516,6 +1516,7 @@ func (s *Server) runPureCPAImageRequest(
 	upstreamModel := cpaFixedImageModel
 	results, err := run(client, upstreamModel)
 	cpaSubroute := client.LastRoute()
+	cpaFallbackReason := client.LastFallbackReason()
 	if label := strings.TrimSpace(client.LastModelLabel()); label != "" {
 		upstreamModel = label
 	}
@@ -1530,6 +1531,7 @@ func (s *Server) runPureCPAImageRequest(
 			Direction:            "cpa",
 			Route:                "cpa",
 			CPASubroute:          cpaSubroute,
+			CPAFallbackReason:    cpaFallbackReason,
 			RequestedModel:       requestedModel,
 			UpstreamModel:        upstreamModel,
 			Preferred:            preferredAccount,
@@ -1557,6 +1559,7 @@ func (s *Server) runPureCPAImageRequest(
 			Direction:            "cpa",
 			Route:                "cpa",
 			CPASubroute:          cpaSubroute,
+			CPAFallbackReason:    cpaFallbackReason,
 			RequestedModel:       requestedModel,
 			UpstreamModel:        upstreamModel,
 			Preferred:            preferredAccount,
@@ -1583,6 +1586,7 @@ func (s *Server) runPureCPAImageRequest(
 		Direction:            "cpa",
 		Route:                "cpa",
 		CPASubroute:          cpaSubroute,
+		CPAFallbackReason:    cpaFallbackReason,
 		RequestedModel:       requestedModel,
 		UpstreamModel:        upstreamModel,
 		Preferred:            preferredAccount,
@@ -1788,8 +1792,10 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 	results, err := run(client, upstreamModel)
 	cpaSubroute := ""
+	cpaFallbackReason := ""
 	if cpaClient, ok := client.(cpaRouteAwareImageWorkflowClient); ok {
 		cpaSubroute = cpaClient.LastRoute()
+		cpaFallbackReason = cpaClient.LastFallbackReason()
 		if label := strings.TrimSpace(cpaClient.LastModelLabel()); label != "" {
 			upstreamModel = label
 		}
@@ -1820,6 +1826,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			Direction:            direction,
 			Route:                route,
 			CPASubroute:          cpaSubroute,
+			CPAFallbackReason:    cpaFallbackReason,
 			AccountType:          account.Type,
 			AccountEmail:         account.Email,
 			AccountFile:          authFile.Name,
@@ -1873,6 +1880,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			Direction:            direction,
 			Route:                route,
 			CPASubroute:          cpaSubroute,
+			CPAFallbackReason:    cpaFallbackReason,
 			AccountType:          account.Type,
 			AccountEmail:         account.Email,
 			AccountFile:          authFile.Name,

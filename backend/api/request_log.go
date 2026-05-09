@@ -30,6 +30,7 @@ type imageRequestLogEntry struct {
 	Direction             string   `json:"direction"`
 	Route                 string   `json:"route"`
 	CPASubroute           string   `json:"cpaSubroute,omitempty"`
+	CPAFallbackReason     string   `json:"cpaFallbackReason,omitempty"`
 	QueueWaitMS           int64    `json:"queueWaitMs,omitempty"`
 	InflightCountAtStart  int      `json:"inflightCountAtStart,omitempty"`
 	LeaseAcquired         bool     `json:"leaseAcquired,omitempty"`
@@ -59,44 +60,46 @@ type imageRequestLogEntry struct {
 }
 
 type imageRequestLogSummary struct {
-	ID           string `json:"id"`
-	StartedAt    string `json:"startedAt"`
-	FinishedAt   string `json:"finishedAt"`
-	Operation    string `json:"operation"`
-	Route        string `json:"route"`
-	CPASubroute  string `json:"cpaSubroute,omitempty"`
-	Size         string `json:"size,omitempty"`
-	Quality      string `json:"quality,omitempty"`
-	PromptLength int    `json:"promptLength,omitempty"`
-	UserID       string `json:"userId,omitempty"`
-	Username     string `json:"username,omitempty"`
-	UserRole     string `json:"userRole,omitempty"`
-	AccountEmail string `json:"accountEmail,omitempty"`
-	AccountType  string `json:"accountType,omitempty"`
-	AccountFile  string `json:"accountFile,omitempty"`
-	Success      bool   `json:"success"`
-	Error        string `json:"error,omitempty"`
+	ID                string `json:"id"`
+	StartedAt         string `json:"startedAt"`
+	FinishedAt        string `json:"finishedAt"`
+	Operation         string `json:"operation"`
+	Route             string `json:"route"`
+	CPASubroute       string `json:"cpaSubroute,omitempty"`
+	CPAFallbackReason string `json:"cpaFallbackReason,omitempty"`
+	Size              string `json:"size,omitempty"`
+	Quality           string `json:"quality,omitempty"`
+	PromptLength      int    `json:"promptLength,omitempty"`
+	UserID            string `json:"userId,omitempty"`
+	Username          string `json:"username,omitempty"`
+	UserRole          string `json:"userRole,omitempty"`
+	AccountEmail      string `json:"accountEmail,omitempty"`
+	AccountType       string `json:"accountType,omitempty"`
+	AccountFile       string `json:"accountFile,omitempty"`
+	Success           bool   `json:"success"`
+	Error             string `json:"error,omitempty"`
 }
 
 func (e *imageRequestLogEntry) summary() imageRequestLogSummary {
 	return imageRequestLogSummary{
-		ID:           e.ID,
-		StartedAt:    e.StartedAt,
-		FinishedAt:   e.FinishedAt,
-		Operation:    e.Operation,
-		Route:        e.Route,
-		CPASubroute:  e.CPASubroute,
-		Size:         e.Size,
-		Quality:      e.Quality,
-		PromptLength: e.PromptLength,
-		UserID:       e.UserID,
-		Username:     e.Username,
-		UserRole:     e.UserRole,
-		AccountEmail: e.AccountEmail,
-		AccountType:  e.AccountType,
-		AccountFile:  e.AccountFile,
-		Success:      e.Success,
-		Error:        e.Error,
+		ID:                e.ID,
+		StartedAt:         e.StartedAt,
+		FinishedAt:        e.FinishedAt,
+		Operation:         e.Operation,
+		Route:             e.Route,
+		CPASubroute:       e.CPASubroute,
+		CPAFallbackReason: e.CPAFallbackReason,
+		Size:              e.Size,
+		Quality:           e.Quality,
+		PromptLength:      e.PromptLength,
+		UserID:            e.UserID,
+		Username:          e.Username,
+		UserRole:          e.UserRole,
+		AccountEmail:      e.AccountEmail,
+		AccountType:       e.AccountType,
+		AccountFile:       e.AccountFile,
+		Success:           e.Success,
+		Error:             e.Error,
 	}
 }
 
@@ -518,6 +521,9 @@ func applyImageResponseLogFields(entry *imageRequestLogEntry, items []map[string
 	seenNames := make(map[string]struct{})
 	for _, item := range items {
 		url := strings.TrimSpace(stringValue(item["url"]))
+		if isImageDataURL(url) {
+			url = ""
+		}
 		if url != "" {
 			if _, ok := seenURLs[url]; !ok {
 				seenURLs[url] = struct{}{}
