@@ -328,6 +328,7 @@ export function TopNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isImageRoute = pathname === "/image" || pathname?.startsWith("/image/");
+  const shouldCollapseNav = isImageRoute && pathname !== "/image/gallery";
   const isMobileWorkspaceRoute = pathname === "/image/workspace";
   const [versionLabel, setVersionLabel] = useState("读取中");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
@@ -610,9 +611,9 @@ export function TopNav() {
         </div>
       ) : null}
       <DesktopTopNav
-        key={isImageRoute ? "image-route" : "non-image-route"}
+        key={shouldCollapseNav ? "image-route" : "non-image-route"}
         pathname={pathname}
-        defaultCollapsed={isImageRoute}
+        defaultCollapsed={shouldCollapseNav}
         versionLabel={versionLabel}
         user={authUser ? { ...authUser, imageApiKey: authUser.imageApiKey || (authUser.role === "admin" ? authKey : authUser.imageApiKey) } : null}
         onLogout={handleLogout}

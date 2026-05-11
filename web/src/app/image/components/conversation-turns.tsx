@@ -360,7 +360,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                             <OriginalImagePreview
                               originalUrl={imageDataUrl}
                               title={`Generated result ${index + 1}`}
-                              className="group relative block text-left"
+                              className="group relative flex items-center justify-center bg-white/40 backdrop-blur-sm text-left"
                             >
                               <Image
                                 src={imageThumbUrl}
