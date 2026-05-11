@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
 
@@ -24,6 +24,23 @@ type OriginalImagePreviewProps = {
   items?: OriginalImagePreviewItem[];
   initialIndex?: number;
 };
+
+function clampScale(scale: number) {
+  return Math.min(4, Math.max(0.5, scale));
+}
+
+function touchDistance(first: Touch, second: Touch) {
+  const deltaX = second.clientX - first.clientX;
+  const deltaY = second.clientY - first.clientY;
+  return Math.hypot(deltaX, deltaY);
+}
+
+function touchCenter(first: Touch, second: Touch) {
+  return {
+    x: (first.clientX + second.clientX) / 2,
+    y: (first.clientY + second.clientY) / 2,
+  };
+}
 
 async function loadOriginalImage(originalUrl: string): Promise<CachedImageResult> {
   if (typeof window === "undefined" || !("caches" in window)) {
@@ -55,13 +72,33 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
   const dragStartRef = useRef<{ pointerX: number; pointerY: number; offsetX: number; offsetY: number } | null>(null);
+  const touchPanStartRef = useRef<{ pointerX: number; pointerY: number; offsetX: number; offsetY: number } | null>(null);
+  const pinchStartRef = useRef<{ distance: number; scale: number; offsetX: number; offsetY: number; centerX: number; centerY: number } | null>(null);
   const dragMovedRef = useRef(false);
   const suppressNextClickRef = useRef(false);
   const scaleRef = useRef(scale);
+  const offsetRef = useRef(offset);
+
+  const resetGestureState = () => {
+    dragStartRef.current = null;
+    touchPanStartRef.current = null;
+    pinchStartRef.current = null;
+    dragMovedRef.current = false;
+  };
+
+  const isPointInsideImage = (clientX: number, clientY: number) => {
+    const imageRect = imageRef.current?.getBoundingClientRect();
+    if (!imageRect) return false;
+    return clientX >= imageRect.left && clientX <= imageRect.right && clientY >= imageRect.top && clientY <= imageRect.bottom;
+  };
 
   useEffect(() => {
     scaleRef.current = scale;
   }, [scale]);
+
+  useEffect(() => {
+    offsetRef.current = offset;
+  }, [offset]);
   const previewItems = items.length > 0 ? items : [{ originalUrl, title }];
   const boundedActiveIndex = Math.min(Math.max(activeIndex, 0), previewItems.length - 1);
   const activeItem = previewItems[boundedActiveIndex] ?? { originalUrl, title };
@@ -75,7 +112,7 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
       if (!event.ctrlKey) return;
       event.preventDefault();
       setScale((current) => {
-        const nextScale = Math.min(4, Math.max(0.5, current + (event.deltaY < 0 ? 0.12 : -0.12)));
+        const nextScale = clampScale(current + (event.deltaY < 0 ? 0.12 : -0.12));
         if (nextScale <= 1) {
           setOffset({ x: 0, y: 0 });
         }
@@ -136,8 +173,7 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
     setDisplayUrl("");
     setScale(1);
     setOffset({ x: 0, y: 0 });
-    dragStartRef.current = null;
-    dragMovedRef.current = false;
+    resetGestureState();
     suppressNextClickRef.current = false;
 
     loadOriginalImage(activeItem.originalUrl)
@@ -169,6 +205,83 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
       }
     };
   }, [activeItem.originalUrl, isOpen]);
+
+  const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 2) {
+      const [first, second] = Array.from(event.touches);
+      if (!isPointInsideImage(first.clientX, first.clientY) || !isPointInsideImage(second.clientX, second.clientY)) {
+        return;
+      }
+      event.preventDefault();
+      const center = touchCenter(first, second);
+      pinchStartRef.current = {
+        distance: touchDistance(first, second),
+        scale: scaleRef.current,
+        offsetX: offsetRef.current.x,
+        offsetY: offsetRef.current.y,
+        centerX: center.x,
+        centerY: center.y,
+      };
+      touchPanStartRef.current = null;
+      dragMovedRef.current = false;
+      return;
+    }
+    if (event.touches.length !== 1 || scaleRef.current <= 1) {
+      return;
+    }
+    const [touch] = Array.from(event.touches);
+    if (!isPointInsideImage(touch.clientX, touch.clientY)) {
+      return;
+    }
+    touchPanStartRef.current = {
+      pointerX: touch.clientX,
+      pointerY: touch.clientY,
+      offsetX: offsetRef.current.x,
+      offsetY: offsetRef.current.y,
+    };
+    dragMovedRef.current = false;
+  };
+
+  const handleTouchMove = (event: ReactTouchEvent<HTMLDivElement>) => {
+    if (event.touches.length === 2 && pinchStartRef.current) {
+      const [first, second] = Array.from(event.touches);
+      event.preventDefault();
+      const nextDistance = touchDistance(first, second);
+      const nextCenter = touchCenter(first, second);
+      const nextScale = clampScale(pinchStartRef.current.scale * (nextDistance / Math.max(pinchStartRef.current.distance, 1)));
+      const scaleRatio = nextScale / Math.max(pinchStartRef.current.scale, 0.0001);
+      const nextOffset = {
+        x: nextCenter.x - (pinchStartRef.current.centerX - pinchStartRef.current.offsetX) * scaleRatio,
+        y: nextCenter.y - (pinchStartRef.current.centerY - pinchStartRef.current.offsetY) * scaleRatio,
+      };
+      dragMovedRef.current = true;
+      setScale(nextScale);
+      setOffset(nextScale <= 1 ? { x: 0, y: 0 } : nextOffset);
+      return;
+    }
+    if (event.touches.length !== 1 || !touchPanStartRef.current || scaleRef.current <= 1) {
+      return;
+    }
+    const [touch] = Array.from(event.touches);
+    event.preventDefault();
+    if (Math.abs(touch.clientX - touchPanStartRef.current.pointerX) > 3 || Math.abs(touch.clientY - touchPanStartRef.current.pointerY) > 3) {
+      dragMovedRef.current = true;
+    }
+    setOffset({
+      x: touchPanStartRef.current.offsetX + touch.clientX - touchPanStartRef.current.pointerX,
+      y: touchPanStartRef.current.offsetY + touch.clientY - touchPanStartRef.current.pointerY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (dragMovedRef.current) {
+      suppressNextClickRef.current = true;
+    }
+    if (scaleRef.current <= 1) {
+      setOffset({ x: 0, y: 0 });
+    }
+    resetGestureState();
+  };
 
   return (
     <>
@@ -212,6 +325,11 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
                   offsetY: offset.y,
                 };
               }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              style={{ touchAction: "none" }}
             >
               <style>{`@keyframes original-preview-pop { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }`}</style>
               <div
@@ -231,7 +349,7 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
                       src={displayUrl}
                       alt={activeTitle}
                       className={`pointer-events-auto max-h-[92vh] max-w-[calc(96vw-7rem)] rounded-[18px] bg-white object-contain shadow-2xl transition-transform duration-100 ${scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
-                      style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}
+                      style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, touchAction: "none" }}
                       onClick={(event) => event.stopPropagation()}
                       draggable={false}
                     />
