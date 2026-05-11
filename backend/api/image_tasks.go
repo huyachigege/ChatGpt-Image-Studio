@@ -39,42 +39,53 @@ type imageTaskSourceImagePayload struct {
 	URL     string `json:"url,omitempty"`
 }
 
+type imageTaskReferenceImagePayload struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	DataURL string `json:"dataUrl,omitempty"`
+	URL     string `json:"url,omitempty"`
+}
+
 type imageTaskSourceReferencePayload struct {
 	OriginalFileID  string `json:"original_file_id"`
 	OriginalGenID   string `json:"original_gen_id"`
 	ConversationID  string `json:"conversation_id,omitempty"`
 	ParentMessageID string `json:"parent_message_id,omitempty"`
+	ResponseID      string `json:"response_id,omitempty"`
 	SourceAccountID string `json:"source_account_id"`
 }
 
 type imageTaskContextReferencePayload struct {
 	ConversationID  string `json:"conversation_id,omitempty"`
 	ParentMessageID string `json:"parent_message_id,omitempty"`
+	ResponseID      string `json:"response_id,omitempty"`
 	SourceAccountID string `json:"source_account_id"`
 }
 
 type createImageTaskRequest struct {
-	UserID           string                              `json:"-"`
-	Username         string                              `json:"-"`
-	TaskID           string                              `json:"taskId,omitempty"`
-	ConversationID   string                              `json:"conversationId"`
-	TurnID           string                              `json:"turnId"`
-	Source           string                              `json:"source,omitempty"`
-	Mode             string                              `json:"mode"`
-	Prompt           string                              `json:"prompt"`
-	Model            string                              `json:"model"`
-	Count            int                                 `json:"count"`
-	Size             string                              `json:"size,omitempty"`
-	ResolutionAccess string                              `json:"resolutionAccess,omitempty"`
-	Quality          string                              `json:"quality,omitempty"`
-	Background       string                              `json:"background,omitempty"`
-	ResponseFormat   string                              `json:"responseFormat,omitempty"`
-	RetryImageIndex  *int                                `json:"retryImageIndex,omitempty"`
-	SourceImages     []imageTaskSourceImagePayload       `json:"sourceImages,omitempty"`
-	SourceReference  *imageTaskSourceReferencePayload    `json:"sourceReference,omitempty"`
-	ContextReference *imageTaskContextReferencePayload   `json:"contextReference,omitempty"`
-	Policy           *accounts.ImageAccountRoutingPolicy `json:"policy,omitempty"`
-	SystemHint       string                              `json:"systemHint,omitempty"`
+	UserID              string                              `json:"-"`
+	Username            string                              `json:"-"`
+	TaskID              string                              `json:"taskId,omitempty"`
+	ConversationID      string                              `json:"conversationId"`
+	TurnID              string                              `json:"turnId"`
+	Source              string                              `json:"source,omitempty"`
+	Mode                string                              `json:"mode"`
+	Prompt              string                              `json:"prompt"`
+	Model               string                              `json:"model"`
+	Count               int                                 `json:"count"`
+	Size                string                              `json:"size,omitempty"`
+	ResolutionAccess    string                              `json:"resolutionAccess,omitempty"`
+	Quality             string                              `json:"quality,omitempty"`
+	Background          string                              `json:"background,omitempty"`
+	ResponseFormat      string                              `json:"responseFormat,omitempty"`
+	RetryImageIndex     *int                                `json:"retryImageIndex,omitempty"`
+	SourceImages        []imageTaskSourceImagePayload       `json:"sourceImages,omitempty"`
+	ReferenceImages     []imageTaskReferenceImagePayload    `json:"referenceImages,omitempty"`
+	SourceReference     *imageTaskSourceReferencePayload    `json:"sourceReference,omitempty"`
+	ContextReference    *imageTaskContextReferencePayload   `json:"contextReference,omitempty"`
+	ConversationContext string                              `json:"conversationContext,omitempty"`
+	Policy              *accounts.ImageAccountRoutingPolicy `json:"policy,omitempty"`
+	SystemHint          string                              `json:"systemHint,omitempty"`
 }
 
 type imageTaskBlocker struct {
@@ -150,12 +161,14 @@ type imageTaskSourceReference struct {
 	OriginalGenID   string
 	ConversationID  string
 	ParentMessageID string
+	ResponseID      string
 	SourceAccountID string
 }
 
 type imageTaskContextReference struct {
 	ConversationID  string
 	ParentMessageID string
+	ResponseID      string
 	SourceAccountID string
 }
 
@@ -172,36 +185,38 @@ type imageTaskUnit struct {
 }
 
 type imageTask struct {
-	ID               string
-	UserID           string
-	Username         string
-	ConversationID   string
-	TurnID           string
-	Source           string
-	Mode             string
-	Prompt           string
-	Model            string
-	Count            int
-	RetryImageIndex  *int
-	Size             string
-	ResolutionAccess string
-	Quality          string
-	Background       string
-	ResponseFormat   string
-	SystemHint       string
-	SourceImages     []imageTaskSourceImage
-	SourceReference  *imageTaskSourceReference
-	ContextReference *imageTaskContextReference
-	Requirement      imageTaskRequirement
-	CreatedAt        time.Time
-	StartedAt        time.Time
-	FinishedAt       time.Time
-	Status           imageTaskStatus
-	WaitingReason    imageTaskWaitingReason
-	Blockers         []imageTaskBlocker
-	Images           []imagehistory.Image
-	Error            string
-	Units            []imageTaskUnit
-	ActiveUnits      int
-	CancelRequested  bool
+	ID                  string
+	UserID              string
+	Username            string
+	ConversationID      string
+	TurnID              string
+	Source              string
+	Mode                string
+	Prompt              string
+	Model               string
+	Count               int
+	RetryImageIndex     *int
+	Size                string
+	ResolutionAccess    string
+	Quality             string
+	Background          string
+	ResponseFormat      string
+	SystemHint          string
+	ConversationContext string
+	SourceImages        []imageTaskSourceImage
+	ReferenceImages     []imageTaskSourceImage
+	SourceReference     *imageTaskSourceReference
+	ContextReference    *imageTaskContextReference
+	Requirement         imageTaskRequirement
+	CreatedAt           time.Time
+	StartedAt           time.Time
+	FinishedAt          time.Time
+	Status              imageTaskStatus
+	WaitingReason       imageTaskWaitingReason
+	Blockers            []imageTaskBlocker
+	Images              []imagehistory.Image
+	Error               string
+	Units               []imageTaskUnit
+	ActiveUnits         int
+	CancelRequested     bool
 }

@@ -46,6 +46,7 @@ type imageSelectionEditRequest struct {
 	OriginalGenID   string
 	ConversationID  string
 	ParentMessageID string
+	ResponseID      string
 	SourceAccountID string
 	ResponseFormat  string
 }
@@ -279,6 +280,7 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 			OriginalGenID:   strings.TrimSpace(req.OriginalGenID),
 			ConversationID:  strings.TrimSpace(req.ConversationID),
 			ParentMessageID: strings.TrimSpace(req.ParentMessageID),
+			ResponseID:      strings.TrimSpace(req.ResponseID),
 			SourceAccountID: sourceAccountID,
 		},
 	})
@@ -501,6 +503,7 @@ func compatTaskPayload(task *imageTaskView) (map[string]any, error) {
 			"gen_id":            strings.TrimSpace(image.GenID),
 			"conversation_id":   strings.TrimSpace(image.ConversationID),
 			"parent_message_id": strings.TrimSpace(image.ParentMessageID),
+			"response_id":       strings.TrimSpace(image.ResponseID),
 		}
 		if sourceAccountID := strings.TrimSpace(image.SourceAccountID); sourceAccountID != "" {
 			item["source_account_id"] = sourceAccountID

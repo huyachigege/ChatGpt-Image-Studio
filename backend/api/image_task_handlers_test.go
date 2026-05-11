@@ -625,6 +625,15 @@ func TestSchedulePublishesQueuedBlockerUpdatesWhenConcurrencyIsFull(t *testing.T
 }
 
 func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
+	oldBackoffBase := imageTaskRetryBackoffBase
+	oldBackoffMax := imageTaskRetryBackoffMax
+	imageTaskRetryBackoffBase = 20 * time.Millisecond
+	imageTaskRetryBackoffMax = 20 * time.Millisecond
+	t.Cleanup(func() {
+		imageTaskRetryBackoffBase = oldBackoffBase
+		imageTaskRetryBackoffMax = oldBackoffMax
+	})
+
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -690,6 +699,15 @@ func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
 }
 
 func TestCreateImageTaskRetriesTransientResponsesSSEError(t *testing.T) {
+	oldBackoffBase := imageTaskRetryBackoffBase
+	oldBackoffMax := imageTaskRetryBackoffMax
+	imageTaskRetryBackoffBase = 20 * time.Millisecond
+	imageTaskRetryBackoffMax = 20 * time.Millisecond
+	t.Cleanup(func() {
+		imageTaskRetryBackoffBase = oldBackoffBase
+		imageTaskRetryBackoffMax = oldBackoffMax
+	})
+
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Plus",

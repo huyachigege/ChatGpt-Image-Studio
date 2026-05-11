@@ -56,7 +56,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
-	effectivePrompt := task.Prompt
+	effectivePrompt := buildImageTaskEffectivePrompt(task.Prompt, task.ConversationContext)
 	systemHint := strings.TrimSpace(task.SystemHint)
 
 	applySystemHint := func(client imageWorkflowClient) {
@@ -76,13 +76,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 
 	switch {
 	case task.SourceReference != nil:
-		mask, imageFiles, err := s.resolveTaskEditInputs(task)
+		var mask []byte
+		var imageFiles [][]byte
+		mask, imageFiles, err = s.resolveTaskEditInputs(task)
 		if err != nil {
 			return nil, err
 		}
 		if len(mask) == 0 {
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
+		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
 		items, retryable, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
@@ -93,7 +96,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			task.ResponseFormat,
 			true,
 			requestedModel,
-			false,
+			responsesEligible,
 			metadata,
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 				applySystemHint(client)
@@ -102,6 +105,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
 						prompt = systemHint + "\n\n" + prompt
 					}
+				}
+				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
+					if editor, ok := client.(interface {
+						EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
+					}); ok {
+						return editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
+					}
+					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 				}
 				return client.InpaintImageByMask(
 					taskCtx,
@@ -119,9 +130,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			fakeReq,
 			false,
 		)
-		_ = imageFiles
 	case task.Mode == "edit" || len(task.SourceImages) > 0:
-		mask, imageFiles, err := s.resolveTaskEditInputs(task)
+		var mask []byte
+		var imageFiles [][]byte
+		mask, imageFiles, err = s.resolveTaskEditInputs(task)
 		if err != nil {
 			return nil, err
 		}
@@ -152,6 +164,11 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			false,
 		)
 	default:
+		var referenceImageFiles [][]byte
+		referenceImageFiles, err = s.resolveTaskReferenceImageInputs(task)
+		if err != nil {
+			return nil, err
+		}
 		items, retryable, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
@@ -172,11 +189,27 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 						prompt = systemHint + "\n\n" + prompt
 					}
 				}
-				if task.ContextReference != nil && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+				if task.ContextReference != nil {
+					if task.ContextReference.ResponseID != "" {
+						if generator, ok := client.(interface {
+							GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
+						}); ok {
+							return generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
+						}
+					}
+					if task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+						if generator, ok := client.(interface {
+							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
+						}); ok {
+							return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+						}
+					}
+				}
+				if handler.SupportsResponsesInlineEdit(referenceImageFiles, nil) {
 					if generator, ok := client.(interface {
-						GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
+						GenerateImageWithReferenceImages(context.Context, string, string, int, string, string, string, [][]byte) ([]handler.ImageResult, error)
 					}); ok {
-						return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+						return generator.GenerateImageWithReferenceImages(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageFiles)
 					}
 				}
 				return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
@@ -193,7 +226,20 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		}
 		return nil, err
 	}
-	return historyImagesFromResponseItems(items), nil
+	images := historyImagesFromResponseItems(items)
+	if len(images) == 0 {
+		return nil, fmt.Errorf("image task returned no images from account %s", lease.auth.AccessToken)
+	}
+	return images, nil
+}
+
+func buildImageTaskEffectivePrompt(prompt string, conversationContext string) string {
+	prompt = strings.TrimSpace(prompt)
+	conversationContext = strings.TrimSpace(conversationContext)
+	if conversationContext == "" {
+		return prompt
+	}
+	return conversationContext + "\n\n本轮用户请求：\n" + prompt
 }
 
 func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image {
@@ -225,6 +271,7 @@ func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image
 			GenID:           stringValue(item["gen_id"]),
 			ConversationID:  stringValue(item["conversation_id"]),
 			ParentMessageID: stringValue(item["parent_message_id"]),
+			ResponseID:      stringValue(item["response_id"]),
 			SourceAccountID: stringValue(item["source_account_id"]),
 			Error:           stringValue(item["error"]),
 		})
@@ -247,6 +294,18 @@ func (s *Server) resolveTaskEditInputs(task *imageTask) ([]byte, [][]byte, error
 		imageFiles = append(imageFiles, data)
 	}
 	return mask, imageFiles, nil
+}
+
+func (s *Server) resolveTaskReferenceImageInputs(task *imageTask) ([][]byte, error) {
+	imageFiles := make([][]byte, 0, len(task.ReferenceImages))
+	for _, source := range task.ReferenceImages {
+		data, err := s.resolveTaskSourceImageBytes(source)
+		if err != nil {
+			return nil, err
+		}
+		imageFiles = append(imageFiles, data)
+	}
+	return imageFiles, nil
 }
 
 func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byte, error) {

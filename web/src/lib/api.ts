@@ -27,6 +27,7 @@ export type ImageResponseItem = {
   gen_id?: string;
   conversation_id?: string;
   parent_message_id?: string;
+  response_id?: string;
   source_account_id?: string;
   error?: string;
 };
@@ -112,12 +113,21 @@ export type InpaintSourceReference = {
   original_gen_id: string;
   conversation_id?: string;
   parent_message_id?: string;
+  response_id?: string;
   source_account_id: string;
 };
 
+export type ImageReferenceImage = {
+  id: string;
+  name: string;
+  dataUrl?: string;
+  url?: string;
+};
+
 export type ImageContextReference = {
-  conversation_id: string;
-  parent_message_id: string;
+  conversation_id?: string;
+  parent_message_id?: string;
+  response_id?: string;
   source_account_id: string;
 };
 
@@ -1121,8 +1131,10 @@ export async function createImageTask(payload: {
     dataUrl?: string;
     url?: string;
   }>;
+  referenceImages?: ImageReferenceImage[];
   sourceReference?: InpaintSourceReference;
   contextReference?: ImageContextReference;
+  conversationContext?: string;
   policy?: StoredImageAccountPolicy;
   systemHint?: string;
 }) {
@@ -1145,8 +1157,10 @@ export async function createImageTask(payload: {
       resolutionAccess: payload.resolutionAccess,
       quality: payload.quality,
       sourceImages: payload.sourceImages ?? [],
+      referenceImages: payload.referenceImages ?? [],
       sourceReference: payload.sourceReference,
       contextReference: payload.contextReference,
+      conversationContext: payload.conversationContext?.trim() || undefined,
       policy: normalizeImageAccountPolicy(policy),
       systemHint: payload.systemHint || undefined,
     },
@@ -1281,6 +1295,9 @@ export async function editImage({
     }
     if (sourceReference.parent_message_id) {
       formData.append("parent_message_id", sourceReference.parent_message_id);
+    }
+    if (sourceReference.response_id) {
+      formData.append("response_id", sourceReference.response_id);
     }
   }
   return httpRequest<ImageResponse>("/v1/images/edits", {

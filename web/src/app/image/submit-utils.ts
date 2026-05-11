@@ -2,6 +2,7 @@
 
 import type {
   ImageContextReference,
+  ImageReferenceImage,
   InpaintSourceReference,
   ImageModel,
   ImageQuality,
@@ -89,6 +90,7 @@ export function mergeResultImages(
     gen_id?: string;
     conversation_id?: string;
     parent_message_id?: string;
+    response_id?: string;
     source_account_id?: string;
   }>,
   expected: number,
@@ -105,6 +107,7 @@ export function mergeResultImages(
           gen_id: item.gen_id,
           conversation_id: item.conversation_id,
           parent_message_id: item.parent_message_id,
+          response_id: item.response_id,
           source_account_id: item.source_account_id,
         }
       : {
@@ -179,17 +182,22 @@ export function buildInpaintSourceReference(image: StoredImage): InpaintSourceRe
     original_gen_id: image.gen_id,
     conversation_id: image.conversation_id,
     parent_message_id: image.parent_message_id,
+    response_id: image.response_id,
     source_account_id: image.source_account_id,
   };
 }
 
 export function buildImageContextReference(image: StoredImage): ImageContextReference | undefined {
-  if (!image.conversation_id || !image.parent_message_id || !image.source_account_id) {
+  if (!image.source_account_id) {
+    return undefined;
+  }
+  if (!image.response_id && (!image.conversation_id || !image.parent_message_id)) {
     return undefined;
   }
   return {
     conversation_id: image.conversation_id,
     parent_message_id: image.parent_message_id,
+    response_id: image.response_id,
     source_account_id: image.source_account_id,
   };
 }
@@ -209,6 +217,76 @@ export function buildLatestImageContextReference(turns: ImageConversationTurn[])
     }
   }
   return undefined;
+}
+
+export function buildLatestImageReferenceImage(
+  turns: ImageConversationTurn[],
+  buildImageUrl: (image: StoredImage) => string,
+  options: { excludeTurnId?: string } = {},
+): ImageReferenceImage | undefined {
+  for (let turnIndex = turns.length - 1; turnIndex >= 0; turnIndex--) {
+    const turn = turns[turnIndex];
+    if (!turn || turn.id === options.excludeTurnId) {
+      continue;
+    }
+    const images = turn.images ?? [];
+    for (let imageIndex = images.length - 1; imageIndex >= 0; imageIndex--) {
+      const image = images[imageIndex];
+      if (image.status && image.status !== "success") {
+        continue;
+      }
+      const url = buildImageUrl(image);
+      if (!url) {
+        continue;
+      }
+      const payload = {
+        id: image.id || `${turn.id}-reference-${imageIndex}`,
+        name: `reference-${imageIndex + 1}.png`,
+      };
+      return url.startsWith("data:")
+        ? { ...payload, dataUrl: url }
+        : { ...payload, url };
+    }
+  }
+  return undefined;
+}
+
+function summarizeTurnForImageContext(turn: ImageConversationTurn, index: number) {
+  const prompt = turn.prompt.trim();
+  const successfulImages = (turn.images || []).filter(
+    (image) => !image.status || image.status === "success",
+  );
+  const revisedPrompt = successfulImages
+    .map((image) => image.revised_prompt?.trim())
+    .find(Boolean);
+  const imageSummary = successfulImages.length
+    ? `产出 ${successfulImages.length} 张图`
+    : "未产出成功图片";
+  return [
+    `${index}. ${turn.mode === "edit" ? "编辑" : "生成"}: ${prompt}`,
+    revisedPrompt ? `   上游修订提示: ${revisedPrompt}` : "",
+    `   结果: ${imageSummary}`,
+  ].filter(Boolean).join("\n");
+}
+
+export function buildImageConversationContext(
+  turns: ImageConversationTurn[],
+  options: { excludeTurnId?: string } = {},
+) {
+  const completedTurns = turns
+    .filter((turn) => turn.id !== options.excludeTurnId)
+    .filter((turn) => turn.prompt.trim())
+    .filter((turn) => turn.status === "success" || turn.images?.some((image) => !image.status || image.status === "success"))
+    .slice(-6);
+
+  if (completedTurns.length === 0) {
+    return undefined;
+  }
+
+  return [
+    "这是同一个图片创作会话的历史上下文。请延续用户之前确认的主体、风格、构图、角色/物体关系与已完成修改；如果本轮提示与历史冲突，以本轮提示为准。",
+    ...completedTurns.map((turn, index) => summarizeTurnForImageContext(turn, index + 1)),
+  ].join("\n");
 }
 
 function extractErrorCode(error: unknown) {

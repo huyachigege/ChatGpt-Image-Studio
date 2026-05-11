@@ -38,11 +38,11 @@ func TestShouldUseOfficialResponses(t *testing.T) {
 			want:              false,
 		},
 		{
-			name:              "preferred source account stays legacy",
+			name:              "preferred source account uses responses when eligible",
 			preferredAccount:  true,
 			responsesEligible: true,
 			configuredRoute:   "responses",
-			want:              false,
+			want:              true,
 		},
 		{
 			name:              "legacy route stays legacy",
@@ -82,6 +82,22 @@ func TestConfiguredImageRoute(t *testing.T) {
 	}
 	if got := server.configuredImageRoute("Plus"); got != "legacy" {
 		t.Fatalf("configuredImageRoute(Plus) = %q, want %q", got, "legacy")
+	}
+}
+
+type loggedRouteStub struct{ route string }
+
+func (s loggedRouteStub) LastRoute() string { return s.route }
+
+func TestResolveLoggedImageRouteUsesActualClientRoute(t *testing.T) {
+	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "conversation"}); got != "conversation" {
+		t.Fatalf("resolveLoggedImageRoute(responses, conversation) = %q, want %q", got, "conversation")
+	}
+	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "responses"}); got != "responses" {
+		t.Fatalf("resolveLoggedImageRoute(responses, responses) = %q, want %q", got, "responses")
+	}
+	if got := resolveLoggedImageRoute("legacy", loggedRouteStub{route: "conversation"}); got != "legacy" {
+		t.Fatalf("resolveLoggedImageRoute(legacy, conversation) = %q, want %q", got, "legacy")
 	}
 }
 

@@ -239,6 +239,7 @@ function mapTaskImagesToStoredImages(images: ImageTaskView["images"]): StoredIma
     gen_id: image.gen_id,
     conversation_id: image.conversation_id,
     parent_message_id: image.parent_message_id,
+    response_id: image.response_id,
     source_account_id: image.source_account_id,
     error: image.error,
   }));

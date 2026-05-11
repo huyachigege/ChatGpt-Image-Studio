@@ -45,6 +45,7 @@ type Image struct {
 	GenID           string `json:"gen_id,omitempty"`
 	ConversationID  string `json:"conversation_id,omitempty"`
 	ParentMessageID string `json:"parent_message_id,omitempty"`
+	ResponseID      string `json:"response_id,omitempty"`
 	SourceAccountID string `json:"source_account_id,omitempty"`
 	Error           string `json:"error,omitempty"`
 }

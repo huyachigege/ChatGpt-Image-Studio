@@ -58,6 +58,27 @@ func TestParseResponsesSSEDeduplicatesFinalImages(t *testing.T) {
 	}
 }
 
+func TestParseResponsesSSECapturesResponseID(t *testing.T) {
+	stream := strings.Join([]string{
+		`data: {"type":"response.completed","response":{"id":"resp_123","output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"png"}]}}`,
+		"",
+		`data: [DONE]`,
+		"",
+	}, "\n")
+
+	client := &ResponsesClient{}
+	images, err := client.parseResponsesSSE(strings.NewReader(stream), "prompt")
+	if err != nil {
+		t.Fatalf("parseResponsesSSE() returned error: %v", err)
+	}
+	if len(images) != 1 {
+		t.Fatalf("parseResponsesSSE() len = %d, want %d", len(images), 1)
+	}
+	if got := images[0].ResponseID; got != "resp_123" {
+		t.Fatalf("parseResponsesSSE() response id = %q, want %q", got, "resp_123")
+	}
+}
+
 func TestParseResponsesSSEAcceptsLargeImageEvents(t *testing.T) {
 	largeB64 := strings.Repeat("A", 10*1024*1024+4096)
 	stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"` + largeB64 + `","output_format":"png"}]}}` + "\n\n"

@@ -35,6 +35,7 @@ export type StoredImage = {
   gen_id?: string;
   conversation_id?: string;
   parent_message_id?: string;
+  response_id?: string;
   source_account_id?: string;
   error?: string;
 };
@@ -362,11 +363,13 @@ function normalizeSourceReference(
   }
   const conversationID = String(value.conversation_id || "").trim();
   const parentMessageID = String(value.parent_message_id || "").trim();
+  const responseID = String(value.response_id || "").trim();
   return {
     original_file_id: originalFileID,
     original_gen_id: originalGenID,
     conversation_id: conversationID || undefined,
     parent_message_id: parentMessageID || undefined,
+    response_id: responseID || undefined,
     source_account_id: sourceAccountID,
   };
 }

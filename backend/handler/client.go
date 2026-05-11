@@ -63,21 +63,22 @@ type ImageResult struct {
 	GenID          string `json:"gen_id"`
 	ConversationID string `json:"conversation_id"`
 	ParentMsgID    string `json:"parent_message_id"`
+	ResponseID     string `json:"response_id"`
 	RevisedPrompt  string `json:"revised_prompt"`
 }
 
 type ChatGPTClient struct {
-	accessToken    string
-	cookies        string
-	oaiDeviceID    string
-	authData       map[string]any
-	httpClient     *http.Client
-	streamClient   *http.Client
-	proxyURL       string
-	pollInterval   time.Duration
-	pollMaxWait    time.Duration
-	lastImageRoute string
-	lastRequestBody string
+	accessToken        string
+	cookies            string
+	oaiDeviceID        string
+	authData           map[string]any
+	httpClient         *http.Client
+	streamClient       *http.Client
+	proxyURL           string
+	pollInterval       time.Duration
+	pollMaxWait        time.Duration
+	lastImageRoute     string
+	lastRequestBody    string
 	customInstructions string
 }
 

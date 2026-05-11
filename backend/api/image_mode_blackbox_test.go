@@ -85,6 +85,15 @@ func (c *compatStubWorkflowClient) DownloadAsBase64(ctx context.Context, url str
 	return base64.StdEncoding.EncodeToString([]byte("stub-image:" + url)), nil
 }
 
+func (c *compatStubWorkflowClient) UsesResponsesAPI() bool {
+	return c != nil && c.factory == "responses"
+}
+
+func (c *compatStubWorkflowClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
+	_ = images
+	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+}
+
 func (c *compatStubWorkflowClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
 	_ = ctx
 	_ = prompt

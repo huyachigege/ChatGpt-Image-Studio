@@ -524,6 +524,13 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 			image.Prompt = strings.TrimSpace(task.Prompt)
 		}
 		task.Images[unitIndex] = image
+	} else {
+		message := "image task returned no images"
+		task.Units[unitIndex].FinishedAt = now
+		task.Units[unitIndex].Status = imageTaskStatusFailed
+		task.Units[unitIndex].Error = message
+		task.Images[unitIndex].Status = "error"
+		task.Images[unitIndex].Error = message
 	}
 
 	queuedUnits := 0
@@ -678,6 +685,7 @@ func (m *imageTaskManager) copyTask(taskID string) *imageTask {
 		copy.Units[index].Attempted = cloneStringSet(task.Units[index].Attempted)
 	}
 	copy.SourceImages = append([]imageTaskSourceImage(nil), task.SourceImages...)
+	copy.ReferenceImages = append([]imageTaskSourceImage(nil), task.ReferenceImages...)
 	copy.Blockers = append([]imageTaskBlocker(nil), task.Blockers...)
 	return &copy
 }
@@ -808,6 +816,18 @@ func (m *imageTaskManager) busyBlocker(task *imageTask) imageTaskBlocker {
 	return imageTaskBlocker{Code: string(imageTaskWaitingReasonCompatibleAccountBusy), Detail: "等待兼容图片账号空闲"}
 }
 
+func normalizeImageConversationContext(value string) string {
+	fields := strings.Fields(strings.TrimSpace(value))
+	if len(fields) == 0 {
+		return ""
+	}
+	normalized := strings.Join(fields, " ")
+	if len([]rune(normalized)) <= 3000 {
+		return normalized
+	}
+	return string([]rune(normalized)[:3000])
+}
+
 func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, error) {
 	id := firstNonEmpty(strings.TrimSpace(req.TaskID), strings.TrimSpace(req.TurnID))
 	if id == "" {
@@ -836,6 +856,17 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		})
 	}
 
+	referenceImages := make([]imageTaskSourceImage, 0, len(req.ReferenceImages))
+	for index, source := range req.ReferenceImages {
+		referenceImages = append(referenceImages, imageTaskSourceImage{
+			ID:      firstNonEmpty(strings.TrimSpace(source.ID), fmt.Sprintf("%s-reference-%d", id, index)),
+			Role:    "image",
+			Name:    firstNonEmpty(strings.TrimSpace(source.Name), fmt.Sprintf("reference-%d.png", index+1)),
+			DataURL: strings.TrimSpace(source.DataURL),
+			URL:     strings.TrimSpace(source.URL),
+		})
+	}
+
 	var sourceReference *imageTaskSourceReference
 	if req.SourceReference != nil {
 		sourceReference = &imageTaskSourceReference{
@@ -843,6 +874,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 			OriginalGenID:   strings.TrimSpace(req.SourceReference.OriginalGenID),
 			ConversationID:  strings.TrimSpace(req.SourceReference.ConversationID),
 			ParentMessageID: strings.TrimSpace(req.SourceReference.ParentMessageID),
+			ResponseID:      strings.TrimSpace(req.SourceReference.ResponseID),
 			SourceAccountID: strings.TrimSpace(req.SourceReference.SourceAccountID),
 		}
 	}
@@ -852,6 +884,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		contextReference = &imageTaskContextReference{
 			ConversationID:  strings.TrimSpace(req.ContextReference.ConversationID),
 			ParentMessageID: strings.TrimSpace(req.ContextReference.ParentMessageID),
+			ResponseID:      strings.TrimSpace(req.ContextReference.ResponseID),
 			SourceAccountID: strings.TrimSpace(req.ContextReference.SourceAccountID),
 		}
 	}
@@ -890,31 +923,33 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	}
 
 	return &imageTask{
-		ID:               id,
-		UserID:           strings.TrimSpace(req.UserID),
-		Username:         strings.TrimSpace(req.Username),
-		ConversationID:   strings.TrimSpace(req.ConversationID),
-		TurnID:           strings.TrimSpace(req.TurnID),
-		Source:           firstNonEmpty(strings.TrimSpace(req.Source), "workspace"),
-		Mode:             mode,
-		Prompt:           prompt,
-		Model:            normalizeRequestedImageModel(req.Model, m.server.cfg.ChatGPT.Model),
-		Count:            count,
-		RetryImageIndex:  req.RetryImageIndex,
-		Size:             strings.TrimSpace(req.Size),
-		ResolutionAccess: resolutionAccess,
-		Quality:          strings.TrimSpace(req.Quality),
-		Background:       strings.TrimSpace(req.Background),
-		ResponseFormat:   "url",
-		SystemHint:       strings.TrimSpace(req.SystemHint),
-		SourceImages:     sourceImages,
-		SourceReference:  sourceReference,
-		ContextReference: contextReference,
-		Requirement:      requirement,
-		CreatedAt:        createdAt,
-		Status:           imageTaskStatusQueued,
-		Images:           images,
-		Units:            units,
+		ID:                  id,
+		UserID:              strings.TrimSpace(req.UserID),
+		Username:            strings.TrimSpace(req.Username),
+		ConversationID:      strings.TrimSpace(req.ConversationID),
+		TurnID:              strings.TrimSpace(req.TurnID),
+		Source:              firstNonEmpty(strings.TrimSpace(req.Source), "workspace"),
+		Mode:                mode,
+		Prompt:              prompt,
+		Model:               normalizeRequestedImageModel(req.Model, m.server.cfg.ChatGPT.Model),
+		Count:               count,
+		RetryImageIndex:     req.RetryImageIndex,
+		Size:                strings.TrimSpace(req.Size),
+		ResolutionAccess:    resolutionAccess,
+		Quality:             strings.TrimSpace(req.Quality),
+		Background:          strings.TrimSpace(req.Background),
+		ResponseFormat:      "url",
+		SystemHint:          strings.TrimSpace(req.SystemHint),
+		ConversationContext: normalizeImageConversationContext(req.ConversationContext),
+		SourceImages:        sourceImages,
+		ReferenceImages:     referenceImages,
+		SourceReference:     sourceReference,
+		ContextReference:    contextReference,
+		Requirement:         requirement,
+		CreatedAt:           createdAt,
+		Status:              imageTaskStatusQueued,
+		Images:              images,
+		Units:               units,
 	}, nil
 }
 

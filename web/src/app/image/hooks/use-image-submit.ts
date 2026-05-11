@@ -19,13 +19,15 @@ import type {
 import type { EditorTarget } from "./use-image-source-inputs";
 import {
   buildConversationTitle,
+  buildImageConversationContext,
   buildInpaintSourceReference,
   buildLatestImageContextReference,
+  buildLatestImageReferenceImage,
   createConversationTurn,
   createLoadingImages,
   formatImageError,
 } from "../submit-utils";
-import { buildSourceImageUrl } from "../view-utils";
+import { buildImageDataUrl, buildSourceImageUrl } from "../view-utils";
 
 type UseImageSubmitOptions = {
   mode: ImageMode;
@@ -167,6 +169,7 @@ export function useImageSubmit({
       const targetConversationId =
         editorTarget.conversationId ?? selectedConversationId;
       const conversationId = targetConversationId ?? makeId();
+      const conversationContext = buildImageConversationContext(conversationTurns);
       const supportsEditableOutputOptions = false;
       const nextQuality = normalizeImageQuality(overrideQuality, imageQuality);
       const turnId = makeId();
@@ -240,6 +243,7 @@ export function useImageSubmit({
           quality: nextQuality,
           sourceImages: draftTurn.sourceImages,
           sourceReference,
+          conversationContext,
           systemHint,
         });
 
@@ -285,6 +289,7 @@ export function useImageSubmit({
     },
     [
       closeSelectionEditor,
+      conversationTurns,
       editorTarget,
       focusConversation,
       imageModel,
@@ -297,6 +302,7 @@ export function useImageSubmit({
       setImagePrompt,
       setSourceImages,
       setSubmitElapsedSeconds,
+      systemHint,
       updateConversation,
     ],
   );
@@ -350,6 +356,15 @@ export function useImageSubmit({
               : image,
           )
         : createLoadingImages(requestCount, turn.id);
+      const conversationContext = buildImageConversationContext(conversationTurns, {
+        excludeTurnId: turn.id,
+      });
+      const referenceImage = buildLatestImageReferenceImage(
+        conversationTurns,
+        buildImageDataUrl,
+        { excludeTurnId: turn.id },
+      );
+      const referenceImages = referenceImage && turnSourceImages.length === 0 ? [referenceImage] : undefined;
       const draftTurn = createConversationTurn({
         turnId: turn.id,
         title: buildConversationTitle(turnMode, prompt),
@@ -393,8 +408,10 @@ export function useImageSubmit({
           resolutionAccess: turn.resolutionAccess,
           quality: turnQuality,
           sourceImages: turnSourceImages,
+          referenceImages,
           sourceReference: turn.sourceReference,
           contextReference: turn.contextReference,
+          conversationContext,
           systemHint,
         });
 
@@ -459,7 +476,7 @@ export function useImageSubmit({
         retryingTurnIdsRef.current.delete(turn.id);
       }
     },
-    [focusConversation, makeId, setSubmitElapsedSeconds, updateConversation],
+    [conversationTurns, focusConversation, makeId, setSubmitElapsedSeconds, systemHint, updateConversation],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -488,6 +505,9 @@ export function useImageSubmit({
       mode === "generate" && selectedConversationId && sourceImages.length === 0
         ? buildLatestImageContextReference(conversationTurns)
         : undefined;
+    const conversationContext = buildImageConversationContext(conversationTurns);
+    const referenceImage = buildLatestImageReferenceImage(conversationTurns, buildImageDataUrl);
+    const referenceImages = referenceImage && mode === "generate" && sourceImages.length === 0 ? [referenceImage] : undefined;
     const draftTurn = createConversationTurn({
       turnId,
       title: buildConversationTitle(mode, prompt),
@@ -533,7 +553,9 @@ export function useImageSubmit({
         resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
         quality: imageQuality,
         sourceImages,
+        referenceImages,
         contextReference,
+        conversationContext,
         systemHint,
       });
 

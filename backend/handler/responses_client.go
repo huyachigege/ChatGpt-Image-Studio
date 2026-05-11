@@ -92,17 +92,32 @@ func (c *ResponsesClient) DownloadAsBase64(ctx context.Context, url string) (str
 }
 
 func (c *ResponsesClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]ImageResult, error) {
-	return c.generateViaResponses(ctx, buildResponsesPrompt(prompt), model, size, quality, background, nil, nil)
+	return c.generateViaResponses(ctx, buildResponsesPrompt(prompt), model, size, quality, background, nil, nil, "")
+}
+
+func (c *ResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]ImageResult, error) {
+	return c.generateViaResponses(ctx, buildResponsesPrompt(prompt), model, size, quality, background, nil, nil, previousResponseID)
+}
+
+func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]ImageResult, error) {
+	if len(images) == 0 {
+		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	}
+	return c.generateViaResponsesWithAction(ctx, buildResponsesReferencePrompt(prompt, len(images)), model, size, quality, background, images, nil, "", "generate")
 }
 
 func (c *ResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]ImageResult, error) {
+	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
+}
+
+func (c *ResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string, previousResponseID string) ([]ImageResult, error) {
 	if len(images) == 0 {
 		return nil, fmt.Errorf("at least one image is required")
 	}
 	if !SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
-	return c.generateViaResponses(ctx, buildResponsesEditPrompt(prompt, len(images), len(mask) > 0), model, size, quality, "", images, mask)
+	return c.generateViaResponses(ctx, buildResponsesEditPrompt(prompt, len(images), len(mask) > 0), model, size, quality, "", images, mask, previousResponseID)
 }
 
 func (c *ResponsesClient) InpaintImageByMask(
@@ -122,7 +137,11 @@ func (c *ResponsesClient) InpaintImageByMask(
 	return nil, fmt.Errorf("selection edit requires conversation context")
 }
 
-func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, model string, size, quality, background string, images [][]byte, mask []byte) ([]ImageResult, error) {
+func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, model string, size, quality, background string, images [][]byte, mask []byte, previousResponseID string) ([]ImageResult, error) {
+	return c.generateViaResponsesWithAction(ctx, prompt, model, size, quality, background, images, mask, previousResponseID, "")
+}
+
+func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, prompt, model string, size, quality, background string, images [][]byte, mask []byte, previousResponseID string, action string) ([]ImageResult, error) {
 	if c == nil || c.backend == nil {
 		return nil, fmt.Errorf("responses client is not initialized")
 	}
@@ -136,9 +155,12 @@ func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, mode
 	if model == "" {
 		model = defaultUpstreamModel
 	}
-	toolAction := "generate"
-	if len(images) > 0 {
-		toolAction = "edit"
+	toolAction := strings.ToLower(strings.TrimSpace(action))
+	if toolAction == "" {
+		toolAction = "generate"
+		if len(images) > 0 {
+			toolAction = "edit"
+		}
 	}
 	tool, err := buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{
 		RequestedModel: c.resolveRequestedImageToolModel(),
@@ -177,9 +199,12 @@ func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, mode
 		"tool_choice":         map[string]any{"type": "image_generation"},
 		"instructions":        instructions,
 		"stream":              true,
-		"store":               false,
+		"store":               true,
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
+	}
+	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
+		payload["previous_response_id"] = previousResponseID
 	}
 
 	body, err := json.Marshal(payload)
@@ -262,6 +287,7 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 	scanner.Buffer(make([]byte, 0, 1024*1024), maxResponsesSSELineBytes)
 
 	var dataLines []string
+	responseID := ""
 	finalImages := make([]ImageResult, 0)
 	partialImages := make(map[string]string)
 	seen := make(map[[32]byte]struct{})
@@ -277,6 +303,7 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 		seen[hash] = struct{}{}
 		finalImages = append(finalImages, ImageResult{
 			URL:           encodeImageDataURLFromBase64(b64, mimeTypeFromOutputFormat(outputFormat)),
+			ResponseID:    responseID,
 			RevisedPrompt: prompt,
 		})
 	}
@@ -300,6 +327,7 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 				OutputFormat string `json:"output_format"`
 			} `json:"item"`
 			Response *struct {
+				ID     string `json:"id"`
 				Output []struct {
 					Type         string `json:"type"`
 					Result       string `json:"result"`
@@ -328,6 +356,9 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 		case "response.completed":
 			if payload.Response == nil {
 				return nil
+			}
+			if id := strings.TrimSpace(payload.Response.ID); id != "" {
+				responseID = id
 			}
 			for _, item := range payload.Response.Output {
 				if item.Type != "image_generation_call" {
@@ -368,6 +399,13 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 	if len(finalImages) == 0 {
 		return nil, fmt.Errorf("no images generated")
 	}
+	if responseID != "" {
+		for index := range finalImages {
+			if strings.TrimSpace(finalImages[index].ResponseID) == "" {
+				finalImages[index].ResponseID = responseID
+			}
+		}
+	}
 	return finalImages, nil
 }
 
@@ -384,6 +422,14 @@ func (c *ResponsesClient) setResponsesHeaders(req *http.Request) {
 
 func buildResponsesPrompt(prompt string) string {
 	return strings.TrimSpace(prompt)
+}
+
+func buildResponsesReferencePrompt(prompt string, imageCount int) string {
+	fullPrompt := strings.TrimSpace(prompt)
+	if imageCount > 0 {
+		fullPrompt += " Use the provided image inputs as visual references for continuity, but generate a new image for the user's current request."
+	}
+	return strings.TrimSpace(fullPrompt)
 }
 
 func buildResponsesEditPrompt(prompt string, imageCount int, hasMask bool) string {
@@ -500,6 +546,17 @@ func (c *ResponsesClient) SetRequestedImageModel(model string) {
 		return
 	}
 	c.requestedImageModel = strings.TrimSpace(model)
+}
+
+func (c *ResponsesClient) LastRoute() string {
+	if c == nil {
+		return ""
+	}
+	return "responses"
+}
+
+func (c *ResponsesClient) UsesResponsesAPI() bool {
+	return c != nil
 }
 
 func (c *ResponsesClient) LastRequestBody() string {

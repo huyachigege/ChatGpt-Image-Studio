@@ -1225,6 +1225,7 @@ func (s *Server) handleImageEdits(w http.ResponseWriter, r *http.Request) {
 			OriginalGenID:   inpaintRequest.originalGenID,
 			ConversationID:  inpaintRequest.conversationID,
 			ParentMessageID: inpaintRequest.parentMessageID,
+			ResponseID:      inpaintRequest.responseID,
 			SourceAccountID: inpaintRequest.sourceAccountID,
 			ResponseFormat:  responseFormat,
 		}, r)
@@ -1831,13 +1832,8 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			upstreamModel = label
 		}
 	}
-	if route == "legacy" {
-		if routeAwareClient, ok := client.(interface{ LastRoute() string }); ok {
-			if actualRoute := strings.TrimSpace(routeAwareClient.LastRoute()); actualRoute != "" {
-				route = actualRoute
-			}
-		}
-	}
+	configuredRoute := route
+	route = resolveLoggedImageRoute(configuredRoute, client)
 	if imageToolModel == "" {
 		if strings.EqualFold(route, "responses") {
 			imageToolModel = strings.TrimSpace(upstreamModel)
@@ -2288,6 +2284,7 @@ type inpaintRequest struct {
 	originalGenID   string
 	conversationID  string
 	parentMessageID string
+	responseID      string
 	sourceAccountID string
 }
 
@@ -2297,6 +2294,7 @@ func parseInpaintRequest(r *http.Request) inpaintRequest {
 		originalGenID:   strings.TrimSpace(r.FormValue("original_gen_id")),
 		conversationID:  strings.TrimSpace(r.FormValue("conversation_id")),
 		parentMessageID: strings.TrimSpace(r.FormValue("parent_message_id")),
+		responseID:      strings.TrimSpace(r.FormValue("response_id")),
 		sourceAccountID: strings.TrimSpace(r.FormValue("source_account_id")),
 	}
 }
@@ -2587,9 +2585,7 @@ func isPaidImageAccountType(accountType string) bool {
 }
 
 func shouldUseOfficialResponses(preferredAccount bool, responsesEligible bool, configuredRoute string) bool {
-	if preferredAccount {
-		return false
-	}
+	_ = preferredAccount
 	if !responsesEligible {
 		return false
 	}
@@ -2657,6 +2653,19 @@ func normalizeConfiguredImageRoute(value, fallback string) string {
 	default:
 		return strings.ToLower(strings.TrimSpace(fallback))
 	}
+}
+
+func resolveLoggedImageRoute(configuredRoute string, client any) string {
+	route := strings.TrimSpace(configuredRoute)
+	if !strings.EqualFold(route, "responses") {
+		return route
+	}
+	if routeAwareClient, ok := client.(interface{ LastRoute() string }); ok {
+		if actualRoute := strings.TrimSpace(routeAwareClient.LastRoute()); actualRoute != "" {
+			return actualRoute
+		}
+	}
+	return route
 }
 
 func resolveLoggedImageToolModel(requestedModel string) string {

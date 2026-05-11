@@ -52,6 +52,7 @@ func buildImageHistoryImages(ctx context.Context, client imageDownloader, result
 			GenID:           stringValue(item["gen_id"]),
 			ConversationID:  stringValue(item["conversation_id"]),
 			ParentMessageID: stringValue(item["parent_message_id"]),
+			ResponseID:      stringValue(item["response_id"]),
 			SourceAccountID: stringValue(item["source_account_id"]),
 			Error:           stringValue(item["error"]),
 		})
@@ -89,12 +90,13 @@ func buildImageResponseItems(
 	data := make([]map[string]any, 0, len(results))
 	for index, img := range results {
 		item := map[string]any{
-			"id":                firstNonEmpty(img.FileID, img.GenID, img.URL, "image"),
+			"id":                firstNonEmpty(img.FileID, img.GenID, img.ResponseID, img.URL, "image"),
 			"revised_prompt":    img.RevisedPrompt,
 			"file_id":           img.FileID,
 			"gen_id":            img.GenID,
 			"conversation_id":   img.ConversationID,
 			"parent_message_id": img.ParentMsgID,
+			"response_id":       img.ResponseID,
 		}
 		if sourceAccountID != "" {
 			item["source_account_id"] = sourceAccountID
