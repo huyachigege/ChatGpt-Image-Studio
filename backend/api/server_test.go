@@ -77,8 +77,8 @@ func TestConfiguredImageRoute(t *testing.T) {
 		},
 	}
 
-	if got := server.configuredImageRoute("Free"); got != "responses" {
-		t.Fatalf("configuredImageRoute(Free) = %q, want %q", got, "responses")
+	if got := server.configuredImageRoute("Free"); got != "legacy" {
+		t.Fatalf("configuredImageRoute(Free) = %q, want %q", got, "legacy")
 	}
 	if got := server.configuredImageRoute("Plus"); got != "legacy" {
 		t.Fatalf("configuredImageRoute(Plus) = %q, want %q", got, "legacy")
@@ -121,6 +121,21 @@ func TestConfiguredImageRouteForDisabledStudioAccountUsesLegacy(t *testing.T) {
 	account.Status = "正常"
 	if got := server.configuredImageRouteForAccount(account); got != "responses" {
 		t.Fatalf("configuredImageRouteForAccount(active Plus) = %q, want %q", got, "responses")
+	}
+}
+
+func TestConfiguredImageRouteForAccountFallsBackWhenResponsesCapabilityRemoved(t *testing.T) {
+	server := &Server{
+		cfg: &config.Config{
+			ChatGPT: config.ChatGPTConfig{
+				PaidImageRoute: "responses",
+			},
+		},
+	}
+
+	account := accounts.PublicAccount{Type: "Plus", Status: "正常", ImageRoutes: []string{"legacy"}}
+	if got := server.configuredImageRouteForAccount(account); got != "legacy" {
+		t.Fatalf("configuredImageRouteForAccount(without responses capability) = %q, want %q", got, "legacy")
 	}
 }
 

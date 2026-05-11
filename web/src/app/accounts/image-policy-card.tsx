@@ -33,6 +33,11 @@ type ImagePolicyCardProps = {
   accounts: Account[];
 };
 
+function accountSupportsRoute(account: Account, route: "legacy" | "responses") {
+  const routes = account.imageRoutes ?? (account.type === "Free" ? ["legacy"] : ["legacy", "responses"]);
+  return routes.includes(route);
+}
+
 function formatImportedAt(value?: string | null) {
   if (!value) {
     return "未记录";
@@ -158,7 +163,12 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
     });
   };
 
-  const handleGroupTest = async (accountId: string, route: string) => {
+  const handleGroupTest = async (account: Account, route: "legacy" | "responses") => {
+    if (route === "responses" && !accountSupportsRoute(account, "responses")) {
+      toast.error("Free 号只支持 legacy 测试");
+      return;
+    }
+    const accountId = account.id;
     setTestingAccountId(accountId);
     toast(`正在检测 ${route}...`, { duration: 60000, id: `gtest-${accountId}` });
     try {
@@ -432,8 +442,10 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                                   <td className="px-3 py-2 text-center text-stone-600">{acc.quota}</td>
                                   <td className="px-3 py-2 text-center">
                                     <div className="flex items-center justify-center gap-1">
-                                      <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-emerald-100 hover:text-emerald-700" onClick={() => void handleGroupTest(acc.id, "responses")} disabled={testingAccountId !== null} title="responses">R</button>
-                                      <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-amber-100 hover:text-amber-700" onClick={() => void handleGroupTest(acc.id, "legacy")} disabled={testingAccountId !== null} title="legacy">L</button>
+                                      {accountSupportsRoute(acc, "responses") ? (
+                                        <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-emerald-100 hover:text-emerald-700" onClick={() => void handleGroupTest(acc, "responses")} disabled={testingAccountId !== null} title="responses">R</button>
+                                      ) : null}
+                                      <button type="button" className="rounded px-1.5 py-0.5 text-[10px] font-medium text-stone-400 hover:bg-amber-100 hover:text-amber-700" onClick={() => void handleGroupTest(acc, "legacy")} disabled={testingAccountId !== null} title="legacy">L</button>
                                     </div>
                                     {testingAccountId === acc.id ? <LoaderCircle className="mx-auto mt-1 size-3 animate-spin text-stone-400" /> : null}
                                     {testResults[acc.id] ? (

@@ -728,14 +728,16 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 
 	allowAccount := m.allowAccountFn(task)
 	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
+	preferredRoute := m.preferredRouteForTask(task)
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
-		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(
+		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
 			excluded,
 			allowAccount,
 			allowDisabled,
 			task.Requirement.PolicySnapshot,
 			task.UserID,
 			task.ConversationID,
+			preferredRoute,
 		)
 		if err == nil {
 			return &imageTaskLease{
@@ -751,12 +753,13 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		return nil, imageTaskBlocker{}, err
 	}
 
-	auth, account, release, err := store.AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(
+	auth, account, release, err := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(
 		excluded,
 		allowAccount,
 		allowDisabled,
 		task.UserID,
 		task.ConversationID,
+		preferredRoute,
 	)
 	if err == nil {
 		return &imageTaskLease{
@@ -804,6 +807,19 @@ func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicA
 	return func(account accounts.PublicAccount) bool {
 		return isPaidImageAccountType(account.Type)
 	}
+}
+
+func (m *imageTaskManager) preferredRouteForTask(task *imageTask) string {
+	if task == nil || m == nil || m.server == nil {
+		return "legacy"
+	}
+	if task.Mode == "generate" && task.SourceReference == nil && len(task.SourceImages) == 0 {
+		return "responses"
+	}
+	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 {
+		return "responses"
+	}
+	return "legacy"
 }
 
 func (m *imageTaskManager) busyBlocker(task *imageTask) imageTaskBlocker {

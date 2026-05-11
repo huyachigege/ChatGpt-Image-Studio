@@ -160,6 +160,7 @@ export type Account = {
   lastSyncedAt?: string | null;
   remoteDisabled?: boolean | null;
   importedAt?: string | null;
+  imageRoutes?: Array<"legacy" | "responses" | string>;
 };
 
 export type SyncAccount = {
@@ -908,7 +909,7 @@ export async function updateImageSystemHint(hint: string) {
 export async function testAccountImage(accountId: string, route?: string) {
   return httpRequest<AccountImageTestResult>(
     `/api/accounts/${encodeURIComponent(accountId)}/image-test`,
-    { method: "POST", body: { route: route || "responses" } },
+    { method: "POST", body: { route: route || "" } },
   );
 }
 

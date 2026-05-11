@@ -1366,10 +1366,11 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 		identity := identityFromContext(ctx)
 		userID := identity.UserID
 		conversationID := strings.TrimSpace(r.Header.Get("X-Studio-Conversation-ID"))
+		preferredRoute := s.preferredImageRouteForRequest(responsesEligible)
 		if policy != nil {
-			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID)
+			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID, preferredRoute)
 		} else {
-			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID)
+			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID, preferredRoute)
 		}
 		if err != nil {
 			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
@@ -1876,7 +1877,10 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
 		if isImageRateLimitError(err) {
-			store.MarkImageAccountLimited(authFile.AccessToken)
+			remainingRoutes := store.RemoveImageRouteCapability(authFile.AccessToken, route)
+			if remainingRoutes == 0 || remainingRoutes < 0 {
+				store.MarkImageAccountLimited(authFile.AccessToken)
+			}
 			if preferredAccount {
 				return nil, false, newRequestError("source_account_rate_limited", "原始图片所属账号当前已限流，请稍后重试或使用普通编辑")
 			}
@@ -2597,15 +2601,26 @@ func (s *Server) configuredImageRoute(accountType string) string {
 	case "Plus", "Pro", "Team":
 		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.PaidImageRoute, "responses")
 	default:
-		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.FreeImageRoute, "legacy")
+		return "legacy"
 	}
+}
+
+func (s *Server) preferredImageRouteForRequest(responsesEligible bool) string {
+	if responsesEligible {
+		return "responses"
+	}
+	return "legacy"
 }
 
 func (s *Server) configuredImageRouteForAccount(account accounts.PublicAccount) string {
 	if s.allowDisabledStudioImageAccounts() && strings.TrimSpace(account.Status) == "禁用" {
 		return "legacy"
 	}
-	return s.configuredImageRoute(account.Type)
+	route := s.configuredImageRoute(account.Type)
+	if route == "responses" && !accounts.AccountSupportsImageRoute(account, "responses") {
+		return "legacy"
+	}
+	return route
 }
 
 func (s *Server) imageRequestConfig() handler.ImageRequestConfig {

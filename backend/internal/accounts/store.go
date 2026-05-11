@@ -63,6 +63,7 @@ type RuntimeState struct {
 	LastRefreshedAt            string           `json:"last_refreshed_at,omitempty"`
 	ImageQuotaDailyBase        int              `json:"image_quota_daily_base,omitempty"`
 	ImageQuotaDailyBaseResetAt string           `json:"image_quota_daily_base_reset_at,omitempty"`
+	ImageRoutes                []string         `json:"image_routes"`
 }
 
 type SyncState struct {
@@ -136,6 +137,7 @@ type PublicAccount struct {
 	LastSyncedAt     string           `json:"lastSyncedAt,omitempty"`
 	RemoteDisabled   *bool            `json:"remoteDisabled,omitempty"`
 	ImportedAt       string           `json:"importedAt,omitempty"`
+	ImageRoutes      []string         `json:"imageRoutes"`
 }
 
 type AccountUpdate struct {
@@ -143,6 +145,77 @@ type AccountUpdate struct {
 	Status *string
 	Quota  *int
 	Note   *string
+}
+
+func NormalizeImageRouteCapability(route string) string {
+	switch strings.ToLower(strings.TrimSpace(route)) {
+	case "legacy", "conversation", "l":
+		return "legacy"
+	case "responses", "response", "r":
+		return "responses"
+	default:
+		return ""
+	}
+}
+
+func normalizeImageRouteCapabilities(routes []string) []string {
+	seen := map[string]struct{}{}
+	items := make([]string, 0, len(routes))
+	for _, route := range routes {
+		normalized := NormalizeImageRouteCapability(route)
+		if normalized == "" {
+			continue
+		}
+		if _, ok := seen[normalized]; ok {
+			continue
+		}
+		seen[normalized] = struct{}{}
+		items = append(items, normalized)
+	}
+	return items
+}
+
+func defaultImageRouteCapabilities(accountType string) []string {
+	switch strings.TrimSpace(accountType) {
+	case "Plus", "Pro", "Team":
+		return []string{"legacy", "responses"}
+	default:
+		return []string{"legacy"}
+	}
+}
+
+func AccountSupportsImageRoute(account PublicAccount, route string) bool {
+	normalized := NormalizeImageRouteCapability(route)
+	if normalized == "" {
+		return true
+	}
+	routes := account.ImageRoutes
+	if routes == nil {
+		routes = defaultImageRouteCapabilities(account.Type)
+	}
+	for _, candidate := range normalizeImageRouteCapabilities(routes) {
+		if candidate == normalized {
+			return true
+		}
+	}
+	return false
+}
+
+func accountHasAnyImageRoute(account PublicAccount) bool {
+	routes := account.ImageRoutes
+	if routes == nil {
+		routes = defaultImageRouteCapabilities(account.Type)
+	}
+	return len(normalizeImageRouteCapabilities(routes)) > 0
+}
+
+func imageRouteStatusUnavailable(status string) bool {
+	switch strings.TrimSpace(status) {
+	case "禁用", "异常", "限流":
+		return true
+	default:
+		return false
+	}
 }
 
 type RefreshError struct {
@@ -746,6 +819,7 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 						state.Status = "异常"
 						state.Quota = 0
 						state.QuotaKnown = true
+						state.ImageRoutes = []string{}
 						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
 						return state
 					})
@@ -778,6 +852,11 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 				state.DefaultModelSlug = firstNonEmpty(result.info.DefaultModelSlug, state.DefaultModelSlug)
 				state.RestoreAt = firstNonEmpty(result.info.RestoreAt, state.RestoreAt)
 				state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
+				if result.info.Quota > 0 && !imageRouteStatusUnavailable(state.Status) {
+					state.ImageRoutes = defaultImageRouteCapabilities(state.Type)
+				} else {
+					state.ImageRoutes = []string{}
+				}
 				return syncImageQuotaDailyBaseState(state, result.info.Quota, result.info.LimitsProgress, result.info.RestoreAt)
 			})
 			refreshed++
@@ -922,15 +1001,19 @@ func (s *Store) AcquireImageAuthFilteredWithDisabledOption(excluded map[string]s
 }
 
 func (s *Store) AcquireImageAuthLeaseFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, "", "")
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, "", "", "")
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID string) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, "")
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, "", "")
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID string) (*LocalAuth, PublicAccount, func(), error) {
-	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, conversationID)
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, conversationID, "")
+}
+
+func (s *Store) AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID, preferredRoute string) (*LocalAuth, PublicAccount, func(), error) {
+	return s.acquireImageAuthWithLease(excluded, allow, allowDisabled, userID, conversationID, preferredRoute)
 }
 
 func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool) (*LocalAuth, PublicAccount, error) {
@@ -997,7 +1080,7 @@ func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(Public
 	return &selected.auth, selected.account, nil
 }
 
-func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID string) (*LocalAuth, PublicAccount, func(), error) {
+func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow func(PublicAccount) bool, allowDisabled bool, userID, conversationID, preferredRoute string) (*LocalAuth, PublicAccount, func(), error) {
 	localAuths, err := s.loadAuths()
 	if err != nil {
 		return nil, PublicAccount{}, nil, err
@@ -1026,6 +1109,9 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		}
 		ready := isUsableImageAccount(account, allowDisabled)
 		refreshNeeded := NeedsImageQuotaRefresh(account, now)
+		if !accountHasAnyImageRoute(account) && !refreshNeeded {
+			continue
+		}
 		if auth.AccessToken == "" ||
 			(auth.Disabled && !allowDisabled) ||
 			(account.Status == "禁用" && !allowDisabled) ||
@@ -1045,17 +1131,25 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		return nil, PublicAccount{}, nil, fmt.Errorf("%w in %s", ErrNoAvailableImageAuth, s.authDir)
 	}
 
+	preferredRoute = NormalizeImageRouteCapability(preferredRoute)
 	sort.Slice(candidates, func(i, j int) bool {
 		if candidates[i].ready != candidates[j].ready {
 			return candidates[i].ready
 		}
-		leftConversationMatch := s.imageAccountMatchesConversationLocked(candidates[i].auth.AccessToken, userID, conversationID)
-		rightConversationMatch := s.imageAccountMatchesConversationLocked(candidates[j].auth.AccessToken, userID, conversationID)
+		if preferredRoute != "" {
+			leftRouteMatch := AccountSupportsImageRoute(candidates[i].account, preferredRoute)
+			rightRouteMatch := AccountSupportsImageRoute(candidates[j].account, preferredRoute)
+			if leftRouteMatch != rightRouteMatch {
+				return leftRouteMatch
+			}
+		}
+		leftConversationMatch := s.imageAccountMatchesConversationLocked(candidates[i].auth.AccessToken, userID, conversationID, preferredRoute)
+		rightConversationMatch := s.imageAccountMatchesConversationLocked(candidates[j].auth.AccessToken, userID, conversationID, preferredRoute)
 		if leftConversationMatch != rightConversationMatch {
 			return leftConversationMatch
 		}
-		leftOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[i].auth.AccessToken, userID)
-		rightOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[j].auth.AccessToken, userID)
+		leftOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[i].auth.AccessToken, userID, preferredRoute)
+		rightOtherUser := s.imageAccountUsedByOtherUserLocked(candidates[j].auth.AccessToken, userID, preferredRoute)
 		if leftOtherUser != rightOtherUser {
 			return !leftOtherUser
 		}
@@ -1073,8 +1167,8 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 	if leaseErr != nil {
 		return nil, PublicAccount{}, nil, leaseErr
 	}
-	s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID)
-	s.rememberImageConversationAccountLocked(selected.auth.AccessToken, userID, conversationID)
+	s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID, preferredRoute)
+	s.rememberImageConversationAccountLocked(selected.auth.AccessToken, userID, conversationID, preferredRoute)
 	return &selected.auth, selected.account, release, nil
 }
 
@@ -1114,40 +1208,40 @@ func (s *Store) isImageLeasedLocked(accessToken string) bool {
 	return s.imageLeases[token] > 0
 }
 
-func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID string) bool {
-	token := strings.TrimSpace(accessToken)
+func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID, route string) bool {
+	key := imageAccountUserKey(accessToken, route)
 	user := strings.TrimSpace(userID)
-	if token == "" || user == "" || s.imageAccountUsers == nil {
+	if key == "" || user == "" || s.imageAccountUsers == nil {
 		return false
 	}
-	lastUser := strings.TrimSpace(s.imageAccountUsers[token])
+	lastUser := strings.TrimSpace(s.imageAccountUsers[key])
 	return lastUser != "" && lastUser != user
 }
 
-func (s *Store) rememberImageAccountUserLocked(accessToken, userID string) {
-	token := strings.TrimSpace(accessToken)
+func (s *Store) rememberImageAccountUserLocked(accessToken, userID, route string) {
+	key := imageAccountUserKey(accessToken, route)
 	user := strings.TrimSpace(userID)
-	if token == "" || user == "" {
+	if key == "" || user == "" {
 		return
 	}
 	if s.imageAccountUsers == nil {
 		s.imageAccountUsers = map[string]string{}
 	}
-	s.imageAccountUsers[token] = user
+	s.imageAccountUsers[key] = user
 }
 
-func (s *Store) imageAccountMatchesConversationLocked(accessToken, userID, conversationID string) bool {
+func (s *Store) imageAccountMatchesConversationLocked(accessToken, userID, conversationID, route string) bool {
 	token := strings.TrimSpace(accessToken)
-	key := imageConversationAccountKey(userID, conversationID)
+	key := imageConversationAccountKey(userID, conversationID, route)
 	if token == "" || key == "" || s.imageConversationAccounts == nil {
 		return false
 	}
 	return strings.TrimSpace(s.imageConversationAccounts[key]) == token
 }
 
-func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conversationID string) {
+func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conversationID, route string) {
 	token := strings.TrimSpace(accessToken)
-	key := imageConversationAccountKey(userID, conversationID)
+	key := imageConversationAccountKey(userID, conversationID, route)
 	if token == "" || key == "" {
 		return
 	}
@@ -1157,13 +1251,44 @@ func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conv
 	s.imageConversationAccounts[key] = token
 }
 
-func imageConversationAccountKey(userID, conversationID string) string {
+func imageAccountUserKey(accessToken, route string) string {
+	token := strings.TrimSpace(accessToken)
+	if token == "" {
+		return ""
+	}
+	normalizedRoute := NormalizeImageRouteCapability(route)
+	return token + "\x00" + normalizedRoute
+}
+
+func imageConversationAccountKey(userID, conversationID, route string) string {
 	user := strings.TrimSpace(userID)
 	conversation := strings.TrimSpace(conversationID)
 	if user == "" || conversation == "" {
 		return ""
 	}
-	return user + "\x00" + conversation
+	normalizedRoute := NormalizeImageRouteCapability(route)
+	return user + "\x00" + conversation + "\x00" + normalizedRoute
+}
+
+func (s *Store) clearImageRouteBindingsLocked(accessToken, route string) {
+	key := imageAccountUserKey(accessToken, route)
+	if key != "" && s.imageAccountUsers != nil {
+		delete(s.imageAccountUsers, key)
+	}
+	if s.imageConversationAccounts == nil {
+		return
+	}
+	token := strings.TrimSpace(accessToken)
+	normalizedRoute := NormalizeImageRouteCapability(route)
+	for key, value := range s.imageConversationAccounts {
+		if strings.TrimSpace(value) != token {
+			continue
+		}
+		if normalizedRoute != "" && !strings.HasSuffix(key, "\x00"+normalizedRoute) {
+			continue
+		}
+		delete(s.imageConversationAccounts, key)
+	}
 }
 
 func (s *Store) RecordImageResult(accessToken string, success bool) {
@@ -1179,10 +1304,14 @@ func (s *Store) RecordImageResult(accessToken string, success bool) {
 			state.Success++
 			state.ImageConsecutiveFailures = 0
 			state.ImageCooldownUntil = ""
+			if state.ImageRoutes == nil {
+				state.ImageRoutes = defaultImageRouteCapabilities(firstNonEmpty(state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free"))
+			}
 			if state.QuotaKnown && state.Quota > 0 {
 				state.Quota--
 				if state.Quota == 0 && state.Status != "禁用" && state.Status != "异常" {
 					state.Status = "限流"
+					state.ImageRoutes = []string{}
 				}
 			}
 			state.LimitsProgress = decrementLimitRemaining(state.LimitsProgress, "image_gen")
@@ -1217,6 +1346,7 @@ func (s *Store) MarkImageTokenAbnormal(accessToken string) {
 	s.disableImageAuth(auth, "异常", func(state RuntimeState) RuntimeState {
 		state.Quota = 0
 		state.QuotaKnown = true
+		state.ImageRoutes = []string{}
 		return state
 	})
 }
@@ -1229,9 +1359,40 @@ func (s *Store) MarkImageAccountLimited(accessToken string) {
 	s.disableImageAuth(auth, "限流", func(state RuntimeState) RuntimeState {
 		state.Quota = 0
 		state.QuotaKnown = true
+		state.ImageRoutes = []string{}
 		state.LimitsProgress = setLimitRemaining(state.LimitsProgress, "image_gen", 0)
 		return state
 	})
+}
+
+func (s *Store) RemoveImageRouteCapability(accessToken string, route string) int {
+	normalizedRoute := NormalizeImageRouteCapability(route)
+	if normalizedRoute == "" {
+		return -1
+	}
+	auth, err := s.findAuthByToken(accessToken)
+	if err != nil {
+		return -1
+	}
+	remaining := -1
+	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+		routes := normalizeImageRouteCapabilities(state.ImageRoutes)
+		if state.ImageRoutes == nil {
+			routes = defaultImageRouteCapabilities(firstNonEmpty(state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free"))
+		}
+		next := make([]string, 0, len(routes))
+		for _, candidate := range routes {
+			if candidate == normalizedRoute {
+				continue
+			}
+			next = append(next, candidate)
+		}
+		state.ImageRoutes = next
+		remaining = len(next)
+		s.clearImageRouteBindingsLocked(accessToken, normalizedRoute)
+		return state
+	})
+	return remaining
 }
 
 func (s *Store) disableImageAuth(auth LocalAuth, status string, update func(RuntimeState) RuntimeState) {
@@ -1249,6 +1410,8 @@ func (s *Store) disableImageAuth(auth LocalAuth, status string, update func(Runt
 		if update != nil {
 			state = update(state)
 		}
+		s.clearImageRouteBindingsLocked(auth.AccessToken, "legacy")
+		s.clearImageRouteBindingsLocked(auth.AccessToken, "responses")
 		return state
 	})
 }
@@ -1750,6 +1913,14 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 		}
 	}
 
+	imageRoutes := normalizeImageRouteCapabilities(state.ImageRoutes)
+	if state.ImageRoutes == nil {
+		imageRoutes = defaultImageRouteCapabilities(accountType)
+	}
+	if auth.Disabled || imageRouteStatusUnavailable(status) || quota <= 0 {
+		imageRoutes = []string{}
+	}
+
 	return PublicAccount{
 		ID:               shortID(auth.AccessToken),
 		FileName:         auth.Name,
@@ -1776,6 +1947,7 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 		LastSyncedAt:     syncState.LastSyncedAt,
 		RemoteDisabled:   remoteDisabled,
 		ImportedAt:       formatAccountImportedAt(auth.ImportedAt),
+		ImageRoutes:      imageRoutes,
 	}
 }
 

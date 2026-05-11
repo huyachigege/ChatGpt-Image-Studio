@@ -86,7 +86,7 @@ func (s *Store) AcquireImageAuthLeaseWithPolicyFilteredWithDisabledOption(
 	allowDisabled bool,
 	policy *ImageAccountRoutingPolicy,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, "", "")
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, "", "", "")
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(
@@ -96,7 +96,7 @@ func (s *Store) AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption
 	policy *ImageAccountRoutingPolicy,
 	userID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, "")
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, "", "")
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(
@@ -107,7 +107,19 @@ func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDi
 	userID string,
 	conversationID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID)
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, "")
+}
+
+func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
+	excluded map[string]struct{},
+	allow func(PublicAccount) bool,
+	allowDisabled bool,
+	policy *ImageAccountRoutingPolicy,
+	userID string,
+	conversationID string,
+	preferredRoute string,
+) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, preferredRoute)
 }
 
 func (s *Store) ImageAccountAllowedForPolicy(accessToken string, account PublicAccount, policy *ImageAccountRoutingPolicy) bool {
@@ -311,9 +323,10 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 	policy *ImageAccountRoutingPolicy,
 	userID string,
 	conversationID string,
+	preferredRoute string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
 	if policy == nil || !policy.Enabled {
-		auth, account, release, err := s.AcquireImageAuthLeaseForUserConversationFilteredWithDisabledOption(excluded, allow, allowDisabled, userID, conversationID)
+		auth, account, release, err := s.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allow, allowDisabled, userID, conversationID, preferredRoute)
 		return auth, account, ImageAccountRoutingDecision{}, release, err
 	}
 
@@ -375,6 +388,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 		now,
 		userID,
 		conversationID,
+		preferredRoute,
 	)
 	if ok {
 		return auth, account, decision, release, nil
@@ -395,6 +409,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 			now,
 			userID,
 			conversationID,
+			preferredRoute,
 		)
 		if ok {
 			return auth, account, ImageAccountRoutingDecision{}, release, nil
@@ -471,7 +486,9 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 	now time.Time,
 	userID string,
 	conversationID string,
+	preferredRoute string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), bool) {
+	preferredRoute = NormalizeImageRouteCapability(preferredRoute)
 	sawSelectedGroup := false
 	for _, groupIndex := range groupIndexes {
 		groupStart := groupIndex * normalizedPolicy.GroupSize
@@ -505,6 +522,9 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if s.isImageAccountCoolingDownLocked(candidate.auth.Name, now) {
 				continue
 			}
+			if !accountHasAnyImageRoute(candidate.account) && !refreshNeeded {
+				continue
+			}
 			if !candidate.ready && !refreshNeeded {
 				continue
 			}
@@ -522,13 +542,20 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if groupCandidates[i].ready != groupCandidates[j].ready {
 				return groupCandidates[i].ready
 			}
-			leftConversationMatch := s.imageAccountMatchesConversationLocked(groupCandidates[i].auth.AccessToken, userID, conversationID)
-			rightConversationMatch := s.imageAccountMatchesConversationLocked(groupCandidates[j].auth.AccessToken, userID, conversationID)
+			if preferredRoute != "" {
+				leftRouteMatch := AccountSupportsImageRoute(groupCandidates[i].account, preferredRoute)
+				rightRouteMatch := AccountSupportsImageRoute(groupCandidates[j].account, preferredRoute)
+				if leftRouteMatch != rightRouteMatch {
+					return leftRouteMatch
+				}
+			}
+			leftConversationMatch := s.imageAccountMatchesConversationLocked(groupCandidates[i].auth.AccessToken, userID, conversationID, preferredRoute)
+			rightConversationMatch := s.imageAccountMatchesConversationLocked(groupCandidates[j].auth.AccessToken, userID, conversationID, preferredRoute)
 			if leftConversationMatch != rightConversationMatch {
 				return leftConversationMatch
 			}
-			leftOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[i].auth.AccessToken, userID)
-			rightOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[j].auth.AccessToken, userID)
+			leftOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[i].auth.AccessToken, userID, preferredRoute)
+			rightOtherUser := s.imageAccountUsedByOtherUserLocked(groupCandidates[j].auth.AccessToken, userID, preferredRoute)
 			if leftOtherUser != rightOtherUser {
 				return !leftOtherUser
 			}
@@ -546,8 +573,8 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 		if leaseErr != nil {
 			continue
 		}
-		s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID)
-		s.rememberImageConversationAccountLocked(selected.auth.AccessToken, userID, conversationID)
+		s.rememberImageAccountUserLocked(selected.auth.AccessToken, userID, preferredRoute)
+		s.rememberImageConversationAccountLocked(selected.auth.AccessToken, userID, conversationID, preferredRoute)
 		return &selected.auth, selected.account, ImageAccountRoutingDecision{
 			PolicyApplied:  true,
 			GroupIndex:     groupIndex,

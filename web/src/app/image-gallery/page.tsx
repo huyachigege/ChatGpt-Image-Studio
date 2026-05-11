@@ -27,6 +27,11 @@ function getGalleryColumnCount() {
   return 2;
 }
 
+function getGalleryPageSize(columnCount: number) {
+  if (columnCount <= 2) return 8;
+  return GALLERY_ROWS * columnCount;
+}
+
 function formatTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -96,7 +101,7 @@ export default function ImageGalleryPage() {
   const [isBatchDeleting, setIsBatchDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const [columnCount, setColumnCount] = useState(getGalleryColumnCount());
-  const [pageSize, setPageSize] = useState(GALLERY_ROWS * getGalleryColumnCount());
+  const [pageSize, setPageSize] = useState(getGalleryPageSize(getGalleryColumnCount()));
   const [total, setTotal] = useState(0);
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -127,15 +132,15 @@ export default function ImageGalleryPage() {
   }, []);
 
   useEffect(() => {
-    const updatePageSize = () => {
+    const updateLayout = () => {
       const nextColumnCount = getGalleryColumnCount();
-      setColumnCount(nextColumnCount);
-      setPageSize(GALLERY_ROWS * nextColumnCount);
-      setPage(1);
+      const nextPageSize = getGalleryPageSize(nextColumnCount);
+      setColumnCount((current) => (current === nextColumnCount ? current : nextColumnCount));
+      setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
     };
-    updatePageSize();
-    window.addEventListener("resize", updatePageSize);
-    return () => window.removeEventListener("resize", updatePageSize);
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
   }, []);
 
   useEffect(() => {
@@ -240,16 +245,17 @@ export default function ImageGalleryPage() {
 
   const galleryRows = useMemo(() => {
     const rows: { groupItems: ImageGalleryItem[]; label: string; rowItems: ImageGalleryItem[] }[] = [];
+    const minRowCount = Math.max(1, Math.ceil(pageSize / Math.max(1, columnCount)));
     let cursor = 0;
 
-    while (rows.length < GALLERY_ROWS) {
+    while (cursor < groupedItems.length) {
       const rowItems: ImageGalleryItem[] = [];
-      if (cursor >= groupedItems.length) {
-        rows.push({ groupItems: [], label: "", rowItems });
-        continue;
-      }
       const rowGroup = groupMode === "user" ? groupedItems[cursor]?.folder || "" : formatDateGroup(groupedItems[cursor]?.createdAt || "", groupMode);
-      const previousGroup = groupMode === "user" ? groupedItems[cursor - 1]?.folder || "" : formatDateGroup(groupedItems[cursor - 1]?.createdAt || "", groupMode);
+      const previousGroup = cursor > 0
+        ? groupMode === "user"
+          ? groupedItems[cursor - 1]?.folder || ""
+          : formatDateGroup(groupedItems[cursor - 1]?.createdAt || "", groupMode)
+        : "";
 
       while (cursor < groupedItems.length && rowItems.length < columnCount) {
         const itemGroup = groupMode === "user" ? groupedItems[cursor].folder || "" : formatDateGroup(groupedItems[cursor].createdAt, groupMode);
@@ -265,8 +271,12 @@ export default function ImageGalleryPage() {
       });
     }
 
+    while (rows.length < minRowCount) {
+      rows.push({ groupItems: [], label: "", rowItems: [] });
+    }
+
     return rows;
-  }, [columnCount, groupMode, groupedItems]);
+  }, [columnCount, groupMode, groupedItems, pageSize]);
 
   return (
     <section className="h-full">
@@ -334,7 +344,7 @@ export default function ImageGalleryPage() {
         ) : items.length === 0 ? (
           <div className="grid min-h-[280px] place-items-center rounded-[28px] border border-dashed border-stone-200 bg-white/70 text-sm text-stone-500 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text-muted)]">{searchQuery ? "没有匹配的图片。" : "当前还没有可展示的图片。"}</div>
         ) : (
-          <div className="grid h-full min-h-0 grid-rows-3 gap-2 pt-2">
+          <div className="grid h-full min-h-0 gap-2 pt-2" style={{ gridTemplateRows: `repeat(${Math.max(galleryRows.length, 1)}, minmax(0, 1fr))` }}>
             {galleryRows.map((row, rowIndex) => (
               <section key={rowIndex} className="flex min-h-0 flex-col">
                 <div className={`flex h-4 shrink-0 items-center justify-between border-b text-[11px] ${row.label ? "border-stone-200 dark:border-[var(--studio-border)]" : "border-transparent"}`}>
@@ -345,7 +355,7 @@ export default function ImageGalleryPage() {
                     return allSelected ? current.filter((name) => !names.includes(name)) : Array.from(new Set([...current, ...names]));
                   })}>全选/取消本组</button> : <span />}
                 </div>
-                <div className="grid min-h-0 flex-1 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+                <div className="grid min-h-0 flex-1 gap-2" style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}>
                   {row.rowItems.map((item) => (
                     <article key={item.id} className="group flex min-h-0 flex-col overflow-hidden rounded-[18px] border border-stone-200 bg-white shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
                       <div className="relative min-h-0 flex-1">

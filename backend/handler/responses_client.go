@@ -199,7 +199,7 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		"tool_choice":         map[string]any{"type": "image_generation"},
 		"instructions":        instructions,
 		"stream":              true,
-		"store":               true,
+		"store":               false,
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
 	}

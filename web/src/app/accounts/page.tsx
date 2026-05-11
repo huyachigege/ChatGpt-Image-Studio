@@ -216,6 +216,15 @@ function maskToken(token?: string) {
   return `${token.slice(0, 16)}...${token.slice(-8)}`;
 }
 
+function accountSupportsRoute(account: Account, route: "legacy" | "responses") {
+  const routes = account.imageRoutes ?? (account.type === "Free" ? ["legacy"] : ["legacy", "responses"]);
+  return routes.includes(route);
+}
+
+function defaultImageTestRoute(account: Account) {
+  return accountSupportsRoute(account, "responses") ? "responses" : "legacy";
+}
+
 function normalizeAccounts(items: Account[]): Account[] {
   return items.map((item) => ({
     ...item,
@@ -921,7 +930,11 @@ export default function AccountsPage() {
     }
   };
 
-  const handleImageTest = async (account: Account, route = "responses") => {
+  const handleImageTest = async (account: Account, route = defaultImageTestRoute(account)) => {
+    if (route === "responses" && !accountSupportsRoute(account, "responses")) {
+      toast.error("Free 号只支持 legacy 测试");
+      return;
+    }
     setImageTestingId(account.id);
     setImageTestResult((prev) => { const next = { ...prev }; delete next[account.id]; return next; });
     toast(`正在检测 ${route} 路线...`, { duration: 60000, id: `image-test-${account.id}` });
@@ -1887,7 +1900,9 @@ export default function AccountsPage() {
                           <button
                             type="button"
                             className="shrink-0 rounded-lg p-2 text-stone-400 transition hover:bg-emerald-100 hover:text-emerald-700"
-                            onClick={() => void handleImageTest(account)}
+                            onClick={() =>
+                              void handleImageTest(account, defaultImageTestRoute(account))
+                            }
                             disabled={imageTestingId === account.id}
                             aria-label="检测生图"
                             title="检测生图"
@@ -2295,20 +2310,22 @@ export default function AccountsPage() {
                             >
                               <Trash2 className="size-4" />
                             </button>
-                            <button
-                              type="button"
-                              className={cn(
-                                "rounded-lg px-1.5 py-1 text-[10px] font-medium transition",
-                                imageTestingId === account.id
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "text-stone-400 hover:bg-emerald-100 hover:text-emerald-700",
-                              )}
-                              onClick={() => void handleImageTest(account, "responses")}
-                              disabled={imageTestingId !== null}
-                              title="检测 responses 路线"
-                            >
-                              {imageTestingId === account.id ? <LoaderCircle className="inline size-3 animate-spin" /> : "R"}
-                            </button>
+                            {accountSupportsRoute(account, "responses") ? (
+                              <button
+                                type="button"
+                                className={cn(
+                                  "rounded-lg px-1.5 py-1 text-[10px] font-medium transition",
+                                  imageTestingId === account.id
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "text-stone-400 hover:bg-emerald-100 hover:text-emerald-700",
+                                )}
+                                onClick={() => void handleImageTest(account, "responses")}
+                                disabled={imageTestingId !== null}
+                                title="检测 responses 路线"
+                              >
+                                {imageTestingId === account.id ? <LoaderCircle className="inline size-3 animate-spin" /> : "R"}
+                              </button>
+                            ) : null}
                             <button
                               type="button"
                               className={cn(

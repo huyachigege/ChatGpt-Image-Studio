@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"chatgpt2api/handler"
+	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/outboundproxy"
 )
 
@@ -43,9 +44,6 @@ func (s *Server) handleAccountImageTest(w http.ResponseWriter, r *http.Request) 
 		_ = json.NewDecoder(r.Body).Decode(&body)
 	}
 	route := strings.ToLower(strings.TrimSpace(body.Route))
-	if route == "" {
-		route = "responses"
-	}
 
 	store := s.getStore()
 	if store == nil {
@@ -56,6 +54,17 @@ func (s *Server) handleAccountImageTest(w http.ResponseWriter, r *http.Request) 
 	auth, account, err := store.FindImageAuthByID(accountID)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]any{"error": fmt.Sprintf("account not found: %v", err)})
+		return
+	}
+	if route == "" {
+		if accounts.AccountSupportsImageRoute(account, "responses") {
+			route = "responses"
+		} else {
+			route = "legacy"
+		}
+	}
+	if route == "responses" && !accounts.AccountSupportsImageRoute(account, "responses") {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "current image account does not support responses test route"})
 		return
 	}
 
@@ -121,6 +130,9 @@ func (s *Server) handleAccountImageTest(w http.ResponseWriter, r *http.Request) 
 	if genErr != nil {
 		result.OK = false
 		result.Error = genErr.Error()
+		if isImageRateLimitError(genErr) {
+			store.RemoveImageRouteCapability(auth.AccessToken, result.Route)
+		}
 	} else if len(images) > 0 {
 		result.OK = true
 		result.ImageURL = images[0].URL

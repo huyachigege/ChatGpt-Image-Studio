@@ -87,6 +87,16 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 	total := len(items)
+	pageCount := 1
+	if pageSize > 0 {
+		pageCount = (total + pageSize - 1) / pageSize
+		if pageCount <= 0 {
+			pageCount = 1
+		}
+	}
+	if page > pageCount {
+		page = pageCount
+	}
 	start := (page - 1) * pageSize
 	if start > total {
 		start = total
