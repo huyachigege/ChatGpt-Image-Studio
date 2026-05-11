@@ -65,6 +65,7 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 	}
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	folderFilter := strings.TrimSpace(r.URL.Query().Get("folder"))
+	groupMode := strings.TrimSpace(r.URL.Query().Get("group"))
 	items, err := s.listImageGalleryItems(r.Context(), identity)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -79,6 +80,11 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 	}
 	if query != "" {
 		items = filterImageGalleryItemsByPrompt(items, query)
+	}
+	if groupMode == "month" || groupMode == "day" {
+		sort.SliceStable(items, func(i, j int) bool {
+			return items[i].CreatedAt > items[j].CreatedAt
+		})
 	}
 	total := len(items)
 	start := (page - 1) * pageSize

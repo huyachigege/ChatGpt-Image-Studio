@@ -108,10 +108,10 @@ export default function ImageGalleryPage() {
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string) => {
+  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day") => {
     setIsLoading(true);
     try {
-      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined });
+      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode });
       setItems(payload.items || []);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);
@@ -139,8 +139,8 @@ export default function ImageGalleryPage() {
   }, []);
 
   useEffect(() => {
-    void loadItems(page, searchQuery, pageSize, folderFilter);
-  }, [loadItems, page, pageSize, searchQuery, folderFilter]);
+    void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
+  }, [loadItems, page, pageSize, searchQuery, folderFilter, groupMode]);
 
   const totalSize = useMemo(() => items.reduce((sum, item) => sum + (Number.isFinite(item.size) ? item.size : 0), 0), [items]);
   const previewItems = useMemo(() => items.map((item) => ({ originalUrl: item.url, title: basename(item.name) })), [items]);
@@ -185,7 +185,7 @@ export default function ImageGalleryPage() {
     try {
       await deleteImageGalleryItems([item.name]);
       toast.success("图片已删除");
-      void loadItems(page, searchQuery, pageSize, folderFilter);
+      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除图片失败");
     } finally {
@@ -230,7 +230,7 @@ export default function ImageGalleryPage() {
       const payload = await deleteImageGalleryItems(selectedNames);
       const deleted = payload.deleted || selectedNames;
       toast.success(`已删除 ${deleted.length} 张图片`);
-      void loadItems(page, searchQuery, pageSize, folderFilter);
+      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "批量删除失败");
     } finally {
@@ -296,7 +296,7 @@ export default function ImageGalleryPage() {
                 </Select>
               ) : null}
               {folderOptions.length > 0 ? (
-                <Select value={groupMode} onValueChange={(value) => setGroupMode(value as "user" | "month" | "day")}>
+                <Select value={groupMode} onValueChange={(value) => { setGroupMode(value as "user" | "month" | "day"); setPage(1); }}>
                   <SelectTrigger className="h-10 w-[136px] rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none"><SelectValue placeholder="分组方式" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">按用户分组</SelectItem>
@@ -318,7 +318,7 @@ export default function ImageGalleryPage() {
                 {isBatchDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                 删除选中 {selectedNames.length > 0 ? selectedNames.length : ""}
               </Button>
-              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize, folderFilter)} disabled={isLoading}>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize, folderFilter, groupMode)} disabled={isLoading}>
                 {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 刷新
               </Button>
