@@ -16,8 +16,10 @@ import (
 const imageTaskFakeHost = "workspace.local"
 
 type imageTaskDeferredError struct {
-	cause       error
-	accessToken string
+	cause        error
+	accessToken  string
+	accountEmail string
+	accountFile  string
 }
 
 func (e *imageTaskDeferredError) Error() string {
@@ -187,7 +189,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	lease.release = nil
 	if err != nil {
 		if retryable {
-			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken}
+			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}
 		}
 		return nil, err
 	}

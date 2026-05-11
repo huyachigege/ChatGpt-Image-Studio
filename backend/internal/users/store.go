@@ -36,6 +36,7 @@ type User struct {
 	ImageAPIKey string `json:"imageApiKey,omitempty"`
 	Disabled    bool   `json:"disabled,omitempty"`
 	CreatedAt   string `json:"createdAt,omitempty"`
+	LastUsedAt  string `json:"lastUsedAt,omitempty"`
 }
 
 type Invite struct {
@@ -329,6 +330,21 @@ func (s *Store) UserByImageAPIKey(ctx context.Context, apiKey string) (*User, er
 }
 
 func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
+	lastUsedByUser, err := s.LatestSessionCreatedAtByUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.listUsersWithLastUsed(ctx, lastUsedByUser)
+}
+
+func (s *Store) ListUsersWithLastUsed(ctx context.Context, lastUsedByUser map[string]string) ([]User, error) {
+	if lastUsedByUser == nil {
+		lastUsedByUser = map[string]string{}
+	}
+	return s.listUsersWithLastUsed(ctx, lastUsedByUser)
+}
+
+func (s *Store) listUsersWithLastUsed(ctx context.Context, lastUsedByUser map[string]string) ([]User, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT id,COALESCE(username, ''),COALESCE(email, ''),COALESCE(name, ''),role,image_api_key,created_at,COALESCE(disabled_at, '') FROM app_users ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
@@ -342,12 +358,33 @@ func (s *Store) ListUsers(ctx context.Context) ([]User, error) {
 			return nil, err
 		}
 		item.Disabled = strings.TrimSpace(disabledAt) != ""
+		item.LastUsedAt = lastUsedByUser[item.ID]
 		if strings.HasSuffix(item.Email, "@local.user") {
 			item.Email = ""
 		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (s *Store) LatestSessionCreatedAtByUser(ctx context.Context) (map[string]string, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT user_id,MAX(created_at) FROM app_user_sessions GROUP BY user_id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	result := map[string]string{}
+	for rows.Next() {
+		var userID string
+		var lastUsedAt string
+		if err := rows.Scan(&userID, &lastUsedAt); err != nil {
+			return nil, err
+		}
+		if strings.TrimSpace(userID) != "" {
+			result[userID] = strings.TrimSpace(lastUsedAt)
+		}
+	}
+	return result, rows.Err()
 }
 
 func (s *Store) SetUserDisabled(ctx context.Context, userID string, disabled bool) error {

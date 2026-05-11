@@ -37,6 +37,29 @@ function promptText(item: RequestLogItem) {
   return "—";
 }
 
+function looksLikeAccessToken(value?: string) {
+  const trimmed = value?.trim() || "";
+  return trimmed.length > 80 || trimmed.startsWith("eyJ");
+}
+
+function accountMainText(item: RequestLogItem | RequestLogDetail) {
+  if (item.accountEmail?.trim()) return item.accountEmail.trim();
+  if (!looksLikeAccessToken(item.accountFile)) return item.accountFile?.trim() || "—";
+  return "—";
+}
+
+function accountSubText(item: RequestLogItem | RequestLogDetail) {
+  const accountFile = looksLikeAccessToken(item.accountFile) ? "" : item.accountFile?.trim() || "";
+  if (item.accountType && accountFile) return `${item.accountType} · ${accountFile}`;
+  return item.accountType || accountFile || "—";
+}
+
+function optionTextMatches(option: { value: string; label: string }, query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return true;
+  return `${option.value} ${option.label}`.toLowerCase().includes(keyword);
+}
+
 export default function RequestsPage() {
   const [items, setItems] = useState<RequestLogItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +68,8 @@ export default function RequestsPage() {
   const [total, setTotal] = useState(0);
   const [userDraft, setUserDraft] = useState("all");
   const [accountDraft, setAccountDraft] = useState("all");
+  const [userOptionQuery, setUserOptionQuery] = useState("");
+  const [accountOptionQuery, setAccountOptionQuery] = useState("");
   const [promptDraft, setPromptDraft] = useState("");
   const [filters, setFilters] = useState({ user: "", account: "", prompt: "" });
   const [filterOptions, setFilterOptions] = useState<RequestLogFilterOptions>({ users: [], accounts: [] });
@@ -97,6 +122,9 @@ export default function RequestsPage() {
 
     return nextItems;
   }, [pageCount, safePage]);
+
+  const visibleUserOptions = useMemo(() => filterOptions.users.filter((option) => optionTextMatches(option, userOptionQuery)), [filterOptions.users, userOptionQuery]);
+  const visibleAccountOptions = useMemo(() => filterOptions.accounts.filter((option) => optionTextMatches(option, accountOptionQuery)), [filterOptions.accounts, accountOptionQuery]);
 
   const handleFilterSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -184,15 +212,21 @@ export default function RequestsPage() {
               <Select value={userDraft} onValueChange={setUserDraft}>
                 <SelectTrigger className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none lg:w-[170px]"><SelectValue placeholder="选择用户" /></SelectTrigger>
                 <SelectContent>
+                  <div className="p-1" onKeyDown={(event) => event.stopPropagation()}>
+                    <Input value={userOptionQuery} onChange={(event) => setUserOptionQuery(event.target.value)} placeholder="搜索用户" className="h-8 rounded-xl border-stone-200 px-3 text-xs shadow-none" />
+                  </div>
                   <SelectItem value="all">全部用户</SelectItem>
-                  {filterOptions.users.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                  {visibleUserOptions.length > 0 ? visibleUserOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>) : <div className="px-3 py-2 text-xs text-stone-400">无匹配用户</div>}
                 </SelectContent>
               </Select>
               <Select value={accountDraft} onValueChange={setAccountDraft}>
                 <SelectTrigger className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none lg:w-[220px]"><SelectValue placeholder="选择账号" /></SelectTrigger>
                 <SelectContent>
+                  <div className="p-1" onKeyDown={(event) => event.stopPropagation()}>
+                    <Input value={accountOptionQuery} onChange={(event) => setAccountOptionQuery(event.target.value)} placeholder="搜索账号" className="h-8 rounded-xl border-stone-200 px-3 text-xs shadow-none" />
+                  </div>
                   <SelectItem value="all">全部账号</SelectItem>
-                  {filterOptions.accounts.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                  {visibleAccountOptions.length > 0 ? visibleAccountOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>) : <div className="px-3 py-2 text-xs text-stone-400">无匹配账号</div>}
                 </SelectContent>
               </Select>
               <Input value={promptDraft} onChange={(event) => setPromptDraft(event.target.value)} placeholder="搜索提示词" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none" />
@@ -251,7 +285,7 @@ export default function RequestsPage() {
                     <InfoBox title="错误" main={item.error || "—"} sub={item.errorCode ? `错误码：${item.errorCode}` : undefined} breakAll />
                     <InfoBox title="提示词" main={promptText(item)} />
                     <InfoBox title="用户" main={item.username || item.userId || "—"} sub={item.userRole || "—"} />
-                    <InfoBox title="账号" main={item.accountEmail || "—"} sub={item.accountType ? `${item.accountType} · ${item.accountFile || "—"}` : item.accountFile || "—"} />
+                    <InfoBox title="账号" main={accountMainText(item)} sub={accountSubText(item)} />
                   </div>
                 </div>
               ))}
@@ -305,9 +339,9 @@ export default function RequestsPage() {
                             <div className="truncate text-stone-700" title={item.username || item.userId || ""}>{item.username || item.userId || "—"}</div>
                             <div className="truncate text-xs text-stone-400">{item.userRole || "—"}</div>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="truncate text-stone-700" title={item.accountEmail || item.accountFile || ""}>{item.accountEmail || "—"}</div>
-                            <div className="truncate text-xs text-stone-400" title={item.accountFile || ""}>{item.accountType ? `${item.accountType} · ${item.accountFile || "—"}` : item.accountFile || "—"}</div>
+                          <td className="max-w-[180px] px-4 py-3 whitespace-nowrap">
+                            <div className="truncate text-stone-700" title={accountMainText(item)}>{accountMainText(item)}</div>
+                            <div className="truncate text-xs text-stone-400" title={accountSubText(item)}>{accountSubText(item)}</div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-2">

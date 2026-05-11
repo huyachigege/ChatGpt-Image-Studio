@@ -219,6 +219,26 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 	return metadataByName
 }
 
+func (s *imageRequestLogStore) latestStartedAtByUser() map[string]string {
+	latestByUser := map[string]string{}
+	if s == nil {
+		return latestByUser
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, entry := range s.items {
+		userID := strings.TrimSpace(entry.UserID)
+		startedAt := strings.TrimSpace(entry.StartedAt)
+		if userID == "" || startedAt == "" {
+			continue
+		}
+		if latestByUser[userID] == "" || startedAt > latestByUser[userID] {
+			latestByUser[userID] = startedAt
+		}
+	}
+	return latestByUser
+}
+
 func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequestLogEntry, int) {
 	if s == nil || s.db == nil {
 		return nil, 0

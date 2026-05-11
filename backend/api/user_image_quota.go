@@ -76,7 +76,7 @@ func (s *Server) normalizeCreateImageTaskRequest(ctx context.Context, req create
 		return req
 	}
 	if strings.TrimSpace(req.ResolutionAccess) == "" {
-		req.ResolutionAccess = "paid"
+		req.ResolutionAccess = "free"
 	}
 	req.Size = normalizeGenerateImageSize(req.Size)
 	if imageTaskQuotaKind(mode, req.ResolutionAccess, req.Size) == "paid" {

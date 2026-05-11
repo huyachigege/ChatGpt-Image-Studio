@@ -33,6 +33,20 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
+function formatDateGroup(value: string, groupMode: "user" | "month" | "day") {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "未知日期";
+  if (groupMode === "month") return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit" }).format(date);
+  if (groupMode === "day") return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(date);
+  return "";
+}
+
+function optionTextMatches(option: { value: string; label: string }, query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return true;
+  return `${option.value} ${option.label}`.toLowerCase().includes(keyword);
+}
+
 function formatSize(size: number) {
   if (!Number.isFinite(size) || size <= 0) return "0 B";
   const units = ["B", "KB", "MB", "GB"];
@@ -87,6 +101,8 @@ export default function ImageGalleryPage() {
   const [searchDraft, setSearchDraft] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [folderFilter, setFolderFilter] = useState("");
+  const [folderOptionQuery, setFolderOptionQuery] = useState("");
+  const [groupMode, setGroupMode] = useState<"user" | "month" | "day">("user");
   const [folderOptions, setFolderOptions] = useState<{ value: string; label: string }[]>([]);
   const [detailItem, setDetailItem] = useState<ImageGalleryItem | null>(null);
 
@@ -131,6 +147,11 @@ export default function ImageGalleryPage() {
   const previewIndexByName = useMemo(() => new Map(items.map((item, index) => [item.name, index])), [items]);
   const selectedSet = useMemo(() => new Set(selectedNames), [selectedNames]);
   const selectedItems = useMemo(() => items.filter((item) => selectedSet.has(item.name)), [items, selectedSet]);
+  const visibleFolderOptions = useMemo(() => folderOptions.filter((option) => optionTextMatches(option, folderOptionQuery)), [folderOptions, folderOptionQuery]);
+  const groupedItems = useMemo(() => {
+    if (groupMode === "user") return items;
+    return [...items].sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  }, [groupMode, items]);
   const missingDimensionItems = useMemo(() => items.filter((item) => !item.width || !item.height), [items]);
 
   useEffect(() => {
@@ -223,23 +244,29 @@ export default function ImageGalleryPage() {
 
     while (rows.length < GALLERY_ROWS) {
       const rowItems: ImageGalleryItem[] = [];
-      const rowFolder = items[cursor]?.folder || "";
-      const previousFolder = items[cursor - 1]?.folder || "";
+      if (cursor >= groupedItems.length) {
+        rows.push({ groupItems: [], label: "", rowItems });
+        continue;
+      }
+      const rowGroup = groupMode === "user" ? groupedItems[cursor]?.folder || "" : formatDateGroup(groupedItems[cursor]?.createdAt || "", groupMode);
+      const previousGroup = groupMode === "user" ? groupedItems[cursor - 1]?.folder || "" : formatDateGroup(groupedItems[cursor - 1]?.createdAt || "", groupMode);
 
-      while (cursor < items.length && rowItems.length < columnCount && (items[cursor].folder || "") === rowFolder) {
-        rowItems.push(items[cursor]);
+      while (cursor < groupedItems.length && rowItems.length < columnCount) {
+        const itemGroup = groupMode === "user" ? groupedItems[cursor].folder || "" : formatDateGroup(groupedItems[cursor].createdAt, groupMode);
+        if (itemGroup !== rowGroup) break;
+        rowItems.push(groupedItems[cursor]);
         cursor += 1;
       }
 
       rows.push({
-        groupItems: rowFolder ? items.filter((item) => item.folder === rowFolder) : [],
-        label: rowFolder && rowFolder !== previousFolder ? rowFolder : "",
+        groupItems: rowGroup ? groupedItems.filter((item) => (groupMode === "user" ? item.folder || "" : formatDateGroup(item.createdAt, groupMode)) === rowGroup) : [],
+        label: rowGroup && rowGroup !== previousGroup ? rowGroup : "",
         rowItems,
       });
     }
 
     return rows;
-  }, [columnCount, items]);
+  }, [columnCount, groupMode, groupedItems]);
 
   return (
     <section className="h-full">
@@ -260,8 +287,21 @@ export default function ImageGalleryPage() {
                 <Select value={folderFilter || "all"} onValueChange={(value) => { setFolderFilter(value === "all" ? "" : value); setPage(1); }}>
                   <SelectTrigger className="h-10 w-[150px] rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none"><SelectValue placeholder="选择用户" /></SelectTrigger>
                   <SelectContent>
+                    <div className="p-1" onKeyDown={(event) => event.stopPropagation()}>
+                      <Input value={folderOptionQuery} onChange={(event) => setFolderOptionQuery(event.target.value)} placeholder="搜索用户" className="h-8 rounded-xl border-stone-200 px-3 text-xs shadow-none" />
+                    </div>
                     <SelectItem value="all">全部用户</SelectItem>
-                    {folderOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                    {visibleFolderOptions.length > 0 ? visibleFolderOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>) : <div className="px-3 py-2 text-xs text-stone-400">无匹配用户</div>}
+                  </SelectContent>
+                </Select>
+              ) : null}
+              {folderOptions.length > 0 ? (
+                <Select value={groupMode} onValueChange={(value) => setGroupMode(value as "user" | "month" | "day")}>
+                  <SelectTrigger className="h-10 w-[136px] rounded-full border-stone-200 bg-white px-4 text-[13px] shadow-none"><SelectValue placeholder="分组方式" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">按用户分组</SelectItem>
+                    <SelectItem value="month">按月分组</SelectItem>
+                    <SelectItem value="day">按日分组</SelectItem>
                   </SelectContent>
                 </Select>
               ) : null}
@@ -380,7 +420,8 @@ export default function ImageGalleryPage() {
               </div>
               <dl className="space-y-3 text-sm">
                 <div><dt className="text-xs text-stone-500">文件名</dt><dd className="mt-1 break-all font-mono text-xs text-stone-800 dark:text-[var(--studio-text)]">{detailItem.name}</dd></div>
-                <div><dt className="text-xs text-stone-500">分组</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{detailItem.folder || "—"}</dd></div>
+                <div><dt className="text-xs text-stone-500">所属用户</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{detailItem.userLabel || detailItem.folder || detailItem.userId || "—"}</dd></div>
+                <div><dt className="text-xs text-stone-500">分组</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{groupMode === "user" ? detailItem.folder || "—" : formatDateGroup(detailItem.createdAt, groupMode)}</dd></div>
                 <div><dt className="text-xs text-stone-500">创建时间</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{new Date(detailItem.createdAt).toLocaleString("zh-CN")}</dd></div>
                 <div><dt className="text-xs text-stone-500">大小</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatSize(detailItem.size)} ({detailItem.size} B)</dd></div>
                 <div><dt className="text-xs text-stone-500">分辨率</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{formatResolution(detailItem)}</dd></div>

@@ -627,7 +627,17 @@ func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer store.Close()
-	items, err := store.ListUsers(r.Context())
+	lastUsedByUser, err := store.LatestSessionCreatedAtByUser(r.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	for userID, startedAt := range s.reqLogs.latestStartedAtByUser() {
+		if lastUsedByUser[userID] == "" || startedAt > lastUsedByUser[userID] {
+			lastUsedByUser[userID] = startedAt
+		}
+	}
+	items, err := store.ListUsersWithLastUsed(r.Context(), lastUsedByUser)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return

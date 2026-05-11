@@ -648,6 +648,8 @@ export type ImageGalleryItem = {
   id: string;
   name: string;
   folder?: string;
+  userId?: string;
+  userLabel?: string;
   url: string;
   thumbUrl?: string;
   size: number;
@@ -668,6 +670,7 @@ export type AppUserItem = {
   imageApiKey?: string;
   disabled?: boolean;
   createdAt?: string;
+  lastUsedAt?: string;
   quota?: {
     freeUsed: number;
     freeLimit: number;

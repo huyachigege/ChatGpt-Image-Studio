@@ -80,6 +80,13 @@ function firstNonEmptyValue(...values: Array<string | null | undefined>) {
   return "";
 }
 
+function formatManagementTime(value?: string) {
+  if (!value?.trim()) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
 function defaultConfigPayload(): ConfigPayload {
   return {
     app: {
@@ -791,10 +798,11 @@ export default function SettingsPage() {
             </div>
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 dark:border-[var(--studio-border)]">
-              <div className="grid grid-cols-[1fr_0.6fr_0.6fr_1.2fr_1.4fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
+              <div className="grid grid-cols-[1fr_0.6fr_0.6fr_0.9fr_1.2fr_1.4fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
                 <span>用户</span>
                 <span>状态</span>
                 <span>角色</span>
+                <span>最近使用</span>
                 <span>今日额度</span>
                 <span>操作</span>
               </div>
@@ -803,7 +811,7 @@ export default function SettingsPage() {
                   <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingUsers ? "正在读取用户..." : "还没有普通用户。"}</div>
                 ) : (
                   pagedUsers.map((item) => (
-                    <div key={item.id} className="grid grid-cols-[1fr_0.6fr_0.6fr_1.2fr_1.4fr] items-center gap-3 px-4 py-4 text-sm">
+                    <div key={item.id} className="grid grid-cols-[1fr_0.6fr_0.6fr_0.9fr_1.2fr_1.4fr] items-center gap-3 px-4 py-4 text-sm">
                       <div className="min-w-0">
                         <div className="truncate font-medium text-stone-950 dark:text-[var(--studio-text-strong)]">{item.username}</div>
                         <div className="mt-1 truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">{item.name || item.id}</div>
@@ -812,6 +820,7 @@ export default function SettingsPage() {
                         {item.disabled ? "已禁用" : "正常"}
                       </span>
                       <span className="text-stone-600 dark:text-[var(--studio-text)]">{item.role}</span>
+                      <span className="text-xs text-stone-600 dark:text-[var(--studio-text)]" title={item.lastUsedAt || ""}>{formatManagementTime(item.lastUsedAt)}</span>
                       <div className="text-xs text-stone-600 dark:text-[var(--studio-text)]">
                         {item.quota ? (
                           <>

@@ -485,6 +485,9 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 			message := "临时失败重试次数过多，请稍后重试"
 			if deferredErr != nil && strings.TrimSpace(deferredErr.Error()) != "" {
 				message = fmt.Sprintf("%s：%s", message, strings.TrimSpace(deferredErr.Error()))
+				if accountLabel := firstNonEmpty(deferredErr.accountEmail, deferredErr.accountFile); accountLabel != "" {
+					message = fmt.Sprintf("%s（账号：%s）", message, accountLabel)
+				}
 			}
 			task.Units[unitIndex].FinishedAt = now
 			task.Units[unitIndex].Status = imageTaskStatusFailed
@@ -1422,6 +1425,11 @@ func (m *imageTaskManager) logTaskDeferredError(task *imageTask, unitIndex int, 
 		return
 	}
 	now := time.Now().UTC()
+	accountLabel := firstNonEmpty(deferredErr.accountEmail, deferredErr.accountFile)
+	errorMessage := deferredErr.Error()
+	if accountLabel != "" {
+		errorMessage = fmt.Sprintf("%s（账号：%s）", errorMessage, accountLabel)
+	}
 	entry := imageRequestLogEntry{
 		ID:           fmt.Sprintf("%s-deferred-%d-%d", task.ID, unitIndex, task.Units[unitIndex].DeferredCount),
 		StartedAt:    now.Format(time.RFC3339Nano),
@@ -1429,11 +1437,12 @@ func (m *imageTaskManager) logTaskDeferredError(task *imageTask, unitIndex int, 
 		Endpoint:     "/api/image/tasks [deferred_retry #" + fmt.Sprintf("%d", task.Units[unitIndex].DeferredCount) + " for task " + task.ID + "]",
 		Operation:    task.Mode,
 		Route:        "deferred_retry",
-		AccountFile:  deferredErr.accessToken,
+		AccountEmail: deferredErr.accountEmail,
+		AccountFile:  deferredErr.accountFile,
 		UserID:       task.UserID,
 		Username:     task.Username,
 		Success:      false,
-		Error:        deferredErr.Error(),
+		Error:        errorMessage,
 		ErrorCode:    inferErrorCode(deferredErr),
 	}
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)

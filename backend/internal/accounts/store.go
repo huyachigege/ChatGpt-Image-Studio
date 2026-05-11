@@ -1708,7 +1708,9 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 	limitsProgress := cloneSlice(state.LimitsProgress)
 	status := strings.TrimSpace(state.Status)
 	if auth.Disabled {
-		status = "禁用"
+		if status == "" {
+			status = "禁用"
+		}
 	} else if status == "" {
 		if state.QuotaKnown && quota == 0 {
 			status = "限流"

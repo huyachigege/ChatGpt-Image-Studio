@@ -24,6 +24,8 @@ type imageGalleryItem struct {
 	ID             string `json:"id"`
 	Name           string `json:"name"`
 	Folder         string `json:"folder,omitempty"`
+	UserID         string `json:"userId,omitempty"`
+	UserLabel      string `json:"userLabel,omitempty"`
 	URL            string `json:"url"`
 	ThumbURL       string `json:"thumbUrl"`
 	Size           int64  `json:"size"`
@@ -36,11 +38,11 @@ type imageGalleryItem struct {
 }
 
 type imageGalleryListResponse struct {
-	Items   []imageGalleryItem       `json:"items"`
-	Total   int                      `json:"total"`
-	Page    int                      `json:"page"`
-	PageSize int                     `json:"pageSize"`
-	Folders []imageGalleryFolderOption `json:"folders,omitempty"`
+	Items    []imageGalleryItem         `json:"items"`
+	Total    int                        `json:"total"`
+	Page     int                        `json:"page"`
+	PageSize int                        `json:"pageSize"`
+	Folders  []imageGalleryFolderOption `json:"folders,omitempty"`
 }
 
 type imageGalleryFolderOption struct {
@@ -202,6 +204,10 @@ func (s *Server) listImageGalleryItems(ctx context.Context, identity authIdentit
 		} else {
 			items, err = s.listImageGalleryDir(filepath.Join(root, folder), folder, "")
 		}
+		for index := range items {
+			items[index].UserID = identity.UserID
+			items[index].UserLabel = firstNonEmpty(identity.Username, identity.Name, identity.UserID)
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -214,6 +220,10 @@ func (s *Server) listAdminImageGalleryItems(ctx context.Context) ([]imageGallery
 	items, err := s.listImageGalleryDir(root, "", "管理员")
 	if err != nil {
 		return nil, err
+	}
+	for index := range items {
+		items[index].UserID = "admin"
+		items[index].UserLabel = "管理员"
 	}
 	usernames := s.imageGalleryUsernames(ctx)
 	entries, err := os.ReadDir(root)
@@ -231,9 +241,14 @@ func (s *Server) listAdminImageGalleryItems(ctx context.Context) ([]imageGallery
 		if folder == "" {
 			continue
 		}
-		folderItems, err := s.listImageGalleryDir(filepath.Join(root, folder), folder, firstNonEmpty(usernames[folder], folder))
+		userLabel := firstNonEmpty(usernames[folder], folder)
+		folderItems, err := s.listImageGalleryDir(filepath.Join(root, folder), folder, userLabel)
 		if err != nil {
 			return nil, err
+		}
+		for index := range folderItems {
+			folderItems[index].UserID = folder
+			folderItems[index].UserLabel = userLabel
 		}
 		items = append(items, folderItems...)
 	}
