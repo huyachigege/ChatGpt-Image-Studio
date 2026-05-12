@@ -53,6 +53,7 @@ type ResponsesClient struct {
 	requestedImageModel string
 	lastRequestBody     string
 	customInstructions  string
+	sessionID           string
 }
 
 func NewResponsesClientWithProxy(accessToken, proxyURL string, authData map[string]any) *ResponsesClient {
@@ -70,6 +71,7 @@ func NewResponsesClientWithProxyAndConfig(accessToken, proxyURL string, authData
 	return &ResponsesClient{
 		backend:   backend,
 		accountID: resolveChatGPTAccountID(accessToken, authData),
+		sessionID: uuid.NewString(),
 		httpClient: &http.Client{
 			Timeout:   requestConfig.SSETimeout + 30*time.Second,
 			Transport: newChromeTransport(proxyURL),
@@ -96,7 +98,7 @@ func (c *ResponsesClient) GenerateImage(ctx context.Context, prompt, model strin
 }
 
 func (c *ResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]ImageResult, error) {
-	return c.generateViaResponses(ctx, buildResponsesPrompt(prompt), model, size, quality, background, nil, nil, previousResponseID)
+	return c.generateViaResponses(ctx, buildResponsesContextPrompt(prompt, previousResponseID), model, size, quality, background, nil, nil, "")
 }
 
 func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]ImageResult, error) {
@@ -117,7 +119,7 @@ func (c *ResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Cont
 	if !SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
-	return c.generateViaResponses(ctx, buildResponsesEditPrompt(prompt, len(images), len(mask) > 0), model, size, quality, "", images, mask, previousResponseID)
+	return c.generateViaResponses(ctx, buildResponsesEditPrompt(buildResponsesContextPrompt(prompt, previousResponseID), len(images), len(mask) > 0), model, size, quality, "", images, mask, "")
 }
 
 func (c *ResponsesClient) InpaintImageByMask(
@@ -203,9 +205,7 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
 	}
-	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
-		payload["previous_response_id"] = previousResponseID
-	}
+	_ = strings.TrimSpace(previousResponseID)
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -416,12 +416,25 @@ func (c *ResponsesClient) setResponsesHeaders(req *http.Request) {
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", codexResponsesUserAgent)
 	req.Header.Set("Originator", codexResponsesOriginator)
-	req.Header.Set("Session_id", uuid.NewString())
+	sessionID := strings.TrimSpace(c.sessionID)
+	if sessionID == "" {
+		sessionID = uuid.NewString()
+	}
+	req.Header.Set("Session_id", sessionID)
 	req.Header.Set("Connection", "Keep-Alive")
 }
 
 func buildResponsesPrompt(prompt string) string {
 	return strings.TrimSpace(prompt)
+}
+
+func buildResponsesContextPrompt(prompt string, responseID string) string {
+	prompt = strings.TrimSpace(prompt)
+	responseID = strings.TrimSpace(responseID)
+	if responseID == "" {
+		return prompt
+	}
+	return strings.TrimSpace("Continue from the prior image response context " + responseID + ". Keep visual continuity with the previous result while following the current request.\n\nCurrent request:\n" + prompt)
 }
 
 func buildResponsesReferencePrompt(prompt string, imageCount int) string {

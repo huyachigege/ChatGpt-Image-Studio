@@ -228,6 +228,23 @@ func TestNormalizeResponsesImageToolModel(t *testing.T) {
 	}
 }
 
+func TestBuildResponsesContextPromptIncludesResponseID(t *testing.T) {
+	prompt := buildResponsesContextPrompt("make it warmer", "resp_123")
+	if !strings.Contains(prompt, "resp_123") {
+		t.Fatalf("context prompt = %q, want response id", prompt)
+	}
+	if !strings.Contains(prompt, "make it warmer") {
+		t.Fatalf("context prompt = %q, want current prompt", prompt)
+	}
+}
+
+func TestResponsesClientUsesStableSessionID(t *testing.T) {
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{"account_id": "acct-1"}, ImageRequestConfig{})
+	if strings.TrimSpace(client.sessionID) == "" {
+		t.Fatal("sessionID = empty, want stable responses session id")
+	}
+}
+
 func TestNewResponsesClientWithProxyAndConfigUsesProvidedSSETimeout(t *testing.T) {
 	requestConfig := ImageRequestConfig{
 		RequestTimeout: 15 * time.Second,
