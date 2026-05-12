@@ -245,6 +245,17 @@ func TestResponsesClientUsesStableSessionID(t *testing.T) {
 	}
 }
 
+func TestResponsesClientAllowsMissingAccountID(t *testing.T) {
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.SetSessionID("session-1")
+	if client.accountID != "" {
+		t.Fatalf("accountID = %q, want empty", client.accountID)
+	}
+	if client.sessionID != "session-1" {
+		t.Fatalf("sessionID = %q, want injected session", client.sessionID)
+	}
+}
+
 func TestNewResponsesClientWithProxyAndConfigUsesProvidedSSETimeout(t *testing.T) {
 	requestConfig := ImageRequestConfig{
 		RequestTimeout: 15 * time.Second,

@@ -150,9 +150,6 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 	if strings.TrimSpace(c.backend.accessToken) == "" {
 		return nil, fmt.Errorf("access token is required")
 	}
-	if strings.TrimSpace(c.accountID) == "" {
-		return nil, fmt.Errorf("chatgpt account id is required")
-	}
 	model = strings.TrimSpace(model)
 	if model == "" {
 		model = defaultUpstreamModel
@@ -411,11 +408,13 @@ func (c *ResponsesClient) parseResponsesSSE(reader io.Reader, prompt string) ([]
 
 func (c *ResponsesClient) setResponsesHeaders(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(c.backend.accessToken))
-	req.Header.Set("Chatgpt-Account-Id", c.accountID)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("User-Agent", codexResponsesUserAgent)
 	req.Header.Set("Originator", codexResponsesOriginator)
+	if strings.TrimSpace(c.accountID) != "" {
+		req.Header.Set("Chatgpt-Account-Id", c.accountID)
+	}
 	sessionID := strings.TrimSpace(c.sessionID)
 	if sessionID == "" {
 		sessionID = uuid.NewString()
@@ -584,6 +583,15 @@ func (c *ResponsesClient) SetInstructions(instructions string) {
 		return
 	}
 	c.customInstructions = instructions
+}
+
+func (c *ResponsesClient) SetSessionID(sessionID string) {
+	if c == nil {
+		return
+	}
+	if trimmed := strings.TrimSpace(sessionID); trimmed != "" {
+		c.sessionID = trimmed
+	}
 }
 
 func (c *ResponsesClient) resolveRequestedImageToolModel() string {

@@ -287,6 +287,92 @@ func TestCreateImageTaskSelectionEditBypassesPolicySnapshot(t *testing.T) {
 	}
 }
 
+func TestCreateImageTaskSourceAccountRateLimitFallsBack(t *testing.T) {
+	oldBackoffBase := imageTaskRetryBackoffBase
+	oldBackoffMax := imageTaskRetryBackoffMax
+	imageTaskRetryBackoffBase = 20 * time.Millisecond
+	imageTaskRetryBackoffMax = 20 * time.Millisecond
+	t.Cleanup(func() {
+		imageTaskRetryBackoffBase = oldBackoffBase
+		imageTaskRetryBackoffMax = oldBackoffMax
+	})
+
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{
+				fileName:    "source-limited.json",
+				accessToken: "token-source-limited",
+				accountType: "Plus",
+				priority:    100,
+				quota:       5,
+				status:      "正常",
+			},
+			{
+				fileName:    "fallback-healthy.json",
+				accessToken: "token-fallback-healthy",
+				accountType: "Plus",
+				priority:    10,
+				quota:       5,
+				status:      "正常",
+			},
+		},
+		behavior: compatClientBehavior{
+			officialInpaintErrors: map[string]error{
+				"token-source-limited": errors.New("chatgpt returned 429: rate limited"),
+			},
+		},
+	})
+
+	sourceAccount, err := server.getStore().GetAccountByToken("token-source-limited")
+	if err != nil {
+		t.Fatalf("GetAccountByToken(source) returned error: %v", err)
+	}
+	accountID := sourceAccount.ID
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-source-fallback-1",
+		TurnID:         "turn-source-fallback-1",
+		Mode:           "edit",
+		Prompt:         "selection edit fallback",
+		Model:          "gpt-image-2",
+		Count:          1,
+		SourceImages: []imageTaskSourceImagePayload{
+			{
+				ID:      "mask-1",
+				Role:    "mask",
+				Name:    "mask.png",
+				DataURL: "data:image/png;base64,aW1hZ2U=",
+			},
+		},
+		SourceReference: &imageTaskSourceReferencePayload{
+			OriginalFileID:  "file-1",
+			OriginalGenID:   "gen-1",
+			ConversationID:  "conv-1",
+			ParentMessageID: "msg-1",
+			SourceAccountID: accountID,
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-source-fallback-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) < 2 {
+		t.Fatalf("callSequence = %#v, want source then fallback attempt", recorder.callSequence)
+	}
+	if !strings.Contains(recorder.callSequence[0], "token-source-limited") {
+		t.Fatalf("callSequence[0] = %q, want source account first", recorder.callSequence[0])
+	}
+	if !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], "token-fallback-healthy") {
+		t.Fatalf("callSequence = %#v, want fallback healthy account", recorder.callSequence)
+	}
+}
+
 func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",

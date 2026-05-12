@@ -476,7 +476,7 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		task.Images[unitIndex].Status = "error"
 		task.Images[unitIndex].Error = "任务已取消"
 	} else if errors.As(err, &deferredErr) {
-		if isInvalidImageTokenError(deferredErr) || isImageRateLimitError(deferredErr) {
+		if code := requestErrorCode(deferredErr); code == "source_account_rate_limited" || code == "source_account_unavailable" || isInvalidImageTokenError(deferredErr) || isImageRateLimitError(deferredErr) {
 			imageTaskUnitRememberAttempt(&task.Units[unitIndex], deferredErr.accessToken)
 		}
 		task.Units[unitIndex].DeferredCount++
@@ -708,26 +708,30 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	store := m.server.getStore()
 	allowDisabled := m.server.allowDisabledStudioImageAccounts()
 
+	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
 	if task.Requirement.SourceAccountID != "" {
 		auth, account, release, err := store.FindImageAuthByIDWithLease(task.Requirement.SourceAccountID)
 		if err == nil {
-			return &imageTaskLease{
-				auth:    auth,
-				account: account,
-				release: release,
-			}, imageTaskBlocker{}, nil
+			if _, attempted := excluded[auth.AccessToken]; !attempted {
+				return &imageTaskLease{
+					auth:    auth,
+					account: account,
+					release: release,
+				}, imageTaskBlocker{}, nil
+			}
+			release()
+		} else {
+			if errors.Is(err, accounts.ErrSourceAccountNotFound) {
+				return nil, imageTaskBlocker{}, newRequestError("source_account_not_found", "原始图片所属账号不存在，请使用普通编辑重试")
+			}
+			if errors.Is(err, accounts.ErrImageAuthInUse) {
+				return nil, imageTaskBlocker{Code: string(imageTaskWaitingReasonSourceAccountBusy), Detail: "等待原始图片所属账号空闲"}, nil
+			}
+			return nil, imageTaskBlocker{}, err
 		}
-		if errors.Is(err, accounts.ErrSourceAccountNotFound) {
-			return nil, imageTaskBlocker{}, newRequestError("source_account_not_found", "原始图片所属账号不存在，请使用普通编辑重试")
-		}
-		if errors.Is(err, accounts.ErrImageAuthInUse) {
-			return nil, imageTaskBlocker{Code: string(imageTaskWaitingReasonSourceAccountBusy), Detail: "等待原始图片所属账号空闲"}, nil
-		}
-		return nil, imageTaskBlocker{}, err
 	}
 
 	allowAccount := m.allowAccountFn(task)
-	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
 	preferredRoute := m.preferredRouteForTask(task)
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
 		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
@@ -813,10 +817,10 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask) string {
 	if task == nil || m == nil || m.server == nil {
 		return "legacy"
 	}
-	if task.Mode == "generate" && task.SourceReference == nil && len(task.SourceImages) == 0 {
+	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 || task.ContextReference != nil {
 		return "responses"
 	}
-	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 {
+	if task.Mode == "generate" && task.Requirement.NeedPaid {
 		return "responses"
 	}
 	return "legacy"

@@ -389,6 +389,63 @@ func TestAcquireImageAuthLeaseForUserPrefersAccountNotUsedByOtherUser(t *testing
 	}
 }
 
+func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := os.MkdirAll(syncDir, 0o755); err != nil {
+		t.Fatalf("mkdir sync dir: %v", err)
+	}
+
+	store := &Store{
+		authDir:      authDir,
+		syncStateDir: syncDir,
+		stateFile:    filepath.Join(rootDir, "state.json"),
+		defaultQuota: 5,
+		providerType: "codex",
+		states: map[string]RuntimeState{
+			"first.json":  {Type: "Plus", Status: "正常", Quota: 5, QuotaKnown: true, ImageRoutes: []string{"legacy", "responses"}},
+			"second.json": {Type: "Plus", Status: "正常", Quota: 5, QuotaKnown: true, ImageRoutes: []string{"legacy", "responses"}},
+		},
+	}
+
+	if err := writeJSONFile(filepath.Join(authDir, "first.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-first",
+		"email":        "first@example.com",
+	}); err != nil {
+		t.Fatalf("seed first auth file: %v", err)
+	}
+	if err := writeJSONFile(filepath.Join(authDir, "second.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-second",
+		"email":        "second@example.com",
+	}); err != nil {
+		t.Fatalf("seed second auth file: %v", err)
+	}
+
+	authR, _, releaseR, err := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(nil, nil, false, "user-a", "conv-1", "responses")
+	if err != nil {
+		t.Fatalf("Acquire responses route error = %v", err)
+	}
+	if authR.AccessToken != "token-first" {
+		t.Fatalf("responses token = %q, want token-first", authR.AccessToken)
+	}
+	releaseR()
+
+	authL, _, releaseL, err := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(nil, nil, false, "user-a", "conv-1", "legacy")
+	if err != nil {
+		t.Fatalf("Acquire legacy route error = %v", err)
+	}
+	defer releaseL()
+	if authL.AccessToken != "token-first" {
+		t.Fatalf("legacy token = %q, want token-first", authL.AccessToken)
+	}
+}
+
 func TestAcquireImageAuthFilteredWithDisabledOptionAllowsDisabledAccount(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")

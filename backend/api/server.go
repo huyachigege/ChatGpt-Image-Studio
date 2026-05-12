@@ -52,6 +52,8 @@ type Server struct {
 	cachedNewAPIKey        string
 	cachedSub2APIClient    *sub2api.Client
 	cachedSub2APIKey       string
+	responsesSessionMu     sync.Mutex
+	responsesSessions      map[string]string
 }
 
 func (s *Server) Close() error {
@@ -98,19 +100,42 @@ type authIdentity struct {
 
 type authIdentityContextKey struct{}
 
+type responsesSessionScopeContextKey struct{}
+
+type responsesSessionScope struct {
+	UserID         string
+	ConversationID string
+}
+
+func withResponsesSessionScope(ctx context.Context, userID, conversationID string) context.Context {
+	return context.WithValue(ctx, responsesSessionScopeContextKey{}, responsesSessionScope{
+		UserID:         strings.TrimSpace(userID),
+		ConversationID: strings.TrimSpace(conversationID),
+	})
+}
+
+func responsesSessionScopeFromContext(ctx context.Context) responsesSessionScope {
+	if scope, ok := ctx.Value(responsesSessionScopeContextKey{}).(responsesSessionScope); ok {
+		return scope
+	}
+	identity := identityFromContext(ctx)
+	return responsesSessionScope{UserID: identity.UserID}
+}
+
 func (e *requestError) Error() string {
 	return firstNonEmpty(e.message, e.code)
 }
 
 func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.Client) *Server {
 	server := &Server{
-		cfg:            cfg,
-		store:          store,
-		syncClient:     syncClient,
-		syncRunCache:   map[string]*sourceSyncRunResult{},
-		staticDir:      cfg.ResolvePath(cfg.Server.StaticDir),
-		reqLogs:        newImageRequestLogStore(cfg),
-		imageAdmission: newImageAdmissionController(),
+		cfg:               cfg,
+		store:             store,
+		syncClient:        syncClient,
+		syncRunCache:      map[string]*sourceSyncRunResult{},
+		staticDir:         cfg.ResolvePath(cfg.Server.StaticDir),
+		reqLogs:           newImageRequestLogStore(cfg),
+		imageAdmission:    newImageAdmissionController(),
+		responsesSessions: map[string]string{},
 		officialClientFactory: func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
 			return handler.NewChatGPTClientWithAuthData(accessToken, proxyURL, authData, requestConfig)
 		},
@@ -208,6 +233,28 @@ func (s *Server) getSub2APIClient() *sub2api.Client {
 	s.cachedSub2APIClient = client
 	s.cachedSub2APIKey = key
 	return client
+}
+
+func (s *Server) responsesSessionID(userID, conversationID, route string) string {
+	key := strings.TrimSpace(userID) + "\x00" + strings.TrimSpace(conversationID) + "\x00" + accounts.NormalizeImageRouteCapability(route)
+	if strings.Trim(key, "\x00") == "" {
+		return ""
+	}
+	s.responsesSessionMu.Lock()
+	defer s.responsesSessionMu.Unlock()
+	if s.responsesSessions == nil {
+		s.responsesSessions = map[string]string{}
+	}
+	if sessionID := strings.TrimSpace(s.responsesSessions[key]); sessionID != "" {
+		return sessionID
+	}
+	sessionID := newImageSessionID()
+	s.responsesSessions[key] = sessionID
+	return sessionID
+}
+
+func newImageSessionID() string {
+	return strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
 }
 
 func (s *Server) getAccountRefreshRun() *accountRefreshRunResult {
@@ -1337,6 +1384,16 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 	if err != nil {
 		return nil, err
 	}
+	attempted := map[string]struct{}{}
+	maxAttempts := 1 + s.cfg.ImageAccountRetryTimes()
+	if maxAttempts < 1 {
+		maxAttempts = 1
+	}
+	var lastRetryableErr error
+	identity := identityFromContext(ctx)
+	userID := identity.UserID
+	conversationID := strings.TrimSpace(r.Header.Get("X-Studio-Conversation-ID"))
+	preferredRoute := s.preferredImageRouteForRequest(responsesEligible)
 	if strings.TrimSpace(preferredAccountID) != "" {
 		authFile, account, releaseLease, err := store.FindImageAuthByIDWithLease(preferredAccountID)
 		if err != nil {
@@ -1345,16 +1402,14 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			}
 			return nil, err
 		}
-		data, _, err := s.runImageRequest(ctx, authFile, account, releaseLease, accounts.ImageAccountRoutingDecision{}, operation, responseFormat, true, requestedModel, responsesEligible, metadata, run, r)
-		return data, err
+		attempted[authFile.AccessToken] = struct{}{}
+		data, retryable, err := s.runImageRequest(ctx, authFile, account, releaseLease, accounts.ImageAccountRoutingDecision{}, operation, responseFormat, true, requestedModel, responsesEligible, metadata, run, r)
+		if err == nil || len(attempted) >= maxAttempts || !(retryable || shouldRetryImageRequestWithNextAccount(err)) {
+			return data, err
+		}
+		lastRetryableErr = err
 	}
 
-	attempted := map[string]struct{}{}
-	maxAttempts := 1 + s.cfg.ImageAccountRetryTimes()
-	if maxAttempts < 1 {
-		maxAttempts = 1
-	}
-	var lastRetryableErr error
 	for {
 		var (
 			authFile     *accounts.LocalAuth
@@ -1363,10 +1418,6 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			decision     accounts.ImageAccountRoutingDecision
 			err          error
 		)
-		identity := identityFromContext(ctx)
-		userID := identity.UserID
-		conversationID := strings.TrimSpace(r.Header.Get("X-Studio-Conversation-ID"))
-		preferredRoute := s.preferredImageRouteForRequest(responsesEligible)
 		if policy != nil {
 			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID, preferredRoute)
 		} else {
@@ -1780,6 +1831,10 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		direction = "official"
 		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
 			client = s.newResponsesWorkflowClient(authFile.AccessToken, authFile.Data)
+			if setter, ok := client.(interface{ SetSessionID(string) }); ok {
+				scope := responsesSessionScopeFromContext(ctx)
+				setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
+			}
 		} else {
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
@@ -1877,24 +1932,16 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
 		if isImageRateLimitError(err) {
-			remainingRoutes := store.RemoveImageRouteCapability(authFile.AccessToken, route)
-			if remainingRoutes == 0 || remainingRoutes < 0 {
-				store.MarkImageAccountLimited(authFile.AccessToken)
-			}
-			if preferredAccount {
-				return nil, false, newRequestError("source_account_rate_limited", "原始图片所属账号当前已限流，请稍后重试或使用普通编辑")
-			}
-			return nil, true, err
+			store.RemoveImageRouteCapability(authFile.AccessToken, route)
+			store.MarkImageAccountLimited(authFile.AccessToken)
+			return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，正在切换下一个账号")
 		}
 		if isTransientImageStreamError(err) {
 			return nil, true, err
 		}
 		if isInvalidImageTokenError(err) {
 			store.MarkImageTokenAbnormal(authFile.AccessToken)
-			if preferredAccount {
-				return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
-			}
-			return nil, true, err
+			return nil, true, newRequestError("source_account_unavailable", "当前账号不可用，正在切换下一个账号")
 		}
 		if preferredAccount && isConversationContextError(err) {
 			return nil, false, newRequestError("source_context_missing", "原始图片对应会话已失效，请使用普通编辑重试")
@@ -2460,8 +2507,13 @@ func shouldRetryImageRequestWithNextAccount(err error) bool {
 	if err == nil {
 		return false
 	}
-	if requestErrorCode(err) != "" {
-		return false
+	if code := requestErrorCode(err); code != "" {
+		switch code {
+		case "source_account_rate_limited", "source_account_unavailable":
+			return true
+		default:
+			return false
+		}
 	}
 	message := strings.ToLower(err.Error())
 	if strings.Contains(message, "image generation refused") {

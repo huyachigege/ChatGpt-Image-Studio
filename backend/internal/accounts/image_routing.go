@@ -538,6 +538,28 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			continue
 		}
 
+		if boundToken := s.imageConversationBoundTokenLocked(userID, conversationID, preferredRoute); boundToken != "" {
+			for _, candidate := range groupCandidates {
+				if strings.TrimSpace(candidate.auth.AccessToken) != boundToken {
+					continue
+				}
+				if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
+					break
+				}
+				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken)
+				if leaseErr != nil {
+					continue
+				}
+				s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+				return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
+					PolicyApplied:  true,
+					GroupIndex:     groupIndex,
+					SortMode:       normalizedPolicy.SortMode,
+					ReservePercent: normalizedPolicy.ReservePercent,
+				}, release, true
+			}
+		}
+
 		sort.Slice(groupCandidates, func(i, j int) bool {
 			if groupCandidates[i].ready != groupCandidates[j].ready {
 				return groupCandidates[i].ready
