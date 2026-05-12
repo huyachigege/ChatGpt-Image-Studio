@@ -592,6 +592,50 @@ func TestParseLocalAuthInfersLegacyTokenSourceKindWhenMissingField(t *testing.T)
 	}
 }
 
+func TestGuessPlanFromPayloadDecodesIDToken(t *testing.T) {
+	payload := map[string]any{
+		"https://api.openai.com/auth": map[string]any{
+			"chatgpt_plan_type": "plus",
+		},
+	}
+	rawPayload, err := json.Marshal(payload)
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	idToken := "e30." + base64.RawURLEncoding.EncodeToString(rawPayload) + ".sig"
+
+	if got := guessPlanFromPayload(map[string]any{"id_token": idToken}); got != "Plus" {
+		t.Fatalf("expected Plus from id_token, got %q", got)
+	}
+	if got := guessPlanFromPayload(map[string]any{"id_token": payload}); got != "Plus" {
+		t.Fatalf("expected Plus from decoded id_token object, got %q", got)
+	}
+}
+
+func TestBuildPublicAccountLetsPayloadPlusOverrideStaleFreeState(t *testing.T) {
+	idToken := mustTestJWT(t, map[string]any{
+		"https://api.openai.com/auth": map[string]any{
+			"chatgpt_plan_type": "plus",
+		},
+	})
+	store := &Store{
+		defaultQuota: 5,
+		states: map[string]RuntimeState{
+			"acct.json": {Type: "Free"},
+		},
+	}
+
+	got := store.buildPublicAccount(
+		LocalAuth{Name: "acct.json", AccessToken: "token-1", Data: map[string]any{"id_token": idToken}},
+		SyncState{},
+		nil,
+	)
+
+	if got.Type != "Plus" {
+		t.Fatalf("expected stale Free state to be corrected to Plus, got %q", got.Type)
+	}
+}
+
 func TestParseLocalAuthKeepsFullAuthFilesAsAuthFileSourceKind(t *testing.T) {
 	auth, err := parseLocalAuth(
 		"full.json",

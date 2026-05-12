@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type RemoteAccountInfo struct {
@@ -103,6 +105,14 @@ func FetchAccountInfoWithProxy(ctx context.Context, accessToken string, authData
 	limitsProgress := normalizeLimitsProgress(initResp.payload["limits_progress"])
 	quota, restoreAt := extractQuotaAndRestoreAt(limitsProgress)
 	accountType := detectAccountType(accessToken, meResp.payload, initResp.payload)
+	if authDataType := detectAccountTypeFromAuthData(authData); accountType == "Free" && authDataType != "" && authDataType != "Free" {
+		accountType = authDataType
+	}
+	if accountType == "Free" {
+		if detected, err := detectCodexAccountTypeByRateLimits(ctx, client, accessToken, authData); err == nil && detected != "" {
+			accountType = detected
+		}
+	}
 	if accountType == "Pro" && !hasLimitFeature(limitsProgress, "image_gen") {
 		quota = proFallbackImageGenQuota
 		limitsProgress = append(limitsProgress, map[string]any{
@@ -216,6 +226,107 @@ func detectAccountType(accessToken string, mePayload, initPayload map[string]any
 	}
 
 	return "Free"
+}
+
+func detectAccountTypeFromAuthData(authData map[string]any) string {
+	if len(authData) == 0 {
+		return ""
+	}
+	if authPayload, ok := authData["https://api.openai.com/auth"].(map[string]any); ok {
+		if matched := normalizeAccountType(authPayload["chatgpt_plan_type"]); matched != "" {
+			return matched
+		}
+	}
+	for _, key := range []string{"chatgpt_plan_type", "plan_type", "account_type"} {
+		if matched := normalizeAccountType(authData[key]); matched != "" {
+			return matched
+		}
+	}
+	if idToken, ok := authData["id_token"].(map[string]any); ok {
+		if matched := searchAccountType(idToken); matched != "" {
+			return matched
+		}
+	}
+	if idToken := strings.TrimSpace(stringValue(authData["id_token"])); idToken != "" {
+		if matched := searchAccountType(decodeAccessTokenPayload(idToken)); matched != "" {
+			return matched
+		}
+	}
+	return ""
+}
+
+func detectCodexAccountTypeByRateLimits(ctx context.Context, client *http.Client, accessToken string, authData map[string]any) (string, error) {
+	if client == nil {
+		return "", fmt.Errorf("http client is required")
+	}
+	accessToken = strings.TrimSpace(accessToken)
+	if accessToken == "" {
+		return "", fmt.Errorf("access token is required")
+	}
+	accountID := resolveChatGPTAccountID(accessToken, authData)
+	if strings.TrimSpace(accountID) == "" {
+		return "", nil
+	}
+
+	payload := map[string]any{
+		"model":        defaultUpstreamModel,
+		"input":        []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": "hi"}}}},
+		"instructions": "You are a helpful assistant.",
+		"stream":       true,
+		"store":        false,
+	}
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, codexResponsesBaseURL+"/responses", bytes.NewReader(raw))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Chatgpt-Account-Id", accountID)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("User-Agent", codexResponsesUserAgent)
+	req.Header.Set("Originator", codexResponsesOriginator)
+	req.Header.Set("Session_id", uuid.NewString())
+	req.Header.Set("Connection", "Keep-Alive")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
+		return "", fmt.Errorf("codex rate limit probe returned HTTP %d", resp.StatusCode)
+	}
+	return detectCodexAccountTypeFromRateLimitHeaders(resp.Header), nil
+}
+
+func detectCodexAccountTypeFromRateLimitHeaders(headers http.Header) string {
+	windows := []int{
+		parseHeaderInt(headers.Get("x-codex-primary-window-minutes")),
+		parseHeaderInt(headers.Get("x-codex-secondary-window-minutes")),
+	}
+	for _, window := range windows {
+		if window > 0 && window <= 360 {
+			return "Plus"
+		}
+	}
+	return ""
+}
+
+func parseHeaderInt(value string) int {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return 0
+	}
+	var result int
+	if _, err := fmt.Sscanf(value, "%d", &result); err != nil {
+		return 0
+	}
+	return result
 }
 
 func decodeAccessTokenPayload(accessToken string) map[string]any {

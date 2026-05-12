@@ -1863,7 +1863,11 @@ func (s *Store) loadAuths() ([]LocalAuth, error) {
 func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDisabled *bool) PublicAccount {
 	state := s.states[auth.Name]
 
-	accountType := firstNonEmpty(state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free")
+	payloadType := normalizePlanType(guessPlanFromPayload(auth.Data))
+	accountType := firstNonEmpty(state.Type, payloadType, "Free")
+	if accountType == "Free" && payloadType != "" && payloadType != "Free" {
+		accountType = payloadType
+	}
 	quota := state.Quota
 	if !state.QuotaKnown {
 		quota = s.defaultQuota
@@ -2504,6 +2508,18 @@ func guessPlanFromPayload(data map[string]any) string {
 	}
 	if plan := normalizePlanType(stringValue(data["account_type"])); plan != "" {
 		return plan
+	}
+	if tokenPayload, ok := data["id_token"].(map[string]any); ok {
+		if plan := guessPlanFromPayload(tokenPayload); plan != "" {
+			return plan
+		}
+	}
+	if token := strings.TrimSpace(stringValue(data["id_token"])); token != "" {
+		if tokenPayload := decodeAccessTokenPayload(token); len(tokenPayload) > 0 {
+			if plan := guessPlanFromPayload(tokenPayload); plan != "" {
+				return plan
+			}
+		}
 	}
 	if token := strings.TrimSpace(stringValue(data["access_token"])); token != "" {
 		if tokenPayload := decodeAccessTokenPayload(token); len(tokenPayload) > 0 {
