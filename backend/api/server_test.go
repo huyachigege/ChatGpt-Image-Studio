@@ -388,6 +388,10 @@ func TestResolveImageUpstreamModelFromConfig(t *testing.T) {
 	if got := server.resolveImageUpstreamModel("gpt-image-2", "Free"); got != "auto" {
 		t.Fatalf("resolveImageUpstreamModel() = %q, want %q", got, "auto")
 	}
+	server.cfg.ChatGPT.FreeImageModel = "gpt-image-2"
+	if got := server.resolveImageUpstreamModel("gpt-5.5", "Free"); got != "gpt-image-2" {
+		t.Fatalf("resolveImageUpstreamModel(free explicit upstream) = %q, want %q", got, "gpt-image-2")
+	}
 }
 
 func TestResolveImageAcquireError(t *testing.T) {

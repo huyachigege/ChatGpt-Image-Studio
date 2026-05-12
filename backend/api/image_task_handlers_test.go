@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -430,6 +431,48 @@ func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
 	if !strings.Contains(lastCall, "token-paid-priority") {
 		t.Fatalf("callSequence = %#v, want paid account selected for high-resolution edit", recorder.callSequence)
+	}
+}
+
+func TestCreateImageEditTaskWithMultipleImagesUsesResponses(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+
+	sources := make([]imageTaskSourceImagePayload, 0, 7)
+	for index := 0; index < 7; index++ {
+		sources = append(sources, imageTaskSourceImagePayload{
+			ID:      fmt.Sprintf("source-%d", index+1),
+			Role:    "image",
+			Name:    fmt.Sprintf("source-%d.png", index+1),
+			DataURL: "data:image/png;base64,aW1hZ2U=",
+		})
+	}
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-edit-multi-responses-1",
+		TurnID:         "turn-edit-multi-responses-1",
+		Mode:           "edit",
+		Prompt:         "multi image edit",
+		Model:          "gpt-image-2",
+		Count:          1,
+		SourceImages:   sources,
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-edit-multi-responses-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) == 0 {
+		t.Fatal("callSequence = empty, want responses edit execution")
+	}
+	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
+	if !strings.HasPrefix(lastCall, "responses:") || !strings.Contains(lastCall, ":edit") {
+		t.Fatalf("callSequence = %#v, want responses edit", recorder.callSequence)
 	}
 }
 

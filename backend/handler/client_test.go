@@ -167,7 +167,8 @@ func TestResolveImageUpstreamModel(t *testing.T) {
 		{name: "gpt image 2 uses auto for free", requested: "gpt-image-2", accountType: "Free", expectedModel: "auto"},
 		{name: "gpt image 2 uses auto when account type missing", requested: "gpt-image-2", accountType: "", expectedModel: "auto"},
 		{name: "gpt image 2 uses gpt 5 4 mini for paid", requested: "gpt-image-2", accountType: "Pro", expectedModel: "gpt-5.4-mini"},
-		{name: "explicit upstream model is preserved", requested: "gpt-5.4-mini", accountType: "Free", expectedModel: "gpt-5.4-mini"},
+		{name: "explicit upstream model uses free route model for free", requested: "gpt-5.4-mini", accountType: "Free", expectedModel: "auto"},
+		{name: "explicit upstream model is preserved for paid", requested: "gpt-5.5", accountType: "Plus", expectedModel: "gpt-5.5"},
 	}
 
 	for _, tt := range tests {

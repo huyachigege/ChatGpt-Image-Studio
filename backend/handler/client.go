@@ -175,16 +175,12 @@ func ResolveImageUpstreamModelWithDefaults(requestedModel, accountType, freeMode
 	freeModel = normalizeImageRouteModel(freeModel, "auto")
 	paidModel = normalizeImageRouteModel(paidModel, defaultUpstreamModel)
 
+	if strings.TrimSpace(accountType) == "" || strings.EqualFold(strings.TrimSpace(accountType), "Free") {
+		return freeModel
+	}
+
 	switch model {
-	case "gpt-image-1":
-		if strings.TrimSpace(accountType) == "" || strings.EqualFold(strings.TrimSpace(accountType), "Free") {
-			return freeModel
-		}
-		return paidModel
-	case "gpt-image-2":
-		if strings.TrimSpace(accountType) == "" || strings.EqualFold(strings.TrimSpace(accountType), "Free") {
-			return freeModel
-		}
+	case "gpt-image-1", "gpt-image-2":
 		return paidModel
 	default:
 		return model

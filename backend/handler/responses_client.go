@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	codexResponsesBaseURL    = "https://chatgpt.com/backend-api/codex"
-	codexResponsesUserAgent  = "codex-tui/0.118.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9 (codex-tui; 0.118.0)"
-	codexResponsesOriginator = "codex-tui"
-	maxResponsesInlineImages = 1
-	maxResponsesInlineBytes  = 768 << 10
-	maxResponsesSSELineBytes = 128 << 20
+	codexResponsesBaseURL        = "https://chatgpt.com/backend-api/codex"
+	codexResponsesUserAgent      = "codex-tui/0.118.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9 (codex-tui; 0.118.0)"
+	codexResponsesOriginator     = "codex-tui"
+	maxResponsesInlineImages     = 16
+	maxResponsesInlineImageBytes = 50_000_000 - 1
+	maxResponsesInlineTotalBytes = 128 << 20
+	maxResponsesSSELineBytes     = 128 << 20
 )
 
 type ImageWorkflowClient interface {
@@ -98,7 +99,7 @@ func (c *ResponsesClient) GenerateImage(ctx context.Context, prompt, model strin
 }
 
 func (c *ResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]ImageResult, error) {
-	return c.generateViaResponses(ctx, buildResponsesContextPrompt(prompt, previousResponseID), model, size, quality, background, nil, nil, "")
+	return c.generateViaResponsesWithAction(ctx, buildResponsesContextPrompt(prompt, previousResponseID), model, size, quality, background, nil, nil, previousResponseID, "auto")
 }
 
 func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]ImageResult, error) {
@@ -538,19 +539,22 @@ func mimeTypeFromOutputFormat(outputFormat string) string {
 }
 
 func SupportsResponsesInlineEdit(images [][]byte, mask []byte) bool {
-	if len(images) != maxResponsesInlineImages {
+	if len(images) == 0 || len(images) > maxResponsesInlineImages {
 		return false
 	}
 
 	totalBytes := 0
 	for _, image := range images {
-		if len(image) == 0 {
+		if len(image) == 0 || len(image) > maxResponsesInlineImageBytes {
 			return false
 		}
 		totalBytes += len(image)
 	}
+	if len(mask) > maxResponsesInlineImageBytes {
+		return false
+	}
 	totalBytes += len(mask)
-	return totalBytes > 0 && totalBytes <= maxResponsesInlineBytes
+	return totalBytes > 0 && totalBytes <= maxResponsesInlineTotalBytes
 }
 
 func (c *ResponsesClient) SetRequestedImageModel(model string) {

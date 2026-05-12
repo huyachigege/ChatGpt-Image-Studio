@@ -3,6 +3,8 @@ package handler
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -119,19 +121,29 @@ func TestSupportsResponsesInlineEdit(t *testing.T) {
 			want:   true,
 		},
 		{
-			name:   "multiple images are rejected",
+			name:   "multiple images are allowed within threshold",
 			images: [][]byte{make([]byte, 8), make([]byte, 8)},
+			want:   true,
+		},
+		{
+			name:   "too many images are rejected",
+			images: make([][]byte, maxResponsesInlineImages+1),
 			want:   false,
 		},
 		{
-			name:   "large image payload is rejected",
-			images: [][]byte{make([]byte, maxResponsesInlineBytes+1)},
+			name:   "image below documented 50MB limit is allowed",
+			images: [][]byte{make([]byte, maxResponsesInlineImageBytes)},
+			want:   true,
+		},
+		{
+			name:   "image at documented 50MB limit is rejected",
+			images: [][]byte{make([]byte, maxResponsesInlineImageBytes+1)},
 			want:   false,
 		},
 		{
-			name:   "image plus mask over threshold is rejected",
-			images: [][]byte{make([]byte, maxResponsesInlineBytes-16)},
-			mask:   make([]byte, 32),
+			name:   "mask at documented 50MB limit is rejected",
+			images: [][]byte{make([]byte, 8)},
+			mask:   make([]byte, maxResponsesInlineImageBytes+1),
 			want:   false,
 		},
 	}
@@ -142,6 +154,71 @@ func TestSupportsResponsesInlineEdit(t *testing.T) {
 				t.Fatalf("SupportsResponsesInlineEdit() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestGenerateImageWithPreviousResponseUsesAutoAction(t *testing.T) {
+	var requestBody map[string]any
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &requestBody); err != nil {
+			return nil, err
+		}
+		stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"png"}]}}` + "\n\n"
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+	})}
+
+	_, err := client.GenerateImageWithPreviousResponse(t.Context(), "make it realistic", "gpt-5.5", 1, "1536x1024", "high", "", "resp_123")
+	if err != nil {
+		t.Fatalf("GenerateImageWithPreviousResponse() returned error: %v", err)
+	}
+	if _, exists := requestBody["previous_response_id"]; exists {
+		t.Fatalf("payload previous_response_id = %v, want omitted for codex responses endpoint", requestBody["previous_response_id"])
+	}
+	tool := requestBody["tools"].([]any)[0].(map[string]any)
+	if got := tool["action"]; got != "auto" {
+		t.Fatalf("tool action = %v, want auto", got)
+	}
+}
+
+func TestResponsesEditIncludesMultipleInputImages(t *testing.T) {
+	var requestBody map[string]any
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &requestBody); err != nil {
+			return nil, err
+		}
+		stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"png"}]}}` + "\n\n"
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+	})}
+
+	_, err := client.EditImageByUpload(t.Context(), "edit these", "gpt-5.4-mini", [][]byte{[]byte("image-1"), []byte("image-2")}, nil, "1536x1024", "high")
+	if err != nil {
+		t.Fatalf("EditImageByUpload() returned error: %v", err)
+	}
+	input := requestBody["input"].([]any)[0].(map[string]any)
+	content := input["content"].([]any)
+	imageCount := 0
+	for _, item := range content {
+		part := item.(map[string]any)
+		if part["type"] == "input_image" {
+			imageCount++
+		}
+	}
+	if imageCount != 2 {
+		t.Fatalf("input_image count = %d, want 2", imageCount)
+	}
+	tool := requestBody["tools"].([]any)[0].(map[string]any)
+	if got := tool["action"]; got != "edit" {
+		t.Fatalf("tool action = %v, want edit", got)
 	}
 }
 
