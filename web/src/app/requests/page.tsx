@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteRequestLogs, fetchRequestLogDetail, fetchRequestLogFilters, fetchRequestLogs, type RequestLogDetail, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
+import { deleteFailedRequestLogs, deleteRequestLogs, fetchRequestLogDetail, fetchRequestLogFilters, fetchRequestLogs, type RequestLogDetail, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatTime(value: string) {
@@ -84,14 +84,14 @@ export default function RequestsPage() {
   const startIndex = total === 0 ? 0 : (safePage - 1) * numericPageSize + 1;
   const endIndex = Math.min(safePage * numericPageSize, total);
 
-  const loadItems = useCallback(async () => {
+  const loadItems = useCallback(async (targetPage = safePage) => {
     setIsLoading(true);
     try {
-      const data = await fetchRequestLogs({ page: safePage, pageSize: numericPageSize, ...filters });
+      const data = await fetchRequestLogs({ page: targetPage, pageSize: numericPageSize, ...filters });
       setItems(data.items || []);
       setSelectedIds((prev) => prev.filter((id) => (data.items || []).some((item) => item.id === id)));
       setTotal(data.total || 0);
-      setPage(data.page || safePage);
+      setPage(data.page || targetPage);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "读取调用请求失败");
     } finally {
@@ -187,8 +187,31 @@ export default function RequestsPage() {
       setSelectedIds((prev) => prev.filter((id) => !(result.deleted || []).includes(id)));
       toast.success(`已删除 ${result.deleted?.length || 0} 条记录`);
       await loadItems();
+      fetchRequestLogFilters().then((data) => setFilterOptions(data)).catch(() => {});
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除调用请求失败");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteFailed = async () => {
+    if (isDeleting) {
+      return;
+    }
+    if (!window.confirm("确定删除所有失败的调用请求记录吗？该操作不可恢复。")) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const result = await deleteFailedRequestLogs();
+      setSelectedIds([]);
+      setPage(1);
+      toast.success(`已删除 ${result.deletedCount || 0} 条失败记录`);
+      await loadItems(1);
+      fetchRequestLogFilters().then((data) => setFilterOptions(data)).catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "删除失败调用请求失败");
     } finally {
       setIsDeleting(false);
     }
@@ -239,6 +262,9 @@ export default function RequestsPage() {
                 <Trash2 className="size-4" />删除选中({selectedIds.length})
               </Button>
             ) : null}
+            <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteFailed()} disabled={isDeleting || isLoading || total === 0}>
+              <Trash2 className="size-4" />删除失败日志
+            </Button>
             <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none" onClick={() => void loadItems()} disabled={isLoading}>
               {isLoading ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
               刷新记录

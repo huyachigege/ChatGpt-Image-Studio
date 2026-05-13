@@ -422,6 +422,7 @@ export type RequestLogItem = {
   accountType?: string;
   accountFile?: string;
   success: boolean;
+  errorCode?: string;
   error?: string;
 };
 
@@ -1011,6 +1012,12 @@ export async function deleteRequestLogs(ids: string[]) {
   return httpRequest<{ ok: boolean; deleted: string[] }>("/api/requests/delete", {
     method: "POST",
     body: { ids },
+  });
+}
+
+export async function deleteFailedRequestLogs() {
+  return httpRequest<{ ok: boolean; deletedCount: number }>("/api/requests/delete-failed", {
+    method: "POST",
   });
 }
 

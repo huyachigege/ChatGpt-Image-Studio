@@ -516,6 +516,7 @@ func TestIsTransientImageStreamError(t *testing.T) {
 		{name: "responses sse internal error", err: errors.New("responses SSE read error: stream error: stream ID 1; INTERNAL_ERROR; received from peer"), want: true},
 		{name: "unexpected eof", err: errors.New("SSE read error: unexpected EOF"), want: true},
 		{name: "http2 connection lost", err: errors.New("http2: client connection lost"), want: true},
+		{name: "responses generic processing error", err: errors.New("responses returned 500: An error occurred while processing your request. You can retry your request, or contact us through our help center at help.openai.com if the error persists. Please include the request ID 45caf6b3-8c85-47c6-911f-375ef0684fa3 in your message."), want: true},
 		{name: "non transient", err: errors.New("no images generated"), want: false},
 	}
 

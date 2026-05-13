@@ -324,6 +324,15 @@ func (s *Server) handleRequestLogFilters(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, s.reqLogs.filterOptions())
 }
 
+func (s *Server) handleDeleteFailedRequestLogs(w http.ResponseWriter, r *http.Request) {
+	deleted, err := s.reqLogs.deleteFailed()
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deletedCount": deleted})
+}
+
 func (s *Server) handleDeleteRequestLogs(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		IDs []string `json:"ids"`

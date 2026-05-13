@@ -505,6 +505,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/requests/filters", s.requireAdminAuth(http.HandlerFunc(s.handleRequestLogFilters)))
 	mux.Handle("GET /api/requests/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleGetRequestLog)))
 	mux.Handle("POST /api/requests/delete", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteRequestLogs)))
+	mux.Handle("POST /api/requests/delete-failed", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteFailedRequestLogs)))
 	mux.Handle("GET /api/startup/check", s.requireAdminAuth(http.HandlerFunc(s.handleStartupCheck)))
 	mux.Handle("GET /api/runtime/status", s.requireAdminAuth(http.HandlerFunc(s.handleRuntimeStatus)))
 	mux.Handle("GET /api/diagnostics/export", s.requireAdminAuth(http.HandlerFunc(s.handleExportDiagnostics)))
@@ -2584,6 +2585,11 @@ func isTransientImageStreamError(err error) bool {
 		"http2: client connection lost",
 		"connection reset by peer",
 		"stream closed",
+		"responses returned 500",
+		"responses returned 502",
+		"responses returned 503",
+		"responses returned 504",
+		"an error occurred while processing your request",
 	} {
 		if strings.Contains(message, token) {
 			return true

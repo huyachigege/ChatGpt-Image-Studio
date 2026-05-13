@@ -106,6 +106,30 @@ func (e *imageRequestLogEntry) summary() imageRequestLogSummary {
 	}
 }
 
+func requestLogSummaryToEntry(summary imageRequestLogSummary) imageRequestLogEntry {
+	return imageRequestLogEntry{
+		ID:                summary.ID,
+		StartedAt:         summary.StartedAt,
+		FinishedAt:        summary.FinishedAt,
+		Operation:         summary.Operation,
+		Route:             summary.Route,
+		CPASubroute:       summary.CPASubroute,
+		CPAFallbackReason: summary.CPAFallbackReason,
+		Size:              summary.Size,
+		Quality:           summary.Quality,
+		PromptLength:      summary.PromptLength,
+		UserID:            summary.UserID,
+		Username:          summary.Username,
+		UserRole:          summary.UserRole,
+		AccountEmail:      summary.AccountEmail,
+		AccountType:       summary.AccountType,
+		AccountFile:       summary.AccountFile,
+		Success:           summary.Success,
+		ErrorCode:         summary.ErrorCode,
+		Error:             summary.Error,
+	}
+}
+
 type imageRequestLogQuery struct {
 	Page     int
 	PageSize int
@@ -269,7 +293,7 @@ func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequ
 		return []imageRequestLogEntry{}, total
 	}
 
-	dataSQL := `SELECT raw_json FROM image_request_logs` + where + ` ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?`
+	dataSQL := `SELECT id, summary_json FROM image_request_logs` + where + ` ORDER BY started_at DESC, id DESC LIMIT ? OFFSET ?`
 	dataArgs := append(args, pageSize, offset)
 	rows, err := s.db.Query(dataSQL, dataArgs...)
 	if err != nil {
@@ -279,15 +303,21 @@ func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequ
 
 	items := make([]imageRequestLogEntry, 0, pageSize)
 	for rows.Next() {
-		var raw []byte
-		if err := rows.Scan(&raw); err != nil {
+		var id string
+		var summaryRaw []byte
+		if err := rows.Scan(&id, &summaryRaw); err != nil {
 			continue
 		}
-		var entry imageRequestLogEntry
-		if err := json.Unmarshal(raw, &entry); err != nil {
-			continue
+		if len(summaryRaw) > 0 {
+			var summary imageRequestLogSummary
+			if err := json.Unmarshal(summaryRaw, &summary); err == nil {
+				items = append(items, requestLogSummaryToEntry(summary))
+				continue
+			}
 		}
-		items = append(items, entry)
+		if entry, ok := s.getByID(id); ok {
+			items = append(items, *entry)
+		}
 	}
 	return items, total
 }
@@ -333,6 +363,32 @@ func (s *imageRequestLogStore) getByID(id string) (*imageRequestLogEntry, bool) 
 		return nil, false
 	}
 	return &entry, true
+}
+
+func (s *imageRequestLogStore) deleteFailed() (int64, error) {
+	if s == nil || s.db == nil {
+		return 0, nil
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	res, err := s.db.Exec(`DELETE FROM image_request_logs WHERE CAST(summary_json AS TEXT) LIKE '%"success":false%'`)
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return 0, nil
+	}
+	next := make([]imageRequestLogEntry, 0, len(s.items))
+	for _, item := range s.items {
+		if item.Success {
+			next = append(next, item)
+		}
+	}
+	s.items = next
+	return affected, nil
 }
 
 func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
@@ -464,8 +520,13 @@ func (s *imageRequestLogStore) openSQLite() error {
 		user_key TEXT NOT NULL DEFAULT '',
 		account_key TEXT NOT NULL DEFAULT '',
 		prompt TEXT NOT NULL DEFAULT '',
+		summary_json BLOB,
 		raw_json BLOB NOT NULL
 	)`); err != nil {
+		_ = db.Close()
+		return err
+	}
+	if err := ensureImageRequestLogSummaryColumn(db); err != nil {
 		_ = db.Close()
 		return err
 	}
@@ -483,6 +544,82 @@ func (s *imageRequestLogStore) openSQLite() error {
 	return nil
 }
 
+func ensureImageRequestLogSummaryColumn(db *sql.DB) error {
+	rows, err := db.Query(`PRAGMA table_info(image_request_logs)`)
+	if err != nil {
+		return err
+	}
+
+	hasSummary := false
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if name == "summary_json" {
+			hasSummary = true
+			break
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if !hasSummary {
+		if _, err := db.Exec(`ALTER TABLE image_request_logs ADD COLUMN summary_json BLOB`); err != nil {
+			return err
+		}
+	}
+	return backfillImageRequestLogSummaries(db)
+}
+
+func backfillImageRequestLogSummaries(db *sql.DB) error {
+	rows, err := db.Query(`SELECT id, raw_json FROM image_request_logs WHERE summary_json IS NULL OR length(summary_json) = 0`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	type update struct {
+		id      string
+		payload []byte
+	}
+	updates := make([]update, 0)
+	for rows.Next() {
+		var id string
+		var raw []byte
+		if err := rows.Scan(&id, &raw); err != nil {
+			return err
+		}
+		var entry imageRequestLogEntry
+		if err := json.Unmarshal(raw, &entry); err != nil {
+			continue
+		}
+		payload, err := json.Marshal(entry.summary())
+		if err != nil {
+			return err
+		}
+		updates = append(updates, update{id: id, payload: payload})
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, item := range updates {
+		if _, err := db.Exec(`UPDATE image_request_logs SET summary_json = ? WHERE id = ?`, item.payload, item.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *imageRequestLogStore) insertSQLite(entry imageRequestLogEntry) error {
 	if strings.TrimSpace(entry.ID) == "" {
 		return nil
@@ -491,13 +628,18 @@ func (s *imageRequestLogStore) insertSQLite(entry imageRequestLogEntry) error {
 	if err != nil {
 		return err
 	}
+	summaryPayload, err := json.Marshal(entry.summary())
+	if err != nil {
+		return err
+	}
 	_, err = s.db.Exec(
-		`INSERT OR REPLACE INTO image_request_logs (id, started_at, user_key, account_key, prompt, raw_json) VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT OR REPLACE INTO image_request_logs (id, started_at, user_key, account_key, prompt, summary_json, raw_json) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		entry.ID,
 		entry.StartedAt,
 		strings.ToLower(strings.TrimSpace(entry.UserID+" "+entry.Username+" "+entry.UserRole)),
 		strings.ToLower(strings.TrimSpace(entry.AccountEmail+" "+entry.AccountFile+" "+entry.AccountType)),
 		strings.ToLower(strings.TrimSpace(entry.Prompt)),
+		summaryPayload,
 		payload,
 	)
 	return err
