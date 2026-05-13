@@ -56,6 +56,17 @@ func TestImageRequestLogStoreMigratesSummariesAndDeletesFailed(t *testing.T) {
 
 	store := newImageRequestLogStore(cfg)
 	defer store.close()
+	var missingBeforeList int
+	if err := store.db.QueryRow(`SELECT COUNT(*) FROM image_request_logs WHERE summary_json IS NULL OR length(summary_json) = 0`).Scan(&missingBeforeList); err != nil {
+		t.Fatalf("count missing summaries before list: %v", err)
+	}
+	if missingBeforeList != 2 {
+		t.Fatalf("missing summaries before list = %d, want 2", missingBeforeList)
+	}
+	if len(store.items) != 0 {
+		t.Fatalf("startup loaded %d request logs, want 0 before lazy summary backfill", len(store.items))
+	}
+
 	items, total := store.listPage(imageRequestLogQuery{Page: 1, PageSize: 20})
 	if total != 2 || len(items) != 2 {
 		t.Fatalf("listPage total=%d len=%d, want 2/2", total, len(items))

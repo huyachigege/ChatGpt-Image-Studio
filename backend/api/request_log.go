@@ -299,23 +299,33 @@ func (s *imageRequestLogStore) listPage(query imageRequestLogQuery) ([]imageRequ
 	if err != nil {
 		return nil, total
 	}
-	defer rows.Close()
-
-	items := make([]imageRequestLogEntry, 0, pageSize)
+	type pageRow struct {
+		id         string
+		summaryRaw []byte
+	}
+	pageRows := make([]pageRow, 0, pageSize)
 	for rows.Next() {
-		var id string
-		var summaryRaw []byte
-		if err := rows.Scan(&id, &summaryRaw); err != nil {
+		var row pageRow
+		if err := rows.Scan(&row.id, &row.summaryRaw); err != nil {
 			continue
 		}
-		if len(summaryRaw) > 0 {
+		pageRows = append(pageRows, row)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, total
+	}
+
+	items := make([]imageRequestLogEntry, 0, pageSize)
+	for _, row := range pageRows {
+		if len(row.summaryRaw) > 0 {
 			var summary imageRequestLogSummary
-			if err := json.Unmarshal(summaryRaw, &summary); err == nil {
+			if err := json.Unmarshal(row.summaryRaw, &summary); err == nil {
 				items = append(items, requestLogSummaryToEntry(summary))
 				continue
 			}
 		}
-		if entry, ok := s.getByID(id); ok {
+		if entry, ok := s.backfillImageRequestLogSummary(row.id); ok {
+			entry.UpstreamRequest = ""
 			items = append(items, *entry)
 		}
 	}
@@ -373,7 +383,7 @@ func (s *imageRequestLogStore) deleteFailed() (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	res, err := s.db.Exec(`DELETE FROM image_request_logs WHERE CAST(summary_json AS TEXT) LIKE '%"success":false%'`)
+	res, err := s.db.Exec(`DELETE FROM image_request_logs WHERE CAST(raw_json AS TEXT) NOT LIKE '%"success":true%'`)
 	if err != nil {
 		return 0, err
 	}
@@ -465,7 +475,7 @@ func (s *imageRequestLogStore) loadFromDB() {
 	if s == nil || s.db == nil {
 		return
 	}
-	rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
+	rows, err := s.db.Query(`SELECT summary_json FROM image_request_logs WHERE summary_json IS NOT NULL AND length(summary_json) > 0 ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
 	if err != nil {
 		return
 	}
@@ -473,15 +483,15 @@ func (s *imageRequestLogStore) loadFromDB() {
 
 	items := make([]imageRequestLogEntry, 0, maxImageRequestLogEntries)
 	for rows.Next() {
-		var raw []byte
-		if err := rows.Scan(&raw); err != nil {
+		var summaryRaw []byte
+		if err := rows.Scan(&summaryRaw); err != nil {
 			continue
 		}
-		var entry imageRequestLogEntry
-		if err := json.Unmarshal(raw, &entry); err != nil {
+		var summary imageRequestLogSummary
+		if err := json.Unmarshal(summaryRaw, &summary); err != nil {
 			continue
 		}
-		items = append(items, entry)
+		items = append(items, requestLogSummaryToEntry(summary))
 	}
 	s.items = items
 }
@@ -578,46 +588,19 @@ func ensureImageRequestLogSummaryColumn(db *sql.DB) error {
 			return err
 		}
 	}
-	return backfillImageRequestLogSummaries(db)
+	return nil
 }
 
-func backfillImageRequestLogSummaries(db *sql.DB) error {
-	rows, err := db.Query(`SELECT id, raw_json FROM image_request_logs WHERE summary_json IS NULL OR length(summary_json) = 0`)
-	if err != nil {
-		return err
+func (s *imageRequestLogStore) backfillImageRequestLogSummary(id string) (*imageRequestLogEntry, bool) {
+	entry, ok := s.getByID(id)
+	if !ok {
+		return nil, false
 	}
-	defer rows.Close()
-
-	type update struct {
-		id      string
-		payload []byte
+	payload, err := json.Marshal(entry.summary())
+	if err == nil {
+		_, _ = s.db.Exec(`UPDATE image_request_logs SET summary_json = ? WHERE id = ?`, payload, id)
 	}
-	updates := make([]update, 0)
-	for rows.Next() {
-		var id string
-		var raw []byte
-		if err := rows.Scan(&id, &raw); err != nil {
-			return err
-		}
-		var entry imageRequestLogEntry
-		if err := json.Unmarshal(raw, &entry); err != nil {
-			continue
-		}
-		payload, err := json.Marshal(entry.summary())
-		if err != nil {
-			return err
-		}
-		updates = append(updates, update{id: id, payload: payload})
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	for _, item := range updates {
-		if _, err := db.Exec(`UPDATE image_request_logs SET summary_json = ? WHERE id = ?`, item.payload, item.id); err != nil {
-			return err
-		}
-	}
-	return nil
+	return entry, true
 }
 
 func (s *imageRequestLogStore) insertSQLite(entry imageRequestLogEntry) error {
