@@ -60,6 +60,7 @@ type compatStubWorkflowClient struct {
 	recorder        *compatFactoryRecorder
 	generateErr     error
 	previousErr     error
+	referenceErr    error
 	editErr         error
 	inpaintErr      error
 	generateStarted chan string
@@ -101,17 +102,32 @@ func (c *compatStubWorkflowClient) GenerateImageWithPreviousResponse(ctx context
 
 func (c *compatStubWorkflowClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
 	_ = images
-	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	c.record("reference-generate", model)
+	if c.referenceErr != nil {
+		return nil, c.referenceErr
+	}
+	return c.generateImageResult(ctx, prompt, model, n, size, quality, background)
+}
+
+func (c *compatStubWorkflowClient) GenerateImageWithContext(ctx context.Context, prompt, model string, n int, size, quality, background, conversationID, parentMessageID string) ([]handler.ImageResult, error) {
+	_ = conversationID
+	_ = parentMessageID
+	c.record("context-generate", model)
+	return c.generateImageResult(ctx, prompt, model, n, size, quality, background)
 }
 
 func (c *compatStubWorkflowClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
+	c.record("generate", model)
+	return c.generateImageResult(ctx, prompt, model, n, size, quality, background)
+}
+
+func (c *compatStubWorkflowClient) generateImageResult(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
 	_ = ctx
 	_ = prompt
 	_ = n
 	_ = size
 	_ = quality
 	_ = background
-	c.record("generate", model)
 	if c.generateErr != nil {
 		return nil, c.generateErr
 	}
@@ -808,18 +824,19 @@ type compatSeedAccount struct {
 }
 
 type compatClientBehavior struct {
-	officialGenerateErrors  map[string]error
-	officialEditErrors      map[string]error
-	officialInpaintErrors   map[string]error
-	responsesGenerateErrors map[string]error
-	responsesPreviousErrors map[string]error
-	responsesEditErrors     map[string]error
-	responsesInpaintErrors  map[string]error
-	cpaGenerateErrors       map[string]error
-	cpaEditErrors           map[string]error
-	cpaInpaintErr           error
-	generateStarted         chan string
-	generateRelease         <-chan struct{}
+	officialGenerateErrors   map[string]error
+	officialEditErrors       map[string]error
+	officialInpaintErrors    map[string]error
+	responsesGenerateErrors  map[string]error
+	responsesPreviousErrors  map[string]error
+	responsesReferenceErrors map[string]error
+	responsesEditErrors      map[string]error
+	responsesInpaintErrors   map[string]error
+	cpaGenerateErrors        map[string]error
+	cpaEditErrors            map[string]error
+	cpaInpaintErr            error
+	generateStarted          chan string
+	generateRelease          <-chan struct{}
 }
 
 type compatTestServerOptions struct {
@@ -898,6 +915,7 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 			recorder:        recorder,
 			generateErr:     options.behavior.responsesGenerateErrors[accessToken],
 			previousErr:     options.behavior.responsesPreviousErrors[accessToken],
+			referenceErr:    options.behavior.responsesReferenceErrors[accessToken],
 			editErr:         options.behavior.responsesEditErrors[accessToken],
 			inpaintErr:      options.behavior.responsesInpaintErrors[accessToken],
 			generateStarted: options.behavior.generateStarted,

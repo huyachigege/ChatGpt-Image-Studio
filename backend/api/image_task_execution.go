@@ -68,6 +68,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			setter.SetInstructions(systemHint)
 		}
 	}
+	holdLease := func() {}
 
 	var (
 		items     []map[string]any
@@ -91,7 +92,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			taskCtx,
 			lease.auth,
 			lease.account,
-			lease.release,
+			holdLease,
 			lease.decision,
 			"selection-edit",
 			task.ResponseFormat,
@@ -143,7 +144,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			taskCtx,
 			lease.auth,
 			lease.account,
-			lease.release,
+			holdLease,
 			lease.decision,
 			"edit",
 			task.ResponseFormat,
@@ -170,41 +171,36 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil {
 			return nil, err
 		}
-		items, retryable, err = s.runImageRequestWithAdmission(
-			taskCtx,
-			lease.auth,
-			lease.account,
-			lease.release,
-			lease.decision,
-			"generate",
-			task.ResponseFormat,
-			false,
-			requestedModel,
-			true,
-			metadata,
-			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				applySystemHint(client)
-				prompt := effectivePrompt
-				if systemHint != "" {
-					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-						prompt = systemHint + "\n\n" + prompt
-					}
+		buildPrompt := func(client imageWorkflowClient) string {
+			applySystemHint(client)
+			prompt := effectivePrompt
+			if systemHint != "" {
+				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+					prompt = systemHint + "\n\n" + prompt
 				}
-				if task.ContextReference != nil {
-					sameSourceAccount := strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
-					if sameSourceAccount && task.ContextReference.ResponseID != "" {
-						if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
-							if generator, ok := client.(interface {
-								GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
-							}); ok {
-								results, err := generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
-								if err == nil || !isResponsesPreviousResponseContextError(err) {
-									return results, err
-								}
+			}
+			return prompt
+		}
+		sameSourceAccount := task.ContextReference != nil && strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
+		previousResponseContextMissing := false
+		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+			prompt := buildPrompt(client)
+			if task.ContextReference != nil {
+				if sameSourceAccount && task.ContextReference.ResponseID != "" {
+					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
+						if generator, ok := client.(interface {
+							GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
+						}); ok {
+							results, err := generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
+							if err == nil || !isResponsesPreviousResponseContextError(err) {
+								return results, err
 							}
+							previousResponseContextMissing = true
 						}
 					}
-					if sameSourceAccount && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+				}
+				if sameSourceAccount && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); !ok || !responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
 							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
 						}); ok {
@@ -212,21 +208,62 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 						}
 					}
 				}
-				if handler.SupportsResponsesReferenceImages(referenceImageFiles) {
-					if generator, ok := client.(interface {
-						GenerateImageWithReferenceImages(context.Context, string, string, int, string, string, string, [][]byte) ([]handler.ImageResult, error)
-					}); ok {
-						return generator.GenerateImageWithReferenceImages(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageFiles)
-					}
+			}
+			if handler.SupportsResponsesReferenceImages(referenceImageFiles) {
+				if generator, ok := client.(interface {
+					GenerateImageWithReferenceImages(context.Context, string, string, int, string, string, string, [][]byte) ([]handler.ImageResult, error)
+				}); ok {
+					return generator.GenerateImageWithReferenceImages(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageFiles)
 				}
-				return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
-			},
+			}
+			return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+		}
+		items, retryable, err = s.runImageRequestWithAdmission(
+			taskCtx,
+			lease.auth,
+			lease.account,
+			holdLease,
+			lease.decision,
+			"generate",
+			task.ResponseFormat,
+			false,
+			requestedModel,
+			true,
+			metadata,
+			runGenerate,
 			fakeReq,
 			false,
 		)
+		if err != nil && previousResponseContextMissing && (!retryable || isTransientImageStreamError(err)) && sameSourceAccount && task.ContextReference != nil && task.ContextReference.ResponseID != "" && handler.SupportsResponsesReferenceImages(referenceImageFiles) {
+			items, retryable, err = s.runImageRequestWithAdmission(
+				taskCtx,
+				lease.auth,
+				lease.account,
+				nil,
+				lease.decision,
+				"generate",
+				task.ResponseFormat,
+				false,
+				requestedModel,
+				false,
+				metadata,
+				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+					prompt := buildPrompt(client)
+					if task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+						if generator, ok := client.(interface {
+							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
+						}); ok {
+							return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
+						}
+					}
+					return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+				},
+				fakeReq,
+				false,
+			)
+		}
 	}
 
-	lease.release = nil
 	if err != nil {
 		if retryable {
 			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}

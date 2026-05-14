@@ -617,7 +617,7 @@ func TestCreateImageGenerateUsesPreviousResponseOnlyForSameResponsesAccount(t *t
 	}
 }
 
-func TestCreateImageGenerateFallsBackWhenPreviousResponseMissing(t *testing.T) {
+func TestCreateImageGenerateFallsBackToReferenceImageWhenPreviousResponseMissing(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Plus",
@@ -641,6 +641,13 @@ func TestCreateImageGenerateFallsBackWhenPreviousResponseMissing(t *testing.T) {
 		Prompt:         "continue after missing previous response",
 		Model:          "gpt-image-2",
 		Count:          1,
+		ReferenceImages: []imageTaskReferenceImagePayload{
+			{
+				ID:      "reference-1",
+				Name:    "reference.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+		},
 		ContextReference: &imageTaskContextReferencePayload{
 			ResponseID:      "resp_missing",
 			SourceAccountID: accountID,
@@ -650,11 +657,71 @@ func TestCreateImageGenerateFallsBackWhenPreviousResponseMissing(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, "turn-prev-response-missing-1", imageTaskStatusSucceeded)
-	if len(recorder.callSequence) < 2 {
-		t.Fatalf("callSequence = %#v, want previous-response then generate fallback", recorder.callSequence)
+	if len(recorder.callSequence) != 2 {
+		t.Fatalf("callSequence = %#v, want previous-response then reference fallback", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], ":previous-response") || !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], ":generate") {
-		t.Fatalf("callSequence = %#v, want previous-response then generate fallback", recorder.callSequence)
+	if recorder.callSequence[0] != "responses:token-compat:previous-response" || recorder.callSequence[1] != "responses:token-compat:reference-generate" {
+		t.Fatalf("callSequence = %#v, want previous-response then reference fallback", recorder.callSequence)
+	}
+}
+
+func TestCreateImageGenerateFallsBackToLegacyWhenResponsesReferenceFails(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		behavior: compatClientBehavior{
+			responsesPreviousErrors: map[string]error{
+				"token-compat": errors.New("responses returned 400: previous_response_id response not found"),
+			},
+			responsesReferenceErrors: map[string]error{
+				"token-compat": errors.New("responses returned 500: upstream unavailable"),
+			},
+		},
+	})
+	accountID := compatPrimaryAccountID(t, server)
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-prev-response-legacy-fallback-1",
+		TurnID:         "turn-prev-response-legacy-fallback-1",
+		Mode:           "generate",
+		Prompt:         "continue after responses reference failure",
+		Model:          "gpt-image-2",
+		Count:          1,
+		ReferenceImages: []imageTaskReferenceImagePayload{
+			{
+				ID:      "reference-1",
+				Name:    "reference.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+		},
+		ContextReference: &imageTaskContextReferencePayload{
+			ConversationID:  "conv-legacy-1",
+			ParentMessageID: "msg-legacy-1",
+			ResponseID:      "resp_missing",
+			SourceAccountID: accountID,
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-prev-response-legacy-fallback-1", imageTaskStatusSucceeded)
+	want := []string{
+		"responses:token-compat:previous-response",
+		"responses:token-compat:reference-generate",
+		"official:token-compat:context-generate",
+	}
+	if len(recorder.callSequence) != len(want) {
+		t.Fatalf("callSequence = %#v, want %#v", recorder.callSequence, want)
+	}
+	for index := range want {
+		if recorder.callSequence[index] != want[index] {
+			t.Fatalf("callSequence = %#v, want %#v", recorder.callSequence, want)
+		}
 	}
 }
 
