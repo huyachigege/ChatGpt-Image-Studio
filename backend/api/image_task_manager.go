@@ -919,9 +919,6 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	if sourceReference != nil && sourceReference.SourceAccountID != "" {
 		requirement.SourceAccountID = sourceReference.SourceAccountID
 		requirement.NeedPaid = false
-	} else if contextReference != nil && contextReference.SourceAccountID != "" {
-		requirement.SourceAccountID = contextReference.SourceAccountID
-		requirement.NeedPaid = false
 	} else if req.Policy != nil && req.Policy.Enabled {
 		normalized := req.Policy.Normalize()
 		requirement.PolicySnapshot = &normalized

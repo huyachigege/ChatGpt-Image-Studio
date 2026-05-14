@@ -59,6 +59,7 @@ type compatStubWorkflowClient struct {
 	model           string
 	recorder        *compatFactoryRecorder
 	generateErr     error
+	previousErr     error
 	editErr         error
 	inpaintErr      error
 	generateStarted chan string
@@ -87,6 +88,15 @@ func (c *compatStubWorkflowClient) DownloadAsBase64(ctx context.Context, url str
 
 func (c *compatStubWorkflowClient) UsesResponsesAPI() bool {
 	return c != nil && c.factory == "responses"
+}
+
+func (c *compatStubWorkflowClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
+	_ = previousResponseID
+	c.record("previous-response", model)
+	if c.previousErr != nil {
+		return nil, c.previousErr
+	}
+	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
 }
 
 func (c *compatStubWorkflowClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
@@ -802,6 +812,7 @@ type compatClientBehavior struct {
 	officialEditErrors      map[string]error
 	officialInpaintErrors   map[string]error
 	responsesGenerateErrors map[string]error
+	responsesPreviousErrors map[string]error
 	responsesEditErrors     map[string]error
 	responsesInpaintErrors  map[string]error
 	cpaGenerateErrors       map[string]error
@@ -886,6 +897,7 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 			token:           accessToken,
 			recorder:        recorder,
 			generateErr:     options.behavior.responsesGenerateErrors[accessToken],
+			previousErr:     options.behavior.responsesPreviousErrors[accessToken],
 			editErr:         options.behavior.responsesEditErrors[accessToken],
 			inpaintErr:      options.behavior.responsesInpaintErrors[accessToken],
 			generateStarted: options.behavior.generateStarted,

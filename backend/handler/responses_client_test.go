@@ -121,29 +121,24 @@ func TestSupportsResponsesInlineEdit(t *testing.T) {
 			want:   true,
 		},
 		{
-			name:   "multiple images are allowed within threshold",
+			name:   "multiple images are rejected",
 			images: [][]byte{make([]byte, 8), make([]byte, 8)},
-			want:   true,
-		},
-		{
-			name:   "too many images are rejected",
-			images: make([][]byte, maxResponsesInlineImages+1),
 			want:   false,
 		},
 		{
-			name:   "image below documented 50MB limit is allowed",
-			images: [][]byte{make([]byte, maxResponsesInlineImageBytes)},
+			name:   "image at inline byte limit is allowed",
+			images: [][]byte{make([]byte, maxResponsesInlineEditBytes)},
 			want:   true,
 		},
 		{
-			name:   "image at documented 50MB limit is rejected",
-			images: [][]byte{make([]byte, maxResponsesInlineImageBytes+1)},
+			name:   "image above inline byte limit is rejected",
+			images: [][]byte{make([]byte, maxResponsesInlineEditBytes+1)},
 			want:   false,
 		},
 		{
-			name:   "mask at documented 50MB limit is rejected",
+			name:   "mask above inline byte limit is rejected",
 			images: [][]byte{make([]byte, 8)},
-			mask:   make([]byte, maxResponsesInlineImageBytes+1),
+			mask:   make([]byte, maxResponsesInlineEditBytes+1),
 			want:   false,
 		},
 	}
@@ -157,7 +152,7 @@ func TestSupportsResponsesInlineEdit(t *testing.T) {
 	}
 }
 
-func TestGenerateImageWithPreviousResponseUsesAutoAction(t *testing.T) {
+func TestGenerateImageWithPreviousResponseUsesNativePreviousResponse(t *testing.T) {
 	var requestBody map[string]any
 	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
 	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -176,16 +171,25 @@ func TestGenerateImageWithPreviousResponseUsesAutoAction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateImageWithPreviousResponse() returned error: %v", err)
 	}
-	if _, exists := requestBody["previous_response_id"]; exists {
-		t.Fatalf("payload previous_response_id = %v, want omitted for codex responses endpoint", requestBody["previous_response_id"])
+	if got := requestBody["previous_response_id"]; got != "resp_123" {
+		t.Fatalf("payload previous_response_id = %v, want resp_123", got)
+	}
+	if got := requestBody["store"]; got != true {
+		t.Fatalf("payload store = %v, want true", got)
+	}
+	input := requestBody["input"].([]any)[0].(map[string]any)
+	content := input["content"].([]any)
+	text := content[0].(map[string]any)["text"].(string)
+	if strings.Contains(text, "resp_123") {
+		t.Fatalf("prompt text contains response id: %q", text)
 	}
 	tool := requestBody["tools"].([]any)[0].(map[string]any)
-	if got := tool["action"]; got != "auto" {
-		t.Fatalf("tool action = %v, want auto", got)
+	if got := tool["action"]; got != "generate" {
+		t.Fatalf("tool action = %v, want generate", got)
 	}
 }
 
-func TestResponsesEditIncludesMultipleInputImages(t *testing.T) {
+func TestResponsesEditIncludesMultipleThumbnailInputImages(t *testing.T) {
 	var requestBody map[string]any
 	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
 	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -200,7 +204,7 @@ func TestResponsesEditIncludesMultipleInputImages(t *testing.T) {
 		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
 	})}
 
-	_, err := client.EditImageByUpload(t.Context(), "edit these", "gpt-5.4-mini", [][]byte{[]byte("image-1"), []byte("image-2")}, nil, "1536x1024", "high")
+	_, err := client.EditImageByUpload(t.Context(), "edit these", "gpt-5.4-mini", [][]byte{testPNGBytes(), testPNGBytes()}, nil, "1536x1024", "high")
 	if err != nil {
 		t.Fatalf("EditImageByUpload() returned error: %v", err)
 	}
@@ -211,14 +215,27 @@ func TestResponsesEditIncludesMultipleInputImages(t *testing.T) {
 		part := item.(map[string]any)
 		if part["type"] == "input_image" {
 			imageCount++
+			if !strings.HasPrefix(part["image_url"].(string), "data:image/jpeg;base64,") {
+				t.Fatalf("image_url = %q, want jpeg data url", part["image_url"])
+			}
 		}
 	}
 	if imageCount != 2 {
 		t.Fatalf("input_image count = %d, want 2", imageCount)
 	}
-	tool := requestBody["tools"].([]any)[0].(map[string]any)
-	if got := tool["action"]; got != "edit" {
-		t.Fatalf("tool action = %v, want edit", got)
+}
+
+func testPNGBytes() []byte {
+	return []byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+		0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
+		0xde, 0x00, 0x00, 0x00, 0x0c, 0x49, 0x44, 0x41,
+		0x54, 0x08, 0xd7, 0x63, 0xf8, 0xff, 0xff, 0x3f,
+		0x00, 0x05, 0xfe, 0x02, 0xfe, 0xdc, 0xcc, 0x59,
+		0xe7, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+		0x44, 0xae, 0x42, 0x60, 0x82,
 	}
 }
 
@@ -302,16 +319,6 @@ func TestNormalizeResponsesImageToolModel(t *testing.T) {
 				t.Fatalf("normalizeResponsesImageToolModel(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
-	}
-}
-
-func TestBuildResponsesContextPromptIncludesResponseID(t *testing.T) {
-	prompt := buildResponsesContextPrompt("make it warmer", "resp_123")
-	if !strings.Contains(prompt, "resp_123") {
-		t.Fatalf("context prompt = %q, want response id", prompt)
-	}
-	if !strings.Contains(prompt, "make it warmer") {
-		t.Fatalf("context prompt = %q, want current prompt", prompt)
 	}
 }
 

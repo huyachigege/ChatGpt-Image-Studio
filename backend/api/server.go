@@ -2607,6 +2607,26 @@ func isConversationContextError(err error) bool {
 		strings.Contains(message, "conversation_not_found")
 }
 
+func isResponsesPreviousResponseContextError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	for _, token := range []string{
+		"previous_response_id",
+		"previous response",
+		"response not found",
+		"response_not_found",
+		"invalid previous",
+		"could not find response",
+	} {
+		if strings.Contains(message, token) {
+			return true
+		}
+	}
+	return false
+}
+
 func isInvalidRefreshError(message string) bool {
 	return strings.Contains(strings.ToLower(strings.TrimSpace(message)), "封号") ||
 		strings.Contains(strings.ToLower(strings.TrimSpace(message)), "http 401")

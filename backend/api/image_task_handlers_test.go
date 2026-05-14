@@ -348,7 +348,7 @@ func TestCreateImageTaskSourceAccountRateLimitFallsBack(t *testing.T) {
 				ID:      "mask-1",
 				Role:    "mask",
 				Name:    "mask.png",
-				DataURL: "data:image/png;base64,aW1hZ2U=",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
 			},
 		},
 		SourceReference: &imageTaskSourceReferencePayload{
@@ -417,7 +417,7 @@ func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 				ID:      "source-1",
 				Role:    "image",
 				Name:    "source.png",
-				DataURL: "data:image/png;base64,aW1hZ2U=",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
 			},
 		},
 	}); err != nil {
@@ -434,7 +434,7 @@ func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 	}
 }
 
-func TestCreateImageEditTaskWithMultipleImagesUsesResponses(t *testing.T) {
+func TestCreateImageEditTaskWithMultipleImagesUsesResponsesThumbnails(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Plus",
@@ -450,7 +450,7 @@ func TestCreateImageEditTaskWithMultipleImagesUsesResponses(t *testing.T) {
 			ID:      fmt.Sprintf("source-%d", index+1),
 			Role:    "image",
 			Name:    fmt.Sprintf("source-%d.png", index+1),
-			DataURL: "data:image/png;base64,aW1hZ2U=",
+			DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
 		})
 	}
 
@@ -579,6 +579,120 @@ func TestCreateImageGenerateTaskAutoPaidUsesPaidAccount(t *testing.T) {
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
 	if !strings.Contains(lastCall, "token-paid-priority-auto-paid") {
 		t.Fatalf("callSequence = %#v, want paid account selected for auto-paid generate", recorder.callSequence)
+	}
+}
+
+func TestCreateImageGenerateUsesPreviousResponseOnlyForSameResponsesAccount(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+	accountID := compatPrimaryAccountID(t, server)
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-prev-response-1",
+		TurnID:         "turn-prev-response-1",
+		Mode:           "generate",
+		Prompt:         "continue image",
+		Model:          "gpt-image-2",
+		Count:          1,
+		ContextReference: &imageTaskContextReferencePayload{
+			ResponseID:      "resp_123",
+			SourceAccountID: accountID,
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-prev-response-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) == 0 {
+		t.Fatal("callSequence = empty, want responses previous-response execution")
+	}
+	if !strings.Contains(recorder.callSequence[0], ":previous-response") {
+		t.Fatalf("callSequence = %#v, want previous-response execution", recorder.callSequence)
+	}
+}
+
+func TestCreateImageGenerateFallsBackWhenPreviousResponseMissing(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		behavior: compatClientBehavior{
+			responsesPreviousErrors: map[string]error{
+				"token-compat": errors.New("previous_response_id response not found"),
+			},
+		},
+	})
+	accountID := compatPrimaryAccountID(t, server)
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-prev-response-missing-1",
+		TurnID:         "turn-prev-response-missing-1",
+		Mode:           "generate",
+		Prompt:         "continue after missing previous response",
+		Model:          "gpt-image-2",
+		Count:          1,
+		ContextReference: &imageTaskContextReferencePayload{
+			ResponseID:      "resp_missing",
+			SourceAccountID: accountID,
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-prev-response-missing-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) < 2 {
+		t.Fatalf("callSequence = %#v, want previous-response then generate fallback", recorder.callSequence)
+	}
+	if !strings.Contains(recorder.callSequence[0], ":previous-response") || !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], ":generate") {
+		t.Fatalf("callSequence = %#v, want previous-response then generate fallback", recorder.callSequence)
+	}
+}
+
+func TestCreateImageGenerateFallsBackWhenContextAccountChanges(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-prev-response-account-change-1",
+		TurnID:         "turn-prev-response-account-change-1",
+		Mode:           "generate",
+		Prompt:         "continue image after account change",
+		Model:          "gpt-image-2",
+		Count:          1,
+		ContextReference: &imageTaskContextReferencePayload{
+			ResponseID:      "resp_123",
+			SourceAccountID: "different-account",
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-prev-response-account-change-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) == 0 {
+		t.Fatal("callSequence = empty, want generate fallback execution")
+	}
+	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
+	if strings.Contains(lastCall, ":previous-response") {
+		t.Fatalf("callSequence = %#v, want plain generate fallback", recorder.callSequence)
+	}
+	if !strings.Contains(lastCall, ":generate") {
+		t.Fatalf("callSequence = %#v, want generate fallback", recorder.callSequence)
 	}
 }
 

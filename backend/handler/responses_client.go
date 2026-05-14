@@ -9,6 +9,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/gif"
+	"image/jpeg"
+	_ "image/png"
 	"io"
 	"net/http"
 	"strings"
@@ -19,13 +23,15 @@ import (
 )
 
 const (
-	codexResponsesBaseURL        = "https://chatgpt.com/backend-api/codex"
-	codexResponsesUserAgent      = "codex-tui/0.118.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9 (codex-tui; 0.118.0)"
-	codexResponsesOriginator     = "codex-tui"
-	maxResponsesInlineImages     = 16
-	maxResponsesInlineImageBytes = 50_000_000 - 1
-	maxResponsesInlineTotalBytes = 128 << 20
-	maxResponsesSSELineBytes     = 128 << 20
+	codexResponsesBaseURL          = "https://chatgpt.com/backend-api/codex"
+	codexResponsesUserAgent        = "codex-tui/0.118.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9 (codex-tui; 0.118.0)"
+	codexResponsesOriginator       = "codex-tui"
+	maxResponsesInlineEditImages   = 1
+	maxResponsesInlineEditBytes    = 768 << 10
+	maxResponsesReferenceImages    = 8
+	maxResponsesReferenceBytes     = 2 << 20
+	maxResponsesReferenceThumbSide = 768
+	maxResponsesSSELineBytes       = 128 << 20
 )
 
 type ImageWorkflowClient interface {
@@ -99,17 +105,28 @@ func (c *ResponsesClient) GenerateImage(ctx context.Context, prompt, model strin
 }
 
 func (c *ResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]ImageResult, error) {
-	return c.generateViaResponsesWithAction(ctx, buildResponsesContextPrompt(prompt, previousResponseID), model, size, quality, background, nil, nil, previousResponseID, "auto")
+	return c.generateViaResponses(ctx, buildResponsesPrompt(prompt), model, size, quality, background, nil, nil, previousResponseID)
 }
 
 func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]ImageResult, error) {
 	if len(images) == 0 {
 		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
 	}
-	return c.generateViaResponsesWithAction(ctx, buildResponsesReferencePrompt(prompt, len(images)), model, size, quality, background, images, nil, "", "generate")
+	references, err := prepareResponsesReferenceImages(images)
+	if err != nil {
+		return nil, err
+	}
+	return c.generateViaResponsesWithAction(ctx, buildResponsesReferencePrompt(prompt, len(references)), model, size, quality, background, references, nil, "", "generate")
 }
 
 func (c *ResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]ImageResult, error) {
+	if len(mask) == 0 && len(images) > 1 {
+		references, err := prepareResponsesReferenceImages(images)
+		if err != nil {
+			return nil, err
+		}
+		return c.generateViaResponsesWithAction(ctx, buildResponsesEditPrompt(prompt, len(references), false), model, size, quality, "", references, nil, "", "edit")
+	}
 	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
 }
 
@@ -120,7 +137,7 @@ func (c *ResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Cont
 	if !SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
-	return c.generateViaResponses(ctx, buildResponsesEditPrompt(buildResponsesContextPrompt(prompt, previousResponseID), len(images), len(mask) > 0), model, size, quality, "", images, mask, "")
+	return c.generateViaResponses(ctx, buildResponsesEditPrompt(prompt, len(images), len(mask) > 0), model, size, quality, "", images, mask, previousResponseID)
 }
 
 func (c *ResponsesClient) InpaintImageByMask(
@@ -199,11 +216,13 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		"tool_choice":         map[string]any{"type": "image_generation"},
 		"instructions":        instructions,
 		"stream":              true,
-		"store":               false,
+		"store":               true,
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
 	}
-	_ = strings.TrimSpace(previousResponseID)
+	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
+		payload["previous_response_id"] = previousResponseID
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -428,15 +447,6 @@ func buildResponsesPrompt(prompt string) string {
 	return strings.TrimSpace(prompt)
 }
 
-func buildResponsesContextPrompt(prompt string, responseID string) string {
-	prompt = strings.TrimSpace(prompt)
-	responseID = strings.TrimSpace(responseID)
-	if responseID == "" {
-		return prompt
-	}
-	return strings.TrimSpace("Continue from the prior image response context " + responseID + ". Keep visual continuity with the previous result while following the current request.\n\nCurrent request:\n" + prompt)
-}
-
 func buildResponsesReferencePrompt(prompt string, imageCount int) string {
 	fullPrompt := strings.TrimSpace(prompt)
 	if imageCount > 0 {
@@ -539,22 +549,90 @@ func mimeTypeFromOutputFormat(outputFormat string) string {
 }
 
 func SupportsResponsesInlineEdit(images [][]byte, mask []byte) bool {
-	if len(images) == 0 || len(images) > maxResponsesInlineImages {
+	if len(images) == 0 || len(images) > maxResponsesInlineEditImages {
 		return false
 	}
 
 	totalBytes := 0
 	for _, image := range images {
-		if len(image) == 0 || len(image) > maxResponsesInlineImageBytes {
+		if len(image) == 0 || len(image) > maxResponsesInlineEditBytes {
 			return false
 		}
 		totalBytes += len(image)
 	}
-	if len(mask) > maxResponsesInlineImageBytes {
+	if len(mask) > maxResponsesInlineEditBytes {
 		return false
 	}
 	totalBytes += len(mask)
-	return totalBytes > 0 && totalBytes <= maxResponsesInlineTotalBytes
+	return totalBytes > 0 && totalBytes <= maxResponsesInlineEditBytes
+}
+
+func SupportsResponsesReferenceImages(images [][]byte) bool {
+	if len(images) == 0 || len(images) > maxResponsesReferenceImages {
+		return false
+	}
+	for _, image := range images {
+		if len(image) == 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func prepareResponsesReferenceImages(images [][]byte) ([][]byte, error) {
+	if !SupportsResponsesReferenceImages(images) {
+		return nil, fmt.Errorf("responses reference image payload is too large")
+	}
+	prepared := make([][]byte, 0, len(images))
+	totalBytes := 0
+	for _, image := range images {
+		thumb, err := encodeResponsesReferenceThumbnail(image)
+		if err != nil {
+			return nil, err
+		}
+		totalBytes += len(thumb)
+		if totalBytes > maxResponsesReferenceBytes {
+			return nil, fmt.Errorf("responses reference image payload is too large")
+		}
+		prepared = append(prepared, thumb)
+	}
+	return prepared, nil
+}
+
+func encodeResponsesReferenceThumbnail(data []byte) ([]byte, error) {
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("decode reference image: %w", err)
+	}
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return nil, fmt.Errorf("decode reference image: empty bounds")
+	}
+	maxSide := max(width, height)
+	if maxSide <= maxResponsesReferenceThumbSide {
+		return encodeResponsesReferenceJPEG(img)
+	}
+	nextWidth := max(1, width*maxResponsesReferenceThumbSide/maxSide)
+	nextHeight := max(1, height*maxResponsesReferenceThumbSide/maxSide)
+	thumb := image.NewRGBA(image.Rect(0, 0, nextWidth, nextHeight))
+	for y := 0; y < nextHeight; y++ {
+		sourceY := bounds.Min.Y + y*height/nextHeight
+		for x := 0; x < nextWidth; x++ {
+			sourceX := bounds.Min.X + x*width/nextWidth
+			thumb.Set(x, y, img.At(sourceX, sourceY))
+		}
+	}
+	return encodeResponsesReferenceJPEG(thumb)
+}
+
+func encodeResponsesReferenceJPEG(img image.Image) ([]byte, error) {
+	var buffer bytes.Buffer
+	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: 82}); err != nil {
+		return nil, fmt.Errorf("encode reference thumbnail: %w", err)
+	}
+	return buffer.Bytes(), nil
 }
 
 func (c *ResponsesClient) SetRequestedImageModel(model string) {

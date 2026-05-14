@@ -138,7 +138,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil {
 			return nil, err
 		}
-		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
+		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask) || (len(mask) == 0 && handler.SupportsResponsesReferenceImages(imageFiles))
 		items, retryable, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
@@ -191,14 +191,20 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					}
 				}
 				if task.ContextReference != nil {
-					if task.ContextReference.ResponseID != "" {
-						if generator, ok := client.(interface {
-							GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
-						}); ok {
-							return generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
+					sameSourceAccount := strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
+					if sameSourceAccount && task.ContextReference.ResponseID != "" {
+						if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
+							if generator, ok := client.(interface {
+								GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
+							}); ok {
+								results, err := generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
+								if err == nil || !isResponsesPreviousResponseContextError(err) {
+									return results, err
+								}
+							}
 						}
 					}
-					if task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+					if sameSourceAccount && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
 						if generator, ok := client.(interface {
 							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
 						}); ok {
@@ -206,7 +212,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 						}
 					}
 				}
-				if handler.SupportsResponsesInlineEdit(referenceImageFiles, nil) {
+				if handler.SupportsResponsesReferenceImages(referenceImageFiles) {
 					if generator, ok := client.(interface {
 						GenerateImageWithReferenceImages(context.Context, string, string, int, string, string, string, [][]byte) ([]handler.ImageResult, error)
 					}); ok {
