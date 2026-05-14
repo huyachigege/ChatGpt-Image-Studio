@@ -29,13 +29,15 @@ function clampScale(scale: number) {
   return Math.min(4, Math.max(0.5, scale));
 }
 
-function touchDistance(first: Touch, second: Touch) {
+type TouchPoint = Pick<React.Touch, "clientX" | "clientY">;
+
+function touchDistance(first: TouchPoint, second: TouchPoint) {
   const deltaX = second.clientX - first.clientX;
   const deltaY = second.clientY - first.clientY;
   return Math.hypot(deltaX, deltaY);
 }
 
-function touchCenter(first: Touch, second: Touch) {
+function touchCenter(first: TouchPoint, second: TouchPoint) {
   return {
     x: (first.clientX + second.clientX) / 2,
     y: (first.clientY + second.clientY) / 2,
