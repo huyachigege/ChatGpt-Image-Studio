@@ -368,6 +368,13 @@ export type ConfigPayload = {
     requestTimeout: number;
     routeStrategy: "images_api" | "codex_responses" | "auto";
   };
+  externalResponses: {
+    enabled: boolean;
+    baseUrl: string;
+    apiKey: string;
+    model: string;
+    requestTimeout: number;
+  };
   newapi: {
     baseUrl: string;
     username: string;

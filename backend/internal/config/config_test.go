@@ -216,6 +216,46 @@ func TestValidateNormalizesResponsesOnlyImageModels(t *testing.T) {
 	}
 }
 
+func TestValidateExternalResponsesConfig(t *testing.T) {
+	cfg := &Config{
+		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{
+			Enabled:        true,
+			BaseURL:        " https://api.example.com/ ",
+			APIKey:         " key ",
+			Model:          " model-x ",
+			RequestTimeout: 0,
+		},
+	}
+
+	if err := cfg.validate(); err != nil {
+		t.Fatalf("validate() returned error: %v", err)
+	}
+	if cfg.ExternalResponses.BaseURL != "https://api.example.com" {
+		t.Fatalf("BaseURL = %q, want trimmed URL", cfg.ExternalResponses.BaseURL)
+	}
+	if cfg.ExternalResponses.APIKey != "key" {
+		t.Fatalf("APIKey = %q, want trimmed key", cfg.ExternalResponses.APIKey)
+	}
+	if cfg.ExternalResponses.Model != "model-x" {
+		t.Fatalf("Model = %q, want model-x", cfg.ExternalResponses.Model)
+	}
+	if cfg.ExternalResponses.RequestTimeout != 300 {
+		t.Fatalf("RequestTimeout = %d, want 300", cfg.ExternalResponses.RequestTimeout)
+	}
+}
+
+func TestValidateExternalResponsesRequiresFieldsWhenEnabled(t *testing.T) {
+	cfg := &Config{
+		ChatGPT:           ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{Enabled: true},
+	}
+
+	if err := cfg.validate(); err == nil || !strings.Contains(err.Error(), "external_responses.base_url") {
+		t.Fatalf("validate() error = %v, want base_url requirement", err)
+	}
+}
+
 func TestValidatePreservesLegacyImageModels(t *testing.T) {
 	cfg := &Config{
 		ChatGPT: ChatGPTConfig{

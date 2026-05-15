@@ -163,6 +163,13 @@ function defaultConfigPayload(): ConfigPayload {
       requestTimeout: 60,
       routeStrategy: "images_api",
     },
+    externalResponses: {
+      enabled: false,
+      baseUrl: "",
+      apiKey: "",
+      model: "gpt-5",
+      requestTimeout: 300,
+    },
     newapi: {
       baseUrl: "",
       username: "",
@@ -248,6 +255,7 @@ function normalizeConfigPayload(
     sync: { ...defaults.sync, ...next.sync },
     proxy: { ...defaults.proxy, ...next.proxy },
     cpa: { ...defaults.cpa, ...next.cpa },
+    externalResponses: { ...defaults.externalResponses, ...next.externalResponses },
     newapi: { ...defaults.newapi, ...next.newapi },
     sub2api: { ...defaults.sub2api, ...next.sub2api },
     log: { ...defaults.log, ...next.log },

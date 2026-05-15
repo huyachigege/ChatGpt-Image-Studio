@@ -86,6 +86,13 @@ type configPayload struct {
 		RequestTimeout int    `json:"requestTimeout"`
 		RouteStrategy  string `json:"routeStrategy"`
 	} `json:"cpa"`
+	ExternalResponses struct {
+		Enabled        bool   `json:"enabled"`
+		BaseURL        string `json:"baseUrl"`
+		APIKey         string `json:"apiKey"`
+		Model          string `json:"model"`
+		RequestTimeout int    `json:"requestTimeout"`
+	} `json:"externalResponses"`
 	NewAPI struct {
 		BaseURL        string `json:"baseUrl"`
 		Username       string `json:"username"`
@@ -212,6 +219,13 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"api_key":         payload.CPA.APIKey,
 			"request_timeout": payload.CPA.RequestTimeout,
 			"route_strategy":  payload.CPA.RouteStrategy,
+		},
+		"external_responses": {
+			"enabled":         payload.ExternalResponses.Enabled,
+			"base_url":        payload.ExternalResponses.BaseURL,
+			"api_key":         payload.ExternalResponses.APIKey,
+			"model":           payload.ExternalResponses.Model,
+			"request_timeout": payload.ExternalResponses.RequestTimeout,
 		},
 		"newapi": {
 			"base_url":        payload.NewAPI.BaseURL,
@@ -420,6 +434,12 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.CPA.APIKey = cfg.CPA.APIKey
 	payload.CPA.RequestTimeout = cfg.CPA.RequestTimeout
 	payload.CPA.RouteStrategy = cfg.CPA.RouteStrategy
+
+	payload.ExternalResponses.Enabled = cfg.ExternalResponses.Enabled
+	payload.ExternalResponses.BaseURL = cfg.ExternalResponses.BaseURL
+	payload.ExternalResponses.APIKey = cfg.ExternalResponses.APIKey
+	payload.ExternalResponses.Model = cfg.ExternalResponses.Model
+	payload.ExternalResponses.RequestTimeout = cfg.ExternalResponses.RequestTimeout
 
 	payload.NewAPI.BaseURL = cfg.NewAPI.BaseURL
 	payload.NewAPI.Username = cfg.NewAPI.Username

@@ -117,6 +117,14 @@ type CPAConfig struct {
 	RouteStrategy  string `toml:"route_strategy"`
 }
 
+type ExternalResponsesConfig struct {
+	Enabled        bool   `toml:"enabled"`
+	BaseURL        string `toml:"base_url"`
+	APIKey         string `toml:"api_key"`
+	Model          string `toml:"model"`
+	RequestTimeout int    `toml:"request_timeout"`
+}
+
 type NewAPIConfig struct {
 	BaseURL        string `toml:"base_url"`
 	Username       string `toml:"username"`
@@ -142,17 +150,18 @@ type Config struct {
 	loaded bool         `toml:"-"`
 	paths  Paths        `toml:"-"`
 
-	App      AppConfig      `toml:"app"`
-	Server   ServerConfig   `toml:"server"`
-	ChatGPT  ChatGPTConfig  `toml:"chatgpt"`
-	Accounts AccountsConfig `toml:"accounts"`
-	Storage  StorageConfig  `toml:"storage"`
-	Sync     SyncConfig     `toml:"sync"`
-	Log      LogConfig      `toml:"log"`
-	Proxy    ProxyConfig    `toml:"proxy"`
-	CPA      CPAConfig      `toml:"cpa"`
-	NewAPI   NewAPIConfig   `toml:"newapi"`
-	Sub2API  Sub2APIConfig  `toml:"sub2api"`
+	App               AppConfig               `toml:"app"`
+	Server            ServerConfig            `toml:"server"`
+	ChatGPT           ChatGPTConfig           `toml:"chatgpt"`
+	Accounts          AccountsConfig          `toml:"accounts"`
+	Storage           StorageConfig           `toml:"storage"`
+	Sync              SyncConfig              `toml:"sync"`
+	Log               LogConfig               `toml:"log"`
+	Proxy             ProxyConfig             `toml:"proxy"`
+	CPA               CPAConfig               `toml:"cpa"`
+	ExternalResponses ExternalResponsesConfig `toml:"external_responses"`
+	NewAPI            NewAPIConfig            `toml:"newapi"`
+	Sub2API           Sub2APIConfig           `toml:"sub2api"`
 }
 
 func New(rootDir string) *Config {
@@ -441,6 +450,7 @@ func (c *Config) copyFrom(other *Config) {
 	c.Log = other.Log
 	c.Proxy = other.Proxy
 	c.CPA = other.CPA
+	c.ExternalResponses = other.ExternalResponses
 	c.NewAPI = other.NewAPI
 	c.Sub2API = other.Sub2API
 	c.paths = other.paths
@@ -490,6 +500,12 @@ func (c *Config) CPAImageRouteStrategy() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return normalizeCPAImageRouteStrategy(c.CPA.RouteStrategy)
+}
+
+func (c *Config) ExternalResponsesConfig() ExternalResponsesConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.ExternalResponses
 }
 
 func (c *Config) ImageQueueConfig() (int, int, time.Duration) {
@@ -613,6 +629,23 @@ func (c *Config) validate() error {
 	c.ChatGPT.PaidImageModel = normalizeConfiguredImageRouteModel(c.ChatGPT.PaidImageRoute, c.ChatGPT.PaidImageModel, "gpt-5.4-mini", false)
 
 	c.CPA.RouteStrategy = normalizeCPAImageRouteStrategy(c.CPA.RouteStrategy)
+	c.ExternalResponses.BaseURL = strings.TrimRight(strings.TrimSpace(c.ExternalResponses.BaseURL), "/")
+	c.ExternalResponses.APIKey = strings.TrimSpace(c.ExternalResponses.APIKey)
+	c.ExternalResponses.Model = strings.TrimSpace(c.ExternalResponses.Model)
+	if c.ExternalResponses.RequestTimeout <= 0 {
+		c.ExternalResponses.RequestTimeout = 300
+	}
+	if c.ExternalResponses.Enabled {
+		if c.ExternalResponses.BaseURL == "" {
+			return fmt.Errorf("external_responses.base_url is required when external_responses.enabled = true")
+		}
+		if c.ExternalResponses.APIKey == "" {
+			return fmt.Errorf("external_responses.api_key is required when external_responses.enabled = true")
+		}
+		if c.ExternalResponses.Model == "" {
+			return fmt.Errorf("external_responses.model is required when external_responses.enabled = true")
+		}
+	}
 	c.Storage.Backend = normalizeStorageBackend(c.Storage.Backend)
 	c.Storage.ConfigBackend = normalizeConfigBackend(c.Storage.ConfigBackend)
 	legacyImageStorage := strings.ToLower(strings.TrimSpace(c.Storage.ImageStorage))

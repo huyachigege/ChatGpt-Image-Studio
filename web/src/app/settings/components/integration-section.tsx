@@ -21,7 +21,7 @@ import {
   type Sub2APIGroupOption,
 } from "@/lib/api";
 
-import { ConfigSection, Field, TooltipDetails, type SetConfigSection } from "./shared";
+import { ConfigSection, Field, ToggleField, TooltipDetails, type SetConfigSection } from "./shared";
 
 type IntegrationSectionProps = {
   config: ConfigPayload;
@@ -278,6 +278,77 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           <Input
             value={config.newapi.sessionCookie}
             onChange={(event) => setSection("newapi", { ...config.newapi, sessionCookie: event.target.value })}
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
+      </ConfigSection>
+
+      <ConfigSection
+        title="外部 Responses"
+        description="启用后，图片 responses 链路会优先请求你配置的外部 /v1/responses 接口；如果外部接口失败，会自动回退到标准账号官网 responses。"
+      >
+        <ToggleField
+          label="启用外部 Responses 优先"
+          hint="关闭时保持现有官网账号 responses 行为；开启时需要填写 API 地址、API Key 和模型。"
+          checked={config.externalResponses.enabled}
+          onCheckedChange={(checked) =>
+            setSection("externalResponses", {
+              ...config.externalResponses,
+              enabled: checked,
+            })
+          }
+        />
+
+        <Field label="API 地址" hint="填写支持 OpenAI-compatible /v1/responses 的服务根地址，例如 https://api.example.com。">
+          <Input
+            value={config.externalResponses.baseUrl}
+            onChange={(event) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                baseUrl: event.target.value,
+              })
+            }
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
+
+        <Field label="API Key" hint="请求外部 /v1/responses 时会作为 Authorization: Bearer 使用。">
+          <Input
+            type="password"
+            value={config.externalResponses.apiKey}
+            onChange={(event) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                apiKey: event.target.value,
+              })
+            }
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
+
+        <Field label="Responses 模型" hint="外部 /v1/responses payload 中的 model，例如 gpt-5 或供应商提供的兼容模型名。">
+          <Input
+            value={config.externalResponses.model}
+            onChange={(event) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                model: event.target.value,
+              })
+            }
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
+
+        <Field label="请求超时（秒）" hint="仅用于外部 /v1/responses 请求；超时或报错后会回退官网 responses。">
+          <Input
+            type="number"
+            value={String(config.externalResponses.requestTimeout)}
+            onChange={(event) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                requestTimeout: Number(event.target.value || 0),
+              })
+            }
             className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
           />
         </Field>

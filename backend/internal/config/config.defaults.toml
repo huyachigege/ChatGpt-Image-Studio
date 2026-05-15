@@ -102,6 +102,15 @@ api_key = ""
 request_timeout = 60
 route_strategy = "images_api"
 
+# 外部 Responses 图片接口配置。
+# 启用后，Studio 的 responses 链路会优先请求 base_url + /v1/responses；失败后回退官方账号 responses。
+[external_responses]
+enabled = false
+base_url = ""
+api_key = ""
+model = "gpt-5"
+request_timeout = 300
+
 [newapi]
 base_url = ""
 username = ""

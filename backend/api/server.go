@@ -29,31 +29,32 @@ import (
 )
 
 type Server struct {
-	cfg                    *config.Config
-	runtimeMu              sync.RWMutex
-	store                  *accounts.Store
-	syncClient             *cliproxy.Client
-	syncRunMu              sync.RWMutex
-	syncRunCache           map[string]*sourceSyncRunResult
-	accountRefreshMu       sync.RWMutex
-	accountRefreshRun      *accountRefreshRunResult
-	accountRefreshCancel   context.CancelFunc
-	staticDir              string
-	reqLogs                *imageRequestLogStore
-	imageAdmission         *imageAdmissionController
-	imageTasks             *imageTaskManager
-	officialClientFactory  func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
-	responsesClientFactory func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
-	cpaClientFactory       func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient
-	newAPIClientFactory    func(cfg *config.Config) *newapi.Client
-	sub2apiClientFactory   func(cfg *config.Config) *sub2api.Client
-	sourceClientMu         sync.Mutex
-	cachedNewAPIClient     *newapi.Client
-	cachedNewAPIKey        string
-	cachedSub2APIClient    *sub2api.Client
-	cachedSub2APIKey       string
-	responsesSessionMu     sync.Mutex
-	responsesSessions      map[string]string
+	cfg                            *config.Config
+	runtimeMu                      sync.RWMutex
+	store                          *accounts.Store
+	syncClient                     *cliproxy.Client
+	syncRunMu                      sync.RWMutex
+	syncRunCache                   map[string]*sourceSyncRunResult
+	accountRefreshMu               sync.RWMutex
+	accountRefreshRun              *accountRefreshRunResult
+	accountRefreshCancel           context.CancelFunc
+	staticDir                      string
+	reqLogs                        *imageRequestLogStore
+	imageAdmission                 *imageAdmissionController
+	imageTasks                     *imageTaskManager
+	officialClientFactory          func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
+	responsesClientFactory         func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
+	externalResponsesClientFactory func(cfg config.ExternalResponsesConfig) imageWorkflowClient
+	cpaClientFactory               func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient
+	newAPIClientFactory            func(cfg *config.Config) *newapi.Client
+	sub2apiClientFactory           func(cfg *config.Config) *sub2api.Client
+	sourceClientMu                 sync.Mutex
+	cachedNewAPIClient             *newapi.Client
+	cachedNewAPIKey                string
+	cachedSub2APIClient            *sub2api.Client
+	cachedSub2APIKey               string
+	responsesSessionMu             sync.Mutex
+	responsesSessions              map[string]string
 }
 
 func (s *Server) Close() error {
@@ -141,6 +142,9 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 		},
 		responsesClientFactory: func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
 			return handler.NewResponsesClientWithProxyAndConfig(accessToken, proxyURL, authData, requestConfig)
+		},
+		externalResponsesClientFactory: func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+			return newExternalResponsesClient(cfg)
 		},
 		cpaClientFactory: func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient {
 			return newCPAImageClient(baseURL, apiKey, timeout, routeStrategy)
@@ -1446,15 +1450,34 @@ func (s *Server) newOfficialWorkflowClient(accessToken string, authData map[stri
 }
 
 func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[string]any) imageWorkflowClient {
+	var official imageWorkflowClient
 	if s != nil && s.responsesClientFactory != nil {
-		return s.responsesClientFactory(accessToken, s.cfg.ChatGPTProxyURL(), authData, s.imageRequestConfig())
+		official = s.responsesClientFactory(accessToken, s.cfg.ChatGPTProxyURL(), authData, s.imageRequestConfig())
+	} else {
+		official = handler.NewResponsesClientWithProxyAndConfig(
+			accessToken,
+			s.cfg.ChatGPTProxyURL(),
+			authData,
+			s.imageRequestConfig(),
+		)
 	}
-	return handler.NewResponsesClientWithProxyAndConfig(
-		accessToken,
-		s.cfg.ChatGPTProxyURL(),
-		authData,
-		s.imageRequestConfig(),
-	)
+	if s == nil || s.cfg == nil {
+		return official
+	}
+	externalConfig := s.cfg.ExternalResponsesConfig()
+	if !externalConfig.Enabled || externalConfig.BaseURL == "" || externalConfig.APIKey == "" || externalConfig.Model == "" {
+		return official
+	}
+	var external imageWorkflowClient
+	if s.externalResponsesClientFactory != nil {
+		external = s.externalResponsesClientFactory(externalConfig)
+	} else {
+		external = newExternalResponsesClient(externalConfig)
+	}
+	if external == nil {
+		return official
+	}
+	return newFallbackResponsesClient(external, official)
 }
 
 func (s *Server) newCPAWorkflowClient() cpaRouteAwareImageWorkflowClient {
