@@ -1468,6 +1468,7 @@ func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[str
 	if !externalConfig.Enabled || externalConfig.BaseURL == "" || externalConfig.APIKey == "" || externalConfig.Model == "" {
 		return official
 	}
+	legacy := s.newOfficialWorkflowClient(accessToken, authData)
 	var external imageWorkflowClient
 	if s.externalResponsesClientFactory != nil {
 		external = s.externalResponsesClientFactory(externalConfig)
@@ -1477,7 +1478,8 @@ func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[str
 	if external == nil {
 		return official
 	}
-	return newFallbackResponsesClient(external, official)
+	responses := newNamedFallbackResponsesClient(official, external, "official responses", "external responses")
+	return newNamedFallbackResponsesClient(responses, legacy, "responses", "legacy")
 }
 
 func (s *Server) newCPAWorkflowClient() cpaRouteAwareImageWorkflowClient {
@@ -1923,7 +1925,9 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 	admissionInfo = imageAdmissionFromContext(ctx)
 	if err != nil {
-		store.RecordImageResult(authFile.AccessToken, false)
+		if !isExternalResponsesRoute(route) {
+			store.RecordImageResult(authFile.AccessToken, false)
+		}
 		entry := imageRequestLogEntry{
 			StartedAt:            startedAt.Format(time.RFC3339Nano),
 			FinishedAt:           time.Now().Format(time.RFC3339Nano),
@@ -1952,13 +1956,17 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		} else {
 			entry.ErrorCode = inferErrorCode(err)
 		}
+		s.applyExternalResponsesLogAccount(route, &entry)
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
 		if isImageRateLimitError(err) {
-			store.RemoveImageRouteCapability(authFile.AccessToken, route)
-			store.MarkImageAccountLimited(authFile.AccessToken)
-			return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，正在切换下一个账号")
+			if !isExternalResponsesRoute(route) {
+				store.RemoveImageRouteCapability(authFile.AccessToken, route)
+				store.MarkImageAccountLimited(authFile.AccessToken)
+				return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，正在切换下一个账号")
+			}
+			return nil, false, err
 		}
 		if isTransientImageStreamError(err) {
 			return nil, true, err
@@ -1974,7 +1982,9 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 
 	if quotaErr := s.consumeUserImageQuota(ctx, imageQuotaKind(account.Type, direction, route)); quotaErr != nil {
-		store.RecordImageResult(authFile.AccessToken, false)
+		if !isExternalResponsesRoute(route) {
+			store.RecordImageResult(authFile.AccessToken, false)
+		}
 		entry := imageRequestLogEntry{
 			StartedAt:            startedAt.Format(time.RFC3339Nano),
 			FinishedAt:           time.Now().Format(time.RFC3339Nano),
@@ -2003,13 +2013,16 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		} else {
 			entry.ErrorCode = inferErrorCode(quotaErr)
 		}
+		s.applyExternalResponsesLogAccount(route, &entry)
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
 		return nil, false, quotaErr
 	}
 
-	store.RecordImageResult(authFile.AccessToken, true)
+	if !isExternalResponsesRoute(route) {
+		store.RecordImageResult(authFile.AccessToken, true)
+	}
 	entry := imageRequestLogEntry{
 		StartedAt:            startedAt.Format(time.RFC3339Nano),
 		FinishedAt:           time.Now().Format(time.RFC3339Nano),
@@ -2031,6 +2044,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		QueueWaitMS:          admissionInfo.QueueWaitMS,
 		InflightCountAtStart: admissionInfo.InflightCountAtStart,
 	}
+	s.applyExternalResponsesLogAccount(route, &entry)
 	applyImageRoutingLogFields(routingDecision, &entry)
 	metadata.applyTo(&entry)
 	items := buildImageResponse(r, client, results, responseFormat, account.ID, s.cfg.ResolvePath(s.cfg.Storage.ImageDir))
@@ -2782,6 +2796,28 @@ func resolveLoggedImageRoute(configuredRoute string, client any) string {
 		}
 	}
 	return route
+}
+
+func isExternalResponsesRoute(route string) bool {
+	return strings.EqualFold(strings.TrimSpace(route), "external_responses")
+}
+
+func (s *Server) applyExternalResponsesLogAccount(route string, entry *imageRequestLogEntry) {
+	if entry == nil || !isExternalResponsesRoute(route) {
+		return
+	}
+	entry.AccountType = "External Responses"
+	entry.AccountEmail = s.externalResponsesLogAccount()
+	entry.AccountFile = ""
+}
+
+func (s *Server) externalResponsesLogAccount() string {
+	if s != nil && s.cfg != nil {
+		if baseURL := strings.TrimSpace(s.cfg.ExternalResponsesConfig().BaseURL); baseURL != "" {
+			return baseURL
+		}
+	}
+	return "external_responses"
 }
 
 func resolveLoggedImageToolModel(requestedModel string) string {

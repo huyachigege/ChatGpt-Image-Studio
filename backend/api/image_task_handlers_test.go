@@ -374,6 +374,140 @@ func TestCreateImageTaskSourceAccountRateLimitFallsBack(t *testing.T) {
 	}
 }
 
+func TestCreateImageTaskSelectionEditFallsBackToSourceMaskEdit(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "legacy",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		behavior: compatClientBehavior{
+			officialInpaintErrors: map[string]error{
+				"token-compat": errors.New("conversation_not_found"),
+			},
+		},
+	})
+
+	accountID := compatPrimaryAccountID(t, server)
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-selection-fallback-1",
+		TurnID:         "turn-selection-fallback-1",
+		Mode:           "edit",
+		Prompt:         "selection edit fallback",
+		Model:          "gpt-image-2",
+		Count:          1,
+		SourceImages: []imageTaskSourceImagePayload{
+			{
+				ID:      "source-1",
+				Role:    "image",
+				Name:    "source.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+			{
+				ID:      "mask-1",
+				Role:    "mask",
+				Name:    "mask.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+		},
+		SourceReference: &imageTaskSourceReferencePayload{
+			OriginalFileID:  "file-1",
+			OriginalGenID:   "gen-1",
+			ConversationID:  "conv-missing",
+			ParentMessageID: "msg-1",
+			SourceAccountID: accountID,
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-selection-fallback-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) != 2 {
+		t.Fatalf("callSequence = %#v, want selection edit then source-mask edit", recorder.callSequence)
+	}
+	if !strings.Contains(recorder.callSequence[0], ":selection-edit") || !strings.Contains(recorder.callSequence[1], ":edit") {
+		t.Fatalf("callSequence = %#v, want selection edit fallback to edit", recorder.callSequence)
+	}
+}
+
+func TestCreateImageTaskRetriesGenericEditErrorWithNextAccount(t *testing.T) {
+	oldBackoffBase := imageTaskRetryBackoffBase
+	oldBackoffMax := imageTaskRetryBackoffMax
+	imageTaskRetryBackoffBase = 20 * time.Millisecond
+	imageTaskRetryBackoffMax = 20 * time.Millisecond
+	t.Cleanup(func() {
+		imageTaskRetryBackoffBase = oldBackoffBase
+		imageTaskRetryBackoffMax = oldBackoffMax
+	})
+
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{
+				fileName:    "edit-transient.json",
+				accessToken: "token-edit-transient",
+				accountType: "Plus",
+				priority:    100,
+				quota:       5,
+				status:      "正常",
+			},
+			{
+				fileName:    "edit-healthy.json",
+				accessToken: "token-edit-healthy",
+				accountType: "Plus",
+				priority:    10,
+				quota:       5,
+				status:      "正常",
+			},
+		},
+		behavior: compatClientBehavior{
+			responsesEditErrors: map[string]error{
+				"token-edit-transient": errors.New("responses returned 500: temporary upstream failure"),
+			},
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID: "conv-edit-retry-1",
+		TurnID:         "turn-edit-retry-1",
+		Mode:           "edit",
+		Prompt:         "edit retry",
+		Model:          "gpt-image-2",
+		Count:          1,
+		Size:           "2048x2048",
+		Quality:        "high",
+		SourceImages: []imageTaskSourceImagePayload{
+			{
+				ID:      "source-1",
+				Role:    "image",
+				Name:    "source.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+		},
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusSucceeded)
+	if len(recorder.callSequence) < 2 {
+		t.Fatalf("callSequence = %#v, want transient then healthy edit attempt", recorder.callSequence)
+	}
+	if !strings.Contains(recorder.callSequence[0], "token-edit-transient") {
+		t.Fatalf("callSequence[0] = %q, want first transient account", recorder.callSequence[0])
+	}
+	if !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], "token-edit-healthy") {
+		t.Fatalf("callSequence = %#v, want healthy fallback account", recorder.callSequence)
+	}
+}
+
 func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",

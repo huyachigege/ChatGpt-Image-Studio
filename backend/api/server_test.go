@@ -96,8 +96,28 @@ func TestResolveLoggedImageRouteUsesActualClientRoute(t *testing.T) {
 	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "responses"}); got != "responses" {
 		t.Fatalf("resolveLoggedImageRoute(responses, responses) = %q, want %q", got, "responses")
 	}
+	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "external_responses"}); got != "external_responses" {
+		t.Fatalf("resolveLoggedImageRoute(responses, external_responses) = %q, want %q", got, "external_responses")
+	}
 	if got := resolveLoggedImageRoute("legacy", loggedRouteStub{route: "conversation"}); got != "legacy" {
 		t.Fatalf("resolveLoggedImageRoute(legacy, conversation) = %q, want %q", got, "legacy")
+	}
+}
+
+func TestApplyExternalResponsesLogAccountUsesExternalBaseURL(t *testing.T) {
+	server := &Server{cfg: &config.Config{ExternalResponses: config.ExternalResponsesConfig{BaseURL: "https://external.example"}}}
+	entry := imageRequestLogEntry{AccountType: "Plus", AccountEmail: "account@example.com", AccountFile: "auth.json"}
+
+	server.applyExternalResponsesLogAccount("external_responses", &entry)
+
+	if entry.AccountEmail != "https://external.example" {
+		t.Fatalf("AccountEmail = %q, want external base url", entry.AccountEmail)
+	}
+	if entry.AccountType != "External Responses" {
+		t.Fatalf("AccountType = %q, want External Responses", entry.AccountType)
+	}
+	if entry.AccountFile != "" {
+		t.Fatalf("AccountFile = %q, want empty", entry.AccountFile)
 	}
 }
 

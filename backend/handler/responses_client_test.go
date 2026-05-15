@@ -174,8 +174,8 @@ func TestGenerateImageWithPreviousResponseUsesNativePreviousResponse(t *testing.
 	if got := requestBody["previous_response_id"]; got != "resp_123" {
 		t.Fatalf("payload previous_response_id = %v, want resp_123", got)
 	}
-	if got := requestBody["store"]; got != true {
-		t.Fatalf("payload store = %v, want true", got)
+	if got := requestBody["store"]; got != false {
+		t.Fatalf("payload store = %v, want false", got)
 	}
 	input := requestBody["input"].([]any)[0].(map[string]any)
 	content := input["content"].([]any)
@@ -186,6 +186,37 @@ func TestGenerateImageWithPreviousResponseUsesNativePreviousResponse(t *testing.
 	tool := requestBody["tools"].([]any)[0].(map[string]any)
 	if got := tool["action"]; got != "generate" {
 		t.Fatalf("tool action = %v, want generate", got)
+	}
+}
+
+func TestResponsesEditUsesThumbnailForLargeSingleImage(t *testing.T) {
+	var requestBody map[string]any
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &requestBody); err != nil {
+			return nil, err
+		}
+		stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"png"}]}}` + "\n\n"
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+	})}
+
+	largeImage := append(testPNGBytes(), make([]byte, maxResponsesInlineEditBytes+1)...)
+	_, err := client.EditImageByUpload(t.Context(), "edit this", "gpt-5.4-mini", [][]byte{largeImage}, nil, "1536x1024", "high")
+	if err != nil {
+		t.Fatalf("EditImageByUpload() returned error: %v", err)
+	}
+	input := requestBody["input"].([]any)[0].(map[string]any)
+	content := input["content"].([]any)
+	if len(content) != 2 {
+		t.Fatalf("content length = %d, want text plus image", len(content))
+	}
+	part := content[1].(map[string]any)
+	if !strings.HasPrefix(part["image_url"].(string), "data:image/jpeg;base64,") {
+		t.Fatalf("image_url = %q, want jpeg thumbnail", part["image_url"])
 	}
 }
 

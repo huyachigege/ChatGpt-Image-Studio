@@ -120,7 +120,7 @@ func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, 
 }
 
 func (c *ResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]ImageResult, error) {
-	if len(mask) == 0 && len(images) > 1 {
+	if len(mask) == 0 && len(images) > 0 && !SupportsResponsesInlineEdit(images, nil) {
 		references, err := prepareResponsesReferenceImages(images)
 		if err != nil {
 			return nil, err
@@ -216,7 +216,7 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		"tool_choice":         map[string]any{"type": "image_generation"},
 		"instructions":        instructions,
 		"stream":              true,
-		"store":               true,
+		"store":               false,
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
 	}
@@ -259,6 +259,15 @@ func buildResponsesImageGenerationTool(size, quality, background string) (map[st
 	})
 }
 
+type ResponsesImageToolOptions struct {
+	RequestedModel string
+	Action         string
+	Size           string
+	Quality        string
+	Background     string
+	Mask           []byte
+}
+
 type responsesImageToolOptions struct {
 	RequestedModel string
 	Action         string
@@ -266,6 +275,17 @@ type responsesImageToolOptions struct {
 	Quality        string
 	Background     string
 	Mask           []byte
+}
+
+func BuildResponsesImageGenerationTool(options ResponsesImageToolOptions) (map[string]any, error) {
+	return buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{
+		RequestedModel: options.RequestedModel,
+		Action:         options.Action,
+		Size:           options.Size,
+		Quality:        options.Quality,
+		Background:     options.Background,
+		Mask:           options.Mask,
+	})
 }
 
 func buildResponsesImageGenerationToolWithOptions(options responsesImageToolOptions) (map[string]any, error) {
@@ -443,6 +463,18 @@ func (c *ResponsesClient) setResponsesHeaders(req *http.Request) {
 	req.Header.Set("Connection", "Keep-Alive")
 }
 
+func BuildResponsesPrompt(prompt string) string {
+	return buildResponsesPrompt(prompt)
+}
+
+func BuildResponsesReferencePrompt(prompt string, imageCount int) string {
+	return buildResponsesReferencePrompt(prompt, imageCount)
+}
+
+func BuildResponsesEditPrompt(prompt string, imageCount int, hasMask bool) string {
+	return buildResponsesEditPrompt(prompt, imageCount, hasMask)
+}
+
 func buildResponsesPrompt(prompt string) string {
 	return strings.TrimSpace(prompt)
 }
@@ -577,6 +609,14 @@ func SupportsResponsesReferenceImages(images [][]byte) bool {
 		}
 	}
 	return true
+}
+
+func PrepareResponsesReferenceImages(images [][]byte) ([][]byte, error) {
+	return prepareResponsesReferenceImages(images)
+}
+
+func EncodeResponsesImageDataURL(data []byte) string {
+	return encodeImageDataURL(data, detectMIME(data))
 }
 
 func prepareResponsesReferenceImages(images [][]byte) ([][]byte, error) {

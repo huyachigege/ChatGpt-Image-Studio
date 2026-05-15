@@ -112,11 +112,15 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if editor, ok := client.(interface {
 						EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
 					}); ok {
-						return editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
+						results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
+						if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+							return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+						}
+						return results, err
 					}
 					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 				}
-				return client.InpaintImageByMask(
+				results, err := client.InpaintImageByMask(
 					taskCtx,
 					prompt,
 					upstreamModel,
@@ -128,6 +132,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					task.Size,
 					task.Quality,
 				)
+				if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				}
+				return results, err
 			},
 			fakeReq,
 			false,
@@ -265,7 +273,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	}
 
 	if err != nil {
-		if retryable {
+		if retryable || shouldRetryImageRequestWithNextAccount(err) {
 			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}
 		}
 		return nil, err
@@ -284,6 +292,10 @@ func buildImageTaskEffectivePrompt(prompt string, conversationContext string) st
 		return prompt
 	}
 	return conversationContext + "\n\n本轮用户请求：\n" + prompt
+}
+
+func isSelectionEditContextFallbackError(err error) bool {
+	return requestErrorCode(err) == "source_context_missing" || isConversationContextError(err) || isResponsesPreviousResponseContextError(err)
 }
 
 func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image {

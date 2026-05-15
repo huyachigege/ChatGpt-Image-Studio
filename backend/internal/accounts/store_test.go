@@ -446,6 +446,26 @@ func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *test
 	}
 }
 
+func TestBuildPublicAccountDoesNotInferResponsesRouteFromHighQuota(t *testing.T) {
+	store := &Store{
+		states: map[string]RuntimeState{
+			"plus.json": {
+				Type:        "Plus",
+				Status:      "正常",
+				Quota:       120,
+				QuotaKnown:  true,
+				ImageRoutes: []string{"legacy"},
+			},
+		},
+	}
+
+	account := store.buildPublicAccount(LocalAuth{Name: "plus.json", AccessToken: "token-plus"}, SyncState{}, nil)
+
+	if AccountSupportsImageRoute(account, "responses") {
+		t.Fatalf("ImageRoutes = %v, want no responses inference from quota only", account.ImageRoutes)
+	}
+}
+
 func TestAcquireImageAuthFilteredWithDisabledOptionAllowsDisabledAccount(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")

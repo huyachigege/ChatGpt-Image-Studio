@@ -476,7 +476,7 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		task.Images[unitIndex].Status = "error"
 		task.Images[unitIndex].Error = "任务已取消"
 	} else if errors.As(err, &deferredErr) {
-		if code := requestErrorCode(deferredErr); code == "source_account_rate_limited" || code == "source_account_unavailable" || isInvalidImageTokenError(deferredErr) || isImageRateLimitError(deferredErr) {
+		if shouldRememberImageTaskFailedAttempt(deferredErr) {
 			imageTaskUnitRememberAttempt(&task.Units[unitIndex], deferredErr.accessToken)
 		}
 		task.Units[unitIndex].DeferredCount++
@@ -752,6 +752,10 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 			}, imageTaskBlocker{}, nil
 		}
 		if errors.Is(err, accounts.ErrSelectedImageGroupsExhausted) || errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
+			if len(excluded) > 0 {
+				imageTaskUnitClearAttempts(task, unitIndex)
+				return m.acquireLeaseForTask(task, unitIndex)
+			}
 			return nil, m.busyBlocker(task), nil
 		}
 		return nil, imageTaskBlocker{}, err
@@ -773,6 +777,10 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		}, imageTaskBlocker{}, nil
 	}
 	if errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
+		if len(excluded) > 0 {
+			imageTaskUnitClearAttempts(task, unitIndex)
+			return m.acquireLeaseForTask(task, unitIndex)
+		}
 		return nil, m.busyBlocker(task), nil
 	}
 	return nil, imageTaskBlocker{}, err
@@ -990,6 +998,22 @@ func imageTaskUnitRememberAttempt(unit *imageTaskUnit, accessToken string) {
 		unit.Attempted = map[string]struct{}{}
 	}
 	unit.Attempted[token] = struct{}{}
+}
+
+func imageTaskUnitClearAttempts(task *imageTask, unitIndex int) {
+	if task == nil || unitIndex < 0 || unitIndex >= len(task.Units) {
+		return
+	}
+	task.Units[unitIndex].Attempted = map[string]struct{}{}
+}
+
+func shouldRememberImageTaskFailedAttempt(err error) bool {
+	return requestErrorCode(err) == "source_account_rate_limited" ||
+		requestErrorCode(err) == "source_account_unavailable" ||
+		isInvalidImageTokenError(err) ||
+		isImageRateLimitError(err) ||
+		isTransientImageStreamError(err) ||
+		shouldRetryImageRequestWithNextAccount(err)
 }
 
 func (m *imageTaskManager) nextQueuedUnitIndexLocked(task *imageTask) int {

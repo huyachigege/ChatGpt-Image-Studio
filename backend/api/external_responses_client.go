@@ -20,14 +20,16 @@ import (
 const maxExternalResponsesSSELineBytes = 128 << 20
 
 type externalResponsesClient struct {
-	baseURL            string
-	apiKey             string
-	model              string
-	httpClient         *http.Client
-	lastRoute          string
-	lastModel          string
-	lastRequestBody    string
-	lastFallbackReason string
+	baseURL             string
+	apiKey              string
+	model               string
+	httpClient          *http.Client
+	requestedImageModel string
+	customInstructions  string
+	lastRoute           string
+	lastModel           string
+	lastRequestBody     string
+	lastFallbackReason  string
 }
 
 func newExternalResponsesClient(cfg config.ExternalResponsesConfig) *externalResponsesClient {
@@ -64,26 +66,43 @@ func (c *externalResponsesClient) DownloadAsBase64(ctx context.Context, url stri
 }
 
 func (c *externalResponsesClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, prompt, nil, nil, size, quality, background)
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, size, quality, background, "", "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, size, quality, background, previousResponseID, "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, prompt, images, nil, size, quality, background)
+	if len(images) == 0 {
+		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	}
+	references, err := handler.PrepareResponsesReferenceImages(images)
+	if err != nil {
+		return nil, err
+	}
+	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(references)), references, nil, size, quality, background, "", "generate")
 }
 
 func (c *externalResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
-	if len(images) == 0 {
-		return nil, fmt.Errorf("external responses edit requires at least one image")
+	if len(mask) == 0 && len(images) > 0 && !handler.SupportsResponsesInlineEdit(images, nil) {
+		references, err := handler.PrepareResponsesReferenceImages(images)
+		if err != nil {
+			return nil, err
+		}
+		return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(references), false), references, nil, size, quality, "", "", "edit")
 	}
-	return c.generateViaResponses(ctx, prompt, images, mask, size, quality, "")
+	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
 }
 
 func (c *externalResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.EditImageByUpload(ctx, prompt, model, images, mask, size, quality)
+	if len(images) == 0 {
+		return nil, fmt.Errorf("at least one image is required")
+	}
+	if !handler.SupportsResponsesInlineEdit(images, mask) {
+		return nil, fmt.Errorf("responses inline edit payload is too large")
+	}
+	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(images), len(mask) > 0), images, mask, size, quality, "", previousResponseID, "")
 }
 
 func (c *externalResponsesClient) InpaintImageByMask(ctx context.Context, prompt string, model string, originalFileID string, originalGenID string, conversationID string, parentMessageID string, mask []byte, size string, quality string) ([]handler.ImageResult, error) {
@@ -112,7 +131,14 @@ func (c *externalResponsesClient) ImageToolModel() string {
 	if c == nil {
 		return ""
 	}
-	return strings.TrimSpace(c.model)
+	tool, err := handler.BuildResponsesImageGenerationTool(handler.ResponsesImageToolOptions{RequestedModel: c.requestedImageModel})
+	if err != nil {
+		return ""
+	}
+	if model, _ := tool["model"].(string); strings.TrimSpace(model) != "" {
+		return strings.TrimSpace(model)
+	}
+	return ""
 }
 
 func (c *externalResponsesClient) LastRequestBody() string {
@@ -130,23 +156,32 @@ func (c *externalResponsesClient) LastFallbackReason() string {
 }
 
 func (c *externalResponsesClient) SetRequestedImageModel(model string) {
-	_ = model
+	if c == nil {
+		return
+	}
+	c.requestedImageModel = strings.TrimSpace(model)
 }
 
 func (c *externalResponsesClient) SetInstructions(instructions string) {
-	_ = instructions
+	if c == nil {
+		return
+	}
+	c.customInstructions = strings.TrimSpace(instructions)
 }
 
 func (c *externalResponsesClient) SetSessionID(sessionID string) {
 	_ = sessionID
 }
 
-func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, size, quality, background string) ([]handler.ImageResult, error) {
-	payload := c.buildResponsesRequest(prompt, images, mask, size, quality, background)
+func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, size, quality, background string, previousResponseID string, action string) ([]handler.ImageResult, error) {
+	payload, err := c.buildResponsesRequest(prompt, images, mask, size, quality, background, previousResponseID, action)
+	if err != nil {
+		return nil, err
+	}
 	return c.executeResponsesRequest(ctx, payload)
 }
 
-func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, size, quality, background string) map[string]any {
+func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, size, quality, background string, previousResponseID string, action string) (map[string]any, error) {
 	content := make([]map[string]any, 0, 1+len(images))
 	content = append(content, map[string]any{
 		"type": "input_text",
@@ -158,43 +193,48 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 		}
 		content = append(content, map[string]any{
 			"type":      "input_image",
-			"image_url": encodeCPAImageDataURL(image, detectCPAImageMIME(image)),
+			"image_url": handler.EncodeResponsesImageDataURL(image),
 		})
 	}
 
-	action := "generate"
-	if len(images) > 0 {
-		action = "edit"
-	}
-	tool := map[string]any{
-		"type":          "image_generation",
-		"action":        action,
-		"output_format": "png",
-	}
-	if trimmedSize := strings.TrimSpace(size); trimmedSize != "" {
-		tool["size"] = trimmedSize
-	}
-	if trimmedQuality := strings.TrimSpace(quality); trimmedQuality != "" {
-		tool["quality"] = trimmedQuality
-	}
-	if trimmedBackground := strings.TrimSpace(background); trimmedBackground != "" {
-		tool["background"] = trimmedBackground
-	}
-	if len(mask) > 0 {
-		tool["input_image_mask"] = map[string]any{
-			"image_url": encodeCPAImageDataURL(mask, detectCPAImageMIME(mask)),
+	toolAction := strings.ToLower(strings.TrimSpace(action))
+	if toolAction == "" {
+		toolAction = "generate"
+		if len(images) > 0 {
+			toolAction = "edit"
 		}
 	}
+	tool, err := handler.BuildResponsesImageGenerationTool(handler.ResponsesImageToolOptions{
+		RequestedModel: c.requestedImageModel,
+		Action:         toolAction,
+		Size:           size,
+		Quality:        quality,
+		Background:     background,
+		Mask:           mask,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	return map[string]any{
+	instructions := "You generate and edit images for the user."
+	if strings.TrimSpace(c.customInstructions) != "" {
+		instructions = strings.TrimSpace(c.customInstructions)
+	}
+	payload := map[string]any{
 		"model":               c.model,
 		"input":               []any{map[string]any{"role": "user", "content": content}},
 		"tools":               []any{tool},
 		"tool_choice":         map[string]any{"type": "image_generation"},
+		"instructions":        instructions,
 		"stream":              true,
 		"store":               false,
 		"parallel_tool_calls": true,
+		"include":             []string{"reasoning.encrypted_content"},
 	}
+	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
+		payload["previous_response_id"] = previousResponseID
+	}
+	return payload, nil
 }
 
 func (c *externalResponsesClient) executeResponsesRequest(ctx context.Context, body map[string]any) ([]handler.ImageResult, error) {
@@ -237,6 +277,7 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 	var dataLines []string
 	responseID := ""
 	results := make([]handler.ImageResult, 0)
+	partialImages := make(map[string]string)
 
 	processFrame := func(frame string) error {
 		frame = strings.TrimSpace(frame)
@@ -244,11 +285,13 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 			return nil
 		}
 		var payload struct {
-			Type  string `json:"type"`
-			Error *struct {
+			Type   string `json:"type"`
+			ItemID string `json:"item_id"`
+			Error  *struct {
 				Message string `json:"message"`
 			} `json:"error"`
-			Response *struct {
+			PartialImageB64 string `json:"partial_image_b64"`
+			Response        *struct {
 				ID     string `json:"id"`
 				Output []struct {
 					Type          string `json:"type"`
@@ -273,6 +316,10 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 				return errors.New(payload.Error.Message)
 			}
 			return errors.New("external responses stream returned an error")
+		case "response.image_generation_call.partial_image":
+			if payload.ItemID != "" && payload.PartialImageB64 != "" {
+				partialImages[payload.ItemID] = payload.PartialImageB64
+			}
 		case "response.output_item.done":
 			if payload.Item != nil && payload.Item.Type == "image_generation_call" {
 				appendExternalResponseImage(&results, payload.Item.Result, payload.Item.OutputFormat, payload.Item.RevisedPrompt, responseID)
@@ -314,7 +361,19 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 		return nil, err
 	}
 	if len(results) == 0 {
+		for _, b64 := range partialImages {
+			appendExternalResponseImage(&results, b64, "png", "", responseID)
+		}
+	}
+	if len(results) == 0 {
 		return nil, fmt.Errorf("external responses did not return image output")
+	}
+	if responseID != "" {
+		for index := range results {
+			if strings.TrimSpace(results[index].ResponseID) == "" {
+				results[index].ResponseID = responseID
+			}
+		}
 	}
 	return results, nil
 }
@@ -358,25 +417,44 @@ func downloadExternalImage(ctx context.Context, client *http.Client, url string)
 type fallbackResponsesClient struct {
 	primary            imageWorkflowClient
 	fallback           imageWorkflowClient
+	primaryLabel       string
+	fallbackLabel      string
 	lastRoute          string
 	lastModelLabel     string
 	lastFallbackReason string
 }
 
 func newFallbackResponsesClient(primary imageWorkflowClient, fallback imageWorkflowClient) *fallbackResponsesClient {
-	return &fallbackResponsesClient{primary: primary, fallback: fallback}
+	return newNamedFallbackResponsesClient(primary, fallback, "primary", "fallback")
+}
+
+func newNamedFallbackResponsesClient(primary imageWorkflowClient, fallback imageWorkflowClient, primaryLabel string, fallbackLabel string) *fallbackResponsesClient {
+	return &fallbackResponsesClient{
+		primary:       primary,
+		fallback:      fallback,
+		primaryLabel:  strings.TrimSpace(primaryLabel),
+		fallbackLabel: strings.TrimSpace(fallbackLabel),
+	}
 }
 
 func (c *fallbackResponsesClient) DownloadBytes(url string) ([]byte, error) {
-	if c == nil || c.fallback == nil {
+	if c == nil || c.primary == nil || c.fallback == nil {
 		return nil, fmt.Errorf("responses fallback client is required")
+	}
+	data, err := c.primary.DownloadBytes(url)
+	if err == nil {
+		return data, nil
 	}
 	return c.fallback.DownloadBytes(url)
 }
 
 func (c *fallbackResponsesClient) DownloadAsBase64(ctx context.Context, url string) (string, error) {
-	if c == nil || c.fallback == nil {
+	if c == nil || c.primary == nil || c.fallback == nil {
 		return "", fmt.Errorf("responses fallback client is required")
+	}
+	data, err := c.primary.DownloadAsBase64(ctx, url)
+	if err == nil {
+		return data, nil
 	}
 	return c.fallback.DownloadAsBase64(ctx, url)
 }
@@ -457,7 +535,16 @@ func (c *fallbackResponsesClient) SetSessionID(sessionID string) {
 }
 
 func (c *fallbackResponsesClient) LastRequestBody() string {
-	if body := lastRequestBody(c.primary); body != "" && c.LastRoute() == "external_responses" {
+	if c == nil {
+		return ""
+	}
+	if c.lastRouteMatches(c.primary) {
+		return lastRequestBody(c.primary)
+	}
+	if c.lastRouteMatches(c.fallback) {
+		return lastRequestBody(c.fallback)
+	}
+	if body := lastRequestBody(c.primary); body != "" {
 		return body
 	}
 	return lastRequestBody(c.fallback)
@@ -501,7 +588,7 @@ func (c *fallbackResponsesClient) run(ctx context.Context, call func(imageWorkfl
 		c.captureRoute(c.primary)
 		return results, nil
 	}
-	if errors.Is(err, context.Canceled) {
+	if errors.Is(err, context.Canceled) || isResponsesPreviousResponseContextError(err) {
 		return nil, err
 	}
 	c.lastFallbackReason = err.Error()
@@ -510,7 +597,38 @@ func (c *fallbackResponsesClient) run(ctx context.Context, call func(imageWorkfl
 		c.captureRoute(c.fallback)
 		return fallbackResults, nil
 	}
-	return nil, fmt.Errorf("external responses failed: %v; official responses fallback failed: %w", err, fallbackErr)
+	return nil, fmt.Errorf("%s failed: %v; %s fallback failed: %w", c.primaryName(), err, c.fallbackName(), fallbackErr)
+}
+
+func (c *fallbackResponsesClient) lastRouteMatches(client imageWorkflowClient) bool {
+	if c == nil || client == nil || strings.TrimSpace(c.lastRoute) == "" {
+		return false
+	}
+	clientRoute := lastRoute(client)
+	if clientRoute == "" {
+		if _, ok := client.(*externalResponsesClient); ok {
+			clientRoute = "external_responses"
+		} else if _, ok := client.(*fallbackResponsesClient); ok {
+			clientRoute = c.lastRoute
+		} else {
+			clientRoute = "responses"
+		}
+	}
+	return strings.EqualFold(strings.TrimSpace(c.lastRoute), strings.TrimSpace(clientRoute))
+}
+
+func (c *fallbackResponsesClient) primaryName() string {
+	if c == nil || strings.TrimSpace(c.primaryLabel) == "" {
+		return "primary"
+	}
+	return strings.TrimSpace(c.primaryLabel)
+}
+
+func (c *fallbackResponsesClient) fallbackName() string {
+	if c == nil || strings.TrimSpace(c.fallbackLabel) == "" {
+		return "fallback"
+	}
+	return strings.TrimSpace(c.fallbackLabel)
 }
 
 func (c *fallbackResponsesClient) captureRoute(client imageWorkflowClient) {
