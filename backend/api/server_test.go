@@ -45,6 +45,12 @@ func TestShouldUseOfficialResponses(t *testing.T) {
 			want:              true,
 		},
 		{
+			name:              "external responses route uses responses client",
+			responsesEligible: true,
+			configuredRoute:   "external_responses",
+			want:              true,
+		},
+		{
 			name:              "legacy route stays legacy",
 			responsesEligible: true,
 			configuredRoute:   "legacy",
@@ -141,6 +147,27 @@ func TestConfiguredImageRouteForDisabledStudioAccountUsesLegacy(t *testing.T) {
 	account.Status = "正常"
 	if got := server.configuredImageRouteForAccount(account); got != "responses" {
 		t.Fatalf("configuredImageRouteForAccount(active Plus) = %q, want %q", got, "responses")
+	}
+}
+
+func TestConfiguredImageRouteForAccountKeepsResponsesWhenExternalResponsesConfigured(t *testing.T) {
+	server := &Server{
+		cfg: &config.Config{
+			ChatGPT: config.ChatGPTConfig{
+				PaidImageRoute: "responses",
+			},
+			ExternalResponses: config.ExternalResponsesConfig{
+				Enabled: true,
+				BaseURL: "https://external.example",
+				APIKey:  "key",
+				Model:   "external-model",
+			},
+		},
+	}
+
+	account := accounts.PublicAccount{Type: "Plus", Status: "正常", ImageRoutes: []string{"responses"}}
+	if got := server.configuredImageRouteForAccount(account); got != "responses" {
+		t.Fatalf("configuredImageRouteForAccount(with external responses) = %q, want %q", got, "responses")
 	}
 }
 

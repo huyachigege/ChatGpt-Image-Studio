@@ -220,7 +220,7 @@ func TestFallbackResponsesClientDoesNotFallbackOnCanceledContext(t *testing.T) {
 	}
 }
 
-func TestNewResponsesWorkflowClientPaidStopsAfterExternalResponses(t *testing.T) {
+func TestNewResponsesWorkflowClientPaidFallsBackOfficialToExternalResponses(t *testing.T) {
 	cfg := config.New(t.TempDir())
 	if err := cfg.Load(); err != nil {
 		t.Fatalf("Load() returned error: %v", err)
@@ -256,9 +256,6 @@ func TestNewResponsesWorkflowClientPaidStopsAfterExternalResponses(t *testing.T)
 	}
 	if strings.Join(callOrder, ",") != "official,external" {
 		t.Fatalf("call order = %v, want official/external", callOrder)
-	}
-	if strings.Contains(strings.Join(callOrder, ","), "legacy") {
-		t.Fatalf("call order = %v, paid responses chain must not use legacy", callOrder)
 	}
 }
 

@@ -273,9 +273,15 @@ type Store struct {
 	mu                        sync.Mutex
 	states                    map[string]RuntimeState
 	imageLeases               map[string]int
+	imageLeaseOwners          map[string]imageLeaseOwner
 	imageAccountUsers         map[string]string
 	imageConversationAccounts map[string]string
 	lastSyncRun               *SyncRunResult
+}
+
+type imageLeaseOwner struct {
+	UserID string
+	Route  string
 }
 
 type Snapshot struct {
@@ -304,6 +310,7 @@ func NewStore(cfg *config.Config) (*Store, error) {
 		providerType:              strings.TrimSpace(cfg.Sync.ProviderType),
 		states:                    map[string]RuntimeState{},
 		imageLeases:               map[string]int{},
+		imageLeaseOwners:          map[string]imageLeaseOwner{},
 		imageAccountUsers:         map[string]string{},
 		imageConversationAccounts: map[string]string{},
 	}
@@ -978,7 +985,7 @@ func (s *Store) FindImageAuthByIDWithLease(accountID string) (*LocalAuth, Public
 		if account.ID != target {
 			continue
 		}
-		release, leaseErr := s.acquireImageLeaseLocked(auth.AccessToken)
+		release, leaseErr := s.acquireImageLeaseLocked(auth.AccessToken, "", "")
 		if leaseErr != nil {
 			return nil, PublicAccount{}, nil, leaseErr
 		}
@@ -1101,7 +1108,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		if _, blocked := excluded[auth.AccessToken]; blocked {
 			continue
 		}
-		if s.isImageLeasedLocked(auth.AccessToken) {
+		if s.isImageLeasedLocked(auth.AccessToken) && !s.canShareImageLeaseLocked(auth.AccessToken, userID, preferredRoute) {
 			continue
 		}
 		if allow != nil && !allow(account) {
@@ -1140,11 +1147,28 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 			if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
 				break
 			}
-			release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken)
+			release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
 			if leaseErr != nil {
 				return nil, PublicAccount{}, nil, leaseErr
 			}
 			s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+			return &candidate.auth, candidate.account, release, nil
+		}
+	}
+	if userToken := s.imageUserBoundTokenLocked(userID, preferredRoute); userToken != "" {
+		for _, candidate := range candidates {
+			if strings.TrimSpace(candidate.auth.AccessToken) != userToken {
+				continue
+			}
+			if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
+				break
+			}
+			release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
+			if leaseErr != nil {
+				return nil, PublicAccount{}, nil, leaseErr
+			}
+			s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+			s.rememberImageConversationAccountLocked(candidate.auth.AccessToken, userID, conversationID, preferredRoute)
 			return &candidate.auth, candidate.account, release, nil
 		}
 	}
@@ -1180,7 +1204,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 	})
 
 	selected := candidates[0]
-	release, leaseErr := s.acquireImageLeaseLocked(selected.auth.AccessToken)
+	release, leaseErr := s.acquireImageLeaseLocked(selected.auth.AccessToken, userID, preferredRoute)
 	if leaseErr != nil {
 		return nil, PublicAccount{}, nil, leaseErr
 	}
@@ -1189,7 +1213,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 	return &selected.auth, selected.account, release, nil
 }
 
-func (s *Store) acquireImageLeaseLocked(accessToken string) (func(), error) {
+func (s *Store) acquireImageLeaseLocked(accessToken, userID, route string) (func(), error) {
 	token := strings.TrimSpace(accessToken)
 	if token == "" {
 		return nil, fmt.Errorf("access token is required")
@@ -1197,10 +1221,14 @@ func (s *Store) acquireImageLeaseLocked(accessToken string) (func(), error) {
 	if s.imageLeases == nil {
 		s.imageLeases = map[string]int{}
 	}
-	if s.imageLeases[token] > 0 {
+	if s.imageLeaseOwners == nil {
+		s.imageLeaseOwners = map[string]imageLeaseOwner{}
+	}
+	if s.imageLeases[token] > 0 && !s.canShareImageLeaseLocked(token, userID, route) {
 		return nil, ErrImageAuthInUse
 	}
 	s.imageLeases[token]++
+	s.imageLeaseOwners[token] = imageLeaseOwner{UserID: strings.TrimSpace(userID), Route: NormalizeImageRouteCapability(route)}
 
 	var once sync.Once
 	return func() {
@@ -1210,6 +1238,7 @@ func (s *Store) acquireImageLeaseLocked(accessToken string) (func(), error) {
 			count := s.imageLeases[token]
 			if count <= 1 {
 				delete(s.imageLeases, token)
+				delete(s.imageLeaseOwners, token)
 				return
 			}
 			s.imageLeases[token] = count - 1
@@ -1223,6 +1252,39 @@ func (s *Store) isImageLeasedLocked(accessToken string) bool {
 		return false
 	}
 	return s.imageLeases[token] > 0
+}
+
+func (s *Store) canShareImageLeaseLocked(accessToken, userID, route string) bool {
+	if NormalizeImageRouteCapability(route) != "responses" {
+		return false
+	}
+	user := strings.TrimSpace(userID)
+	if user == "" || s.imageLeaseOwners == nil {
+		return false
+	}
+	owner, ok := s.imageLeaseOwners[strings.TrimSpace(accessToken)]
+	return ok && owner.UserID == user && owner.Route == "responses"
+}
+
+func (s *Store) imageUserBoundTokenLocked(userID, route string) string {
+	user := strings.TrimSpace(userID)
+	if user == "" || s.imageAccountUsers == nil {
+		return ""
+	}
+	normalizedRoute := NormalizeImageRouteCapability(route)
+	for key, boundUser := range s.imageAccountUsers {
+		if strings.TrimSpace(boundUser) != user {
+			continue
+		}
+		if normalizedRoute != "" && !strings.HasSuffix(key, "\x00"+normalizedRoute) {
+			continue
+		}
+		parts := strings.SplitN(key, "\x00", 2)
+		if len(parts) == 2 {
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	return ""
 }
 
 func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID, route string) bool {

@@ -26,6 +26,8 @@ import (
 	"chatgpt2api/internal/newapi"
 	"chatgpt2api/internal/sub2api"
 	"chatgpt2api/internal/users"
+
+	"github.com/google/uuid"
 )
 
 type Server struct {
@@ -258,7 +260,7 @@ func (s *Server) responsesSessionID(userID, conversationID, route string) string
 }
 
 func newImageSessionID() string {
-	return strings.ReplaceAll(time.Now().UTC().Format("20060102150405.000000000"), ".", "")
+	return uuid.NewString()
 }
 
 func (s *Server) getAccountRefreshRun() *accountRefreshRunResult {
@@ -1470,7 +1472,11 @@ func (s *Server) newResponsesWorkflowClientForAccount(accessToken string, authDa
 	}
 	externalConfig := s.cfg.ExternalResponsesConfig()
 	if !externalConfig.Enabled || externalConfig.BaseURL == "" || externalConfig.APIKey == "" || externalConfig.Model == "" {
-		return official
+		if isPaidImageAccountType(account.Type) {
+			return official
+		}
+		legacy := s.newOfficialWorkflowClient(accessToken, authData)
+		return newNamedFallbackResponsesClient(official, legacy, "responses", "legacy")
 	}
 	var external imageWorkflowClient
 	if s.externalResponsesClientFactory != nil {
@@ -1977,9 +1983,12 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			return nil, false, err
 		}
 		if isTransientImageStreamError(err) {
-			return nil, true, err
+			return nil, !isExternalResponsesRoute(route), err
 		}
 		if isInvalidImageTokenError(err) {
+			if isExternalResponsesRoute(route) {
+				return nil, false, err
+			}
 			store.MarkImageTokenAbnormal(authFile.AccessToken)
 			return nil, true, newRequestError("source_account_unavailable", "当前账号不可用，正在切换下一个账号")
 		}
@@ -2747,7 +2756,15 @@ func shouldUseOfficialResponses(preferredAccount bool, responsesEligible bool, c
 	if !responsesEligible {
 		return false
 	}
-	return strings.EqualFold(strings.TrimSpace(configuredRoute), "responses")
+	return strings.EqualFold(strings.TrimSpace(configuredRoute), "responses") || isExternalResponsesRoute(configuredRoute)
+}
+
+func (s *Server) externalResponsesConfigured() bool {
+	if s == nil || s.cfg == nil {
+		return false
+	}
+	cfg := s.cfg.ExternalResponsesConfig()
+	return cfg.Enabled && cfg.BaseURL != "" && cfg.APIKey != "" && cfg.Model != ""
 }
 
 func (s *Server) configuredImageRoute(accountType string) string {

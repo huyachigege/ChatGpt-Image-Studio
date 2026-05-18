@@ -506,7 +506,7 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if _, blocked := excluded[candidate.auth.AccessToken]; blocked {
 				continue
 			}
-			if s.isImageLeasedLocked(candidate.auth.AccessToken) {
+			if s.isImageLeasedLocked(candidate.auth.AccessToken) && !s.canShareImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute) {
 				continue
 			}
 			refreshNeeded := NeedsImageQuotaRefreshWithTTL(candidate.account, now, s.cfg.ImageQuotaRefreshTTL())
@@ -546,11 +546,33 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 				if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
 					break
 				}
-				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken)
+				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
 				if leaseErr != nil {
 					continue
 				}
 				s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+				return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
+					PolicyApplied:  true,
+					GroupIndex:     groupIndex,
+					SortMode:       normalizedPolicy.SortMode,
+					ReservePercent: normalizedPolicy.ReservePercent,
+				}, release, true
+			}
+		}
+		if userToken := s.imageUserBoundTokenLocked(userID, preferredRoute); userToken != "" {
+			for _, candidate := range groupCandidates {
+				if strings.TrimSpace(candidate.auth.AccessToken) != userToken {
+					continue
+				}
+				if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
+					break
+				}
+				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
+				if leaseErr != nil {
+					continue
+				}
+				s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+				s.rememberImageConversationAccountLocked(candidate.auth.AccessToken, userID, conversationID, preferredRoute)
 				return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
 					PolicyApplied:  true,
 					GroupIndex:     groupIndex,
@@ -591,7 +613,7 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 		})
 
 		selected := groupCandidates[0]
-		release, leaseErr := s.acquireImageLeaseLocked(selected.auth.AccessToken)
+		release, leaseErr := s.acquireImageLeaseLocked(selected.auth.AccessToken, userID, preferredRoute)
 		if leaseErr != nil {
 			continue
 		}

@@ -354,6 +354,9 @@ func (m *imageTaskManager) tryScheduleOne() bool {
 		if task.ActiveUnits >= m.maxParallelUnitsForTaskLocked(task) {
 			continue
 		}
+		if !m.canStartUnitForUserLocked(task) {
+			continue
+		}
 		unitIndex, _ := m.nextReadyQueuedUnitIndexLocked(task, now)
 		if unitIndex < 0 {
 			continue
@@ -402,7 +405,7 @@ func (m *imageTaskManager) tryScheduleOne() bool {
 			}
 			continue
 		}
-		if m.runningUnits >= m.maxRunningLocked() || current.ActiveUnits >= m.maxParallelUnitsForTaskLocked(current) {
+		if m.runningUnits >= m.maxRunningLocked() || current.ActiveUnits >= m.maxParallelUnitsForTaskLocked(current) || !m.canStartUnitForUserLocked(current) {
 			m.mu.Unlock()
 			if lease.release != nil {
 				lease.release()
@@ -1189,13 +1192,37 @@ func (m *imageTaskManager) maxRunningLocked() int {
 
 func (m *imageTaskManager) maxParallelUnitsForTaskLocked(task *imageTask) int {
 	maxRunning := m.maxRunningLocked()
-	if maxRunning <= 1 || task == nil || task.Count <= 1 {
+	if maxRunning <= 1 || task == nil || task.Count <= 1 || !m.taskSupportsParallelUnitsLocked(task) {
 		return 1
 	}
 	if task.Count < maxRunning {
 		return task.Count
 	}
 	return maxRunning
+}
+
+func (m *imageTaskManager) taskSupportsParallelUnitsLocked(task *imageTask) bool {
+	return task != nil && m.preferredRouteForTask(task) == "responses"
+}
+
+func (m *imageTaskManager) canStartUnitForUserLocked(task *imageTask) bool {
+	if task == nil {
+		return false
+	}
+	if m.taskSupportsParallelUnitsLocked(task) {
+		return true
+	}
+	userID := strings.TrimSpace(task.UserID)
+	if userID == "" {
+		return true
+	}
+	for _, other := range m.tasks {
+		if other == nil || strings.TrimSpace(other.UserID) != userID || other.ActiveUnits <= 0 {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 func (m *imageTaskManager) buildTaskViewLocked(task *imageTask) *imageTaskView {

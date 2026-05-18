@@ -86,7 +86,7 @@ func TestCreateImageTaskRunsToSuccessForWorkspaceUser(t *testing.T) {
 	}
 }
 
-func TestCreateImageTaskRunsMultipleImagesInParallelWithDifferentAccounts(t *testing.T) {
+func TestCreateLegacyImageTaskRunsMultipleImagesSeriallyForSameUser(t *testing.T) {
 	started := make(chan string, 4)
 	release := make(chan struct{})
 	released := false
@@ -117,8 +117,9 @@ func TestCreateImageTaskRunsMultipleImagesInParallelWithDifferentAccounts(t *tes
 	})
 
 	if _, err := server.imageTasks.createTask(createImageTaskRequest{
-		ConversationID: "conv-parallel-1",
-		TurnID:         "turn-parallel-1",
+		UserID:         "user-serial-1",
+		ConversationID: "conv-serial-1",
+		TurnID:         "turn-serial-1",
 		Mode:           "generate",
 		Prompt:         "draw four cats",
 		Model:          "gpt-image-2",
@@ -129,28 +130,298 @@ func TestCreateImageTaskRunsMultipleImagesInParallelWithDifferentAccounts(t *tes
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	received := make([]string, 0, 4)
-	deadline := time.After(2 * time.Second)
-	for len(received) < 4 {
-		select {
-		case token := <-started:
-			received = append(received, token)
-		case <-deadline:
-			t.Fatalf("started tokens = %v, want 4 parallel starts", received)
-		}
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("first image unit did not start")
 	}
-
-	seen := map[string]struct{}{}
-	for _, token := range received {
-		seen[token] = struct{}{}
-	}
-	if len(seen) != 4 {
-		t.Fatalf("started tokens = %v, want 4 different accounts", received)
+	select {
+	case token := <-started:
+		t.Fatalf("unexpected concurrent image unit start with token %q", token)
+	case <-time.After(150 * time.Millisecond):
 	}
 
 	close(release)
 	released = true
-	waitForTaskStatus(t, server, "turn-parallel-1", imageTaskStatusSucceeded)
+	waitForTaskStatus(t, server, "turn-serial-1", imageTaskStatusSucceeded)
+}
+
+func TestCreateResponsesImageTaskRunsMultipleImagesConcurrentlyForSameUserOnBoundAccount(t *testing.T) {
+	started := make(chan string, 4)
+	release := make(chan struct{})
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "responses-bound-1.json", accessToken: "token-responses-bound-1", accountType: "Plus", priority: 20, quota: 5, status: "正常"},
+			{fileName: "responses-bound-2.json", accessToken: "token-responses-bound-2", accountType: "Plus", priority: 10, quota: 5, status: "正常"},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		UserID:              "user-responses-bound",
+		ConversationID:      "conv-responses-bound-a",
+		TurnID:              "turn-responses-bound-a",
+		Mode:                "generate",
+		Prompt:              "draw concurrent responses cats",
+		Model:               "gpt-image-2",
+		Count:               3,
+		Size:                "3840x2160",
+		ResolutionAccess:    "paid",
+		Quality:             "high",
+		ConversationContext: "context a",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	received := make([]string, 0, 3)
+	deadline := time.After(2 * time.Second)
+	for len(received) < 3 {
+		select {
+		case token := <-started:
+			received = append(received, token)
+		case <-deadline:
+			t.Fatalf("started tokens = %v, want 3 concurrent responses starts", received)
+		}
+	}
+	for _, token := range received {
+		if token != received[0] {
+			t.Fatalf("started tokens = %v, want same bound account", received)
+		}
+	}
+	recorder.mu.Lock()
+	recorderSessions := append([]string(nil), recorder.sessionIDs...)
+	recorder.mu.Unlock()
+	if len(recorderSessions) != 3 {
+		t.Fatalf("responses session ids = %v, want 3", recorderSessions)
+	}
+	seenSessions := map[string]struct{}{}
+	for _, sessionID := range recorderSessions {
+		seenSessions[sessionID] = struct{}{}
+	}
+	if len(seenSessions) != 3 {
+		t.Fatalf("responses session ids = %v, want unique session per concurrent unit", recorderSessions)
+	}
+
+	close(release)
+	released = true
+	waitForTaskStatus(t, server, "turn-responses-bound-a", imageTaskStatusSucceeded)
+}
+
+func TestCreateResponsesImageTasksUseSameBoundAccountAcrossConversations(t *testing.T) {
+	started := make(chan string, 2)
+	release := make(chan struct{})
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "responses-cross-conv-1.json", accessToken: "token-responses-cross-conv-1", accountType: "Plus", priority: 20, quota: 5, status: "正常"},
+			{fileName: "responses-cross-conv-2.json", accessToken: "token-responses-cross-conv-2", accountType: "Plus", priority: 10, quota: 5, status: "正常"},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+
+	for _, req := range []createImageTaskRequest{
+		{UserID: "user-responses-cross-conv", ConversationID: "conv-responses-cross-conv-a", TurnID: "turn-responses-cross-conv-a", Mode: "generate", Prompt: "draw cat a", Model: "gpt-image-2", Count: 1, Size: "3840x2160", ResolutionAccess: "paid", Quality: "high", ConversationContext: "context a"},
+		{UserID: "user-responses-cross-conv", ConversationID: "conv-responses-cross-conv-b", TurnID: "turn-responses-cross-conv-b", Mode: "generate", Prompt: "draw cat b", Model: "gpt-image-2", Count: 1, Size: "3840x2160", ResolutionAccess: "paid", Quality: "high", ConversationContext: "context b"},
+	} {
+		if _, err := server.imageTasks.createTask(req); err != nil {
+			t.Fatalf("createTask() returned error: %v", err)
+		}
+	}
+
+	received := make([]string, 0, 2)
+	deadline := time.After(2 * time.Second)
+	for len(received) < 2 {
+		select {
+		case token := <-started:
+			received = append(received, token)
+		case <-deadline:
+			t.Fatalf("started tokens = %v, want 2 concurrent responses starts", received)
+		}
+	}
+	if received[0] != received[1] {
+		t.Fatalf("started tokens = %v, want same bound account across conversations", received)
+	}
+
+	close(release)
+	released = true
+	waitForTaskStatus(t, server, "turn-responses-cross-conv-a", imageTaskStatusSucceeded)
+	waitForTaskStatus(t, server, "turn-responses-cross-conv-b", imageTaskStatusSucceeded)
+}
+
+func TestCreateImageTasksRunConcurrentlyForDifferentUsers(t *testing.T) {
+	started := make(chan string, 2)
+	release := make(chan struct{})
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "different-user-1.json", accessToken: "token-different-user-1", accountType: "Free", priority: 20, quota: 5, status: "正常"},
+			{fileName: "different-user-2.json", accessToken: "token-different-user-2", accountType: "Free", priority: 10, quota: 5, status: "正常"},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+
+	for _, req := range []createImageTaskRequest{
+		{UserID: "user-a", ConversationID: "conv-user-a", TurnID: "turn-user-a", Mode: "generate", Prompt: "draw cat a", Model: "gpt-image-2", Count: 1, Size: "1248x1248", Quality: "high"},
+		{UserID: "user-b", ConversationID: "conv-user-b", TurnID: "turn-user-b", Mode: "generate", Prompt: "draw cat b", Model: "gpt-image-2", Count: 1, Size: "1248x1248", Quality: "high"},
+	} {
+		if _, err := server.imageTasks.createTask(req); err != nil {
+			t.Fatalf("createTask() returned error: %v", err)
+		}
+	}
+
+	received := make([]string, 0, 2)
+	deadline := time.After(2 * time.Second)
+	for len(received) < 2 {
+		select {
+		case token := <-started:
+			received = append(received, token)
+		case <-deadline:
+			t.Fatalf("started tokens = %v, want 2 concurrent starts for different users", received)
+		}
+	}
+
+	close(release)
+	released = true
+	waitForTaskStatus(t, server, "turn-user-a", imageTaskStatusSucceeded)
+	waitForTaskStatus(t, server, "turn-user-b", imageTaskStatusSucceeded)
+}
+
+func TestCreateResponsesGenerateAndEditTasksRunConcurrentlyForSameUserOnBoundAccount(t *testing.T) {
+	started := make(chan string, 2)
+	release := make(chan struct{})
+	released := false
+	defer func() {
+		if !released {
+			close(release)
+		}
+	}()
+
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "same-user-generate.json", accessToken: "token-same-user-generate", accountType: "Plus", priority: 20, quota: 5, status: "正常"},
+			{fileName: "same-user-edit.json", accessToken: "token-same-user-edit", accountType: "Plus", priority: 10, quota: 5, status: "正常"},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		UserID:           "user-generate-edit",
+		ConversationID:   "conv-generate-edit",
+		TurnID:           "turn-generate-edit-generate",
+		Mode:             "generate",
+		Prompt:           "draw cat before edit",
+		Model:            "gpt-image-2",
+		Count:            1,
+		Size:             "3840x2160",
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("create generate task: %v", err)
+	}
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		UserID:         "user-generate-edit",
+		ConversationID: "conv-generate-edit",
+		TurnID:         "turn-generate-edit-edit",
+		Mode:           "edit",
+		Prompt:         "edit cat after generate",
+		Model:          "gpt-image-2",
+		Count:          1,
+		Size:           "1248x1248",
+		Quality:        "high",
+		SourceImages: []imageTaskSourceImagePayload{{
+			ID:      "source-edit-1",
+			Role:    "image",
+			Name:    "source.png",
+			DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+		}},
+	}); err != nil {
+		t.Fatalf("create edit task: %v", err)
+	}
+
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("generate task did not start")
+	}
+	received := []string{}
+	select {
+	case token := <-started:
+		received = append(received, token)
+	case <-time.After(2 * time.Second):
+		t.Fatal("edit task did not start concurrently")
+	}
+	select {
+	case token := <-started:
+		received = append(received, token)
+	default:
+	}
+	if len(received) == 0 || received[0] != "token-same-user-generate" {
+		t.Fatalf("started tokens = %v, want edit to use same bound account", received)
+	}
+
+	close(release)
+	released = true
+	waitForTaskStatus(t, server, "turn-generate-edit-generate", imageTaskStatusSucceeded)
+	waitForTaskStatus(t, server, "turn-generate-edit-edit", imageTaskStatusSucceeded)
 }
 
 func TestCreateImageTaskRunsToSuccess(t *testing.T) {

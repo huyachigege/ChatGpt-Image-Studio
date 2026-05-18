@@ -50,6 +50,7 @@ type compatFactoryRecorder struct {
 	lastFactory    string
 	lastModel      string
 	callSequence   []string
+	sessionIDs     []string
 }
 
 type compatStubWorkflowClient struct {
@@ -65,6 +66,7 @@ type compatStubWorkflowClient struct {
 	inpaintErr      error
 	generateStarted chan string
 	generateRelease <-chan struct{}
+	sessionID       string
 }
 
 func (c *compatStubWorkflowClient) record(operation, model string) {
@@ -76,6 +78,9 @@ func (c *compatStubWorkflowClient) record(operation, model string) {
 	c.recorder.lastFactory = c.factory
 	c.recorder.lastModel = model
 	c.recorder.callSequence = append(c.recorder.callSequence, fmt.Sprintf("%s:%s:%s", c.factory, c.token, operation))
+	if c.factory == "responses" && c.sessionID != "" {
+		c.recorder.sessionIDs = append(c.recorder.sessionIDs, c.sessionID)
+	}
 }
 
 func (c *compatStubWorkflowClient) DownloadBytes(url string) ([]byte, error) {
@@ -89,6 +94,13 @@ func (c *compatStubWorkflowClient) DownloadAsBase64(ctx context.Context, url str
 
 func (c *compatStubWorkflowClient) UsesResponsesAPI() bool {
 	return c != nil && c.factory == "responses"
+}
+
+func (c *compatStubWorkflowClient) SetSessionID(sessionID string) {
+	if c == nil {
+		return
+	}
+	c.sessionID = strings.TrimSpace(sessionID)
 }
 
 func (c *compatStubWorkflowClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
@@ -150,7 +162,6 @@ func (c *compatStubWorkflowClient) generateImageResult(ctx context.Context, prom
 }
 
 func (c *compatStubWorkflowClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
-	_ = ctx
 	_ = prompt
 	_ = images
 	_ = mask
@@ -159,6 +170,16 @@ func (c *compatStubWorkflowClient) EditImageByUpload(ctx context.Context, prompt
 	c.record("edit", model)
 	if c.editErr != nil {
 		return nil, c.editErr
+	}
+	if c.generateStarted != nil {
+		c.generateStarted <- c.token
+	}
+	if c.generateRelease != nil {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-c.generateRelease:
+		}
 	}
 	return []handler.ImageResult{
 		{
@@ -277,7 +298,7 @@ func (c *parallelGenerateWorkflowClient) InpaintImageByMask(ctx context.Context,
 	return nil, fmt.Errorf("not implemented")
 }
 
-func TestImageGenerationsRunConcurrentlyAcrossAvailableAccounts(t *testing.T) {
+func TestLegacyImageGenerationsStaySerialAcrossAvailableAccounts(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -352,8 +373,8 @@ func TestImageGenerationsRunConcurrentlyAcrossAvailableAccounts(t *testing.T) {
 	if recorder.officialCalls != 3 {
 		t.Fatalf("official client calls = %d, want 3", recorder.officialCalls)
 	}
-	if got := atomic.LoadInt32(&maxActive); got < 2 {
-		t.Fatalf("max concurrent generate calls = %d, want at least 2", got)
+	if got := atomic.LoadInt32(&maxActive); got != 1 {
+		t.Fatalf("max concurrent generate calls = %d, want 1 for legacy route", got)
 	}
 }
 
