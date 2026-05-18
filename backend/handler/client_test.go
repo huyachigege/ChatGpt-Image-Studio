@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -177,6 +178,35 @@ func TestResolveImageUpstreamModel(t *testing.T) {
 				t.Fatalf("expected %s, got %s", tt.expectedModel, actual)
 			}
 		})
+	}
+}
+
+func TestBuildMultimodalBodyKeepsImageUploadsOutOfParts(t *testing.T) {
+	client := &ChatGPTClient{}
+	body := client.buildMultimodalBody("edit cat", "gpt-image-2", []*UploadedFile{
+		{FileID: "file-image", SizeBytes: 123, MIMEType: "image/png", Width: 1, Height: 2},
+	}, &UploadedFile{FileID: "file-mask", SizeBytes: 45, MIMEType: "image/png", Width: 3, Height: 4})
+
+	messages := body["messages"].([]any)
+	msg := messages[0].(map[string]any)
+	content := msg["content"].(map[string]any)
+	parts := content["parts"].([]any)
+	if !reflect.DeepEqual(parts, []any{"edit cat"}) {
+		t.Fatalf("parts = %#v, want prompt only", parts)
+	}
+
+	metadata := msg["metadata"].(map[string]any)
+	attachments := metadata["attachments"].([]any)
+	if len(attachments) != 2 {
+		t.Fatalf("attachments = %#v, want image and mask", attachments)
+	}
+	first := attachments[0].(map[string]any)
+	if first["id"] != "file-image" || first["mimeType"] != "image/png" {
+		t.Fatalf("first attachment = %#v, want uploaded image metadata", first)
+	}
+	second := attachments[1].(map[string]any)
+	if second["id"] != "file-mask" || second["name"] != "mask.png" {
+		t.Fatalf("second attachment = %#v, want uploaded mask metadata", second)
 	}
 }
 

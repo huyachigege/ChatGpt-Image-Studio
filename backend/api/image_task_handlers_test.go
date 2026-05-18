@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -238,7 +239,7 @@ func TestCreateImageTaskSelectionEditBypassesPolicySnapshot(t *testing.T) {
 				"id":"mask-1",
 				"role":"mask",
 				"name":"mask.png",
-				"dataUrl":"data:image/png;base64,aW1hZ2U="
+				"dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
 			}
 		],
 		"sourceReference":{
@@ -432,7 +433,7 @@ func TestCreateImageTaskSelectionEditFallsBackToSourceMaskEdit(t *testing.T) {
 	}
 }
 
-func TestCreateImageTaskRetriesGenericEditErrorWithNextAccount(t *testing.T) {
+func TestCreateImageTaskDoesNotSwitchAccountForGenericEditError(t *testing.T) {
 	oldBackoffBase := imageTaskRetryBackoffBase
 	oldBackoffMax := imageTaskRetryBackoffMax
 	imageTaskRetryBackoffBase = 20 * time.Millisecond
@@ -496,15 +497,15 @@ func TestCreateImageTaskRetriesGenericEditErrorWithNextAccount(t *testing.T) {
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusSucceeded)
-	if len(recorder.callSequence) < 2 {
-		t.Fatalf("callSequence = %#v, want transient then healthy edit attempt", recorder.callSequence)
+	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusFailed)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("callSequence = %#v, want only first account", recorder.callSequence)
 	}
 	if !strings.Contains(recorder.callSequence[0], "token-edit-transient") {
-		t.Fatalf("callSequence[0] = %q, want first transient account", recorder.callSequence[0])
+		t.Fatalf("callSequence[0] = %q, want first account", recorder.callSequence[0])
 	}
-	if !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], "token-edit-healthy") {
-		t.Fatalf("callSequence = %#v, want healthy fallback account", recorder.callSequence)
+	if strings.Contains(strings.Join(recorder.callSequence, ","), "token-edit-healthy") {
+		t.Fatalf("callSequence = %#v, generic edit error must not switch account", recorder.callSequence)
 	}
 }
 
@@ -859,6 +860,88 @@ func TestCreateImageGenerateFallsBackToLegacyWhenResponsesReferenceFails(t *test
 	}
 }
 
+func TestResolveTaskSourceImageBytesRejectsNonImageDataURL(t *testing.T) {
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+
+	_, err := server.resolveTaskSourceImageBytes(imageTaskSourceImage{
+		DataURL: "data:text/html;base64," + base64.StdEncoding.EncodeToString([]byte("<html></html>")),
+	})
+	if err == nil || !strings.Contains(err.Error(), "only image data urls are supported") {
+		t.Fatalf("resolveTaskSourceImageBytes() error = %v, want image data url error", err)
+	}
+}
+
+func TestResolveTaskSourceImageBytesRejectsInvalidImageDataURL(t *testing.T) {
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+
+	_, err := server.resolveTaskSourceImageBytes(imageTaskSourceImage{
+		DataURL: "data:image/png;base64," + base64.StdEncoding.EncodeToString([]byte("not an image")),
+	})
+	if err == nil || !strings.Contains(err.Error(), "data url image is not a valid image") {
+		t.Fatalf("resolveTaskSourceImageBytes() error = %v, want invalid image error", err)
+	}
+}
+
+func TestResolveTaskSourceImageBytesRejectsNonImageURL(t *testing.T) {
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<html></html>"))
+	}))
+	defer upstream.Close()
+
+	_, err := server.resolveTaskSourceImageBytes(imageTaskSourceImage{URL: upstream.URL})
+	if err == nil || !strings.Contains(err.Error(), "non-image content-type text/html") {
+		t.Fatalf("resolveTaskSourceImageBytes() error = %v, want non-image content-type error", err)
+	}
+}
+
+func TestResolveTaskSourceImageBytesAcceptsImageURL(t *testing.T) {
+	server, _ := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{})
+	png := []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\b\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\rIDATx\xdac\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82")
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(png)
+	}))
+	defer upstream.Close()
+
+	data, err := server.resolveTaskSourceImageBytes(imageTaskSourceImage{URL: upstream.URL})
+	if err != nil {
+		t.Fatalf("resolveTaskSourceImageBytes() returned error: %v", err)
+	}
+	if string(data) != string(png) {
+		t.Fatalf("resolveTaskSourceImageBytes() returned %d bytes, want %d", len(data), len(png))
+	}
+}
+
 func TestCreateImageGenerateFallsBackWhenContextAccountChanges(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
@@ -1142,7 +1225,7 @@ func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
 	}
 }
 
-func TestCreateImageTaskRetriesTransientResponsesSSEError(t *testing.T) {
+func TestCreateImageTaskDoesNotRetryPaidTransientResponsesSSEError(t *testing.T) {
 	oldBackoffBase := imageTaskRetryBackoffBase
 	oldBackoffMax := imageTaskRetryBackoffMax
 	imageTaskRetryBackoffBase = 20 * time.Millisecond
@@ -1203,19 +1286,9 @@ func TestCreateImageTaskRetriesTransientResponsesSSEError(t *testing.T) {
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	waitForTaskPredicate(t, server, "turn-transient-1", func(task *imageTaskView) bool {
-		return task.Status == imageTaskStatusSucceeded
-	})
-
-	task, _, err := server.imageTasks.getTask("turn-transient-1")
-	if err != nil {
-		t.Fatalf("getTask() returned error: %v", err)
-	}
-	if len(task.Images) != 1 || task.Images[0].URL == "" {
-		t.Fatalf("task images = %#v, want successful cached image", task.Images)
-	}
-	if got := atomic.LoadInt32(&transientCalls); got < 2 {
-		t.Fatalf("transientCalls = %d, want retry after first SSE failure", got)
+	waitForTaskStatus(t, server, "turn-transient-1", imageTaskStatusFailed)
+	if got := atomic.LoadInt32(&transientCalls); got != 1 {
+		t.Fatalf("transientCalls = %d, want no paid same-account retry", got)
 	}
 }
 

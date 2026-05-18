@@ -1008,12 +1008,7 @@ func imageTaskUnitClearAttempts(task *imageTask, unitIndex int) {
 }
 
 func shouldRememberImageTaskFailedAttempt(err error) bool {
-	return requestErrorCode(err) == "source_account_rate_limited" ||
-		requestErrorCode(err) == "source_account_unavailable" ||
-		isInvalidImageTokenError(err) ||
-		isImageRateLimitError(err) ||
-		isTransientImageStreamError(err) ||
-		shouldRetryImageRequestWithNextAccount(err)
+	return isImageAccountSwitchError(err)
 }
 
 func (m *imageTaskManager) nextQueuedUnitIndexLocked(task *imageTask) int {

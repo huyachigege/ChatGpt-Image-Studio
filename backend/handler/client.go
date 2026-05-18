@@ -606,23 +606,10 @@ func (c *ChatGPTClient) buildMultimodalBody(prompt, model string, uploads []*Upl
 		model = defaultUpstreamModel
 	}
 
-	// Build parts: text prompt + image asset pointers
 	parts := []any{prompt}
 	attachments := []any{}
 
 	for i, up := range uploads {
-		imgPart := map[string]any{
-			"content_type":  "image_asset_pointer",
-			"asset_pointer": "file-service://" + up.FileID,
-			"size_bytes":    up.SizeBytes,
-			"mime_type":     up.MIMEType,
-		}
-		if up.Width > 0 && up.Height > 0 {
-			imgPart["width"] = up.Width
-			imgPart["height"] = up.Height
-		}
-		parts = append(parts, imgPart)
-
 		name := fmt.Sprintf("image_%d.png", i)
 		attachments = append(attachments, map[string]any{
 			"id":       up.FileID,
@@ -635,18 +622,6 @@ func (c *ChatGPTClient) buildMultimodalBody(prompt, model string, uploads []*Upl
 	}
 
 	if maskUpload != nil {
-		maskPart := map[string]any{
-			"content_type":  "image_asset_pointer",
-			"asset_pointer": "file-service://" + maskUpload.FileID,
-			"size_bytes":    maskUpload.SizeBytes,
-			"mime_type":     maskUpload.MIMEType,
-		}
-		if maskUpload.Width > 0 && maskUpload.Height > 0 {
-			maskPart["width"] = maskUpload.Width
-			maskPart["height"] = maskUpload.Height
-		}
-		parts = append(parts, maskPart)
-
 		attachments = append(attachments, map[string]any{
 			"id":       maskUpload.FileID,
 			"name":     "mask.png",

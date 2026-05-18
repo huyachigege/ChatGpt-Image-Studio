@@ -1,15 +1,18 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"image"
 	"io"
 	"net/http/httptest"
 	"os"
 	"strings"
 
 	"chatgpt2api/handler"
+	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/imagehistory"
 )
 
@@ -273,7 +276,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	}
 
 	if err != nil {
-		if retryable || shouldRetryImageRequestWithNextAccount(err) {
+		if shouldRetryImageRequestWithNextAccount(err) || shouldRetryImageTaskOnSameAccount(lease.account, err) {
 			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}
 		}
 		return nil, err
@@ -335,6 +338,13 @@ func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image
 	return images
 }
 
+func shouldRetryImageTaskOnSameAccount(account accounts.PublicAccount, err error) bool {
+	if err == nil || isImageModelRefusalError(err) || shouldRetryImageRequestWithNextAccount(err) {
+		return false
+	}
+	return !isPaidImageAccountType(account.Type)
+}
+
 func (s *Server) resolveTaskEditInputs(task *imageTask) ([]byte, [][]byte, error) {
 	imageFiles := make([][]byte, 0)
 	var mask []byte
@@ -370,6 +380,9 @@ func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byt
 		if err != nil {
 			return nil, err
 		}
+		if err := validateTaskImageBytes(payload, "data url image"); err != nil {
+			return nil, err
+		}
 		return payload, nil
 	}
 	rawURL := strings.TrimSpace(source.URL)
@@ -382,7 +395,14 @@ func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byt
 		if path == "" {
 			return nil, fmt.Errorf("image not found")
 		}
-		return os.ReadFile(path)
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if err := validateTaskImageBytes(data, "local image"); err != nil {
+			return nil, err
+		}
+		return data, nil
 	}
 	resp, err := compatImageFetchClient.Get(rawURL)
 	if err != nil {
@@ -392,7 +412,18 @@ func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byt
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("fetch image returned %d", resp.StatusCode)
 	}
-	return io.ReadAll(resp.Body)
+	contentType := strings.ToLower(strings.TrimSpace(resp.Header.Get("Content-Type")))
+	if contentType != "" && !strings.HasPrefix(contentType, "image/") {
+		return nil, fmt.Errorf("fetch image returned non-image content-type %s", contentType)
+	}
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateTaskImageBytes(data, "url image"); err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func decodeTaskDataURL(raw string) ([]byte, error) {
@@ -400,8 +431,11 @@ func decodeTaskDataURL(raw string) ([]byte, error) {
 	if comma < 0 {
 		return nil, fmt.Errorf("invalid data url")
 	}
-	meta := raw[:comma]
-	if !strings.Contains(strings.ToLower(meta), ";base64") {
+	meta := strings.ToLower(strings.TrimSpace(raw[:comma]))
+	if !strings.HasPrefix(meta, "data:image/") {
+		return nil, fmt.Errorf("only image data urls are supported")
+	}
+	if !strings.Contains(meta, ";base64") {
 		return nil, fmt.Errorf("only base64 data urls are supported")
 	}
 	payload, err := base64.StdEncoding.DecodeString(raw[comma+1:])
@@ -409,4 +443,14 @@ func decodeTaskDataURL(raw string) ([]byte, error) {
 		return nil, fmt.Errorf("decode data url: %w", err)
 	}
 	return payload, nil
+}
+
+func validateTaskImageBytes(data []byte, source string) error {
+	if len(data) == 0 {
+		return fmt.Errorf("%s is empty", source)
+	}
+	if _, _, err := image.DecodeConfig(bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("%s is not a valid image: %w", source, err)
+	}
+	return nil
 }

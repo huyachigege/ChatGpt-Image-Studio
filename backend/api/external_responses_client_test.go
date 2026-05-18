@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"chatgpt2api/handler"
+	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/config"
 )
 
@@ -188,6 +189,23 @@ func TestFallbackResponsesClientFallsBackToSecondClient(t *testing.T) {
 	}
 }
 
+func TestFallbackResponsesClientDoesNotFallbackOnModelRefusal(t *testing.T) {
+	primary := &fallbackStubClient{generateErr: fmt.Errorf("image generation refused: content policy"), route: "responses"}
+	fallback := &fallbackStubClient{route: "legacy"}
+	client := newNamedFallbackResponsesClient(primary, fallback, "responses", "legacy")
+
+	_, err := client.GenerateImage(context.Background(), "draw", "model", 1, "", "", "")
+	if err == nil || !strings.Contains(err.Error(), "image generation refused") {
+		t.Fatalf("GenerateImage() error = %v, want model refusal", err)
+	}
+	if fallback.generateCalls != 0 {
+		t.Fatalf("fallback calls = %d, want 0", fallback.generateCalls)
+	}
+	if got := client.LastFallbackReason(); got != "" {
+		t.Fatalf("LastFallbackReason = %q, want empty", got)
+	}
+}
+
 func TestFallbackResponsesClientDoesNotFallbackOnCanceledContext(t *testing.T) {
 	primary := &fallbackStubClient{generateErr: context.Canceled, route: "external_responses"}
 	official := &fallbackStubClient{route: "responses"}
@@ -202,7 +220,7 @@ func TestFallbackResponsesClientDoesNotFallbackOnCanceledContext(t *testing.T) {
 	}
 }
 
-func TestNewResponsesWorkflowClientFallsBackOfficialExternalLegacy(t *testing.T) {
+func TestNewResponsesWorkflowClientPaidStopsAfterExternalResponses(t *testing.T) {
 	cfg := config.New(t.TempDir())
 	if err := cfg.Load(); err != nil {
 		t.Fatalf("Load() returned error: %v", err)
@@ -231,7 +249,49 @@ func TestNewResponsesWorkflowClientFallsBackOfficialExternalLegacy(t *testing.T)
 		return &fallbackStubClient{name: "legacy", route: "legacy", resultURL: "stub://legacy", callOrder: &callOrder}
 	}
 
-	client := server.newResponsesWorkflowClient("token", nil)
+	client := server.newResponsesWorkflowClientForAccount("token", nil, accounts.PublicAccount{Type: "Plus"})
+	_, err := client.GenerateImage(context.Background(), "draw", "model", 1, "", "", "")
+	if err == nil {
+		t.Fatal("GenerateImage() returned nil error, want external error")
+	}
+	if strings.Join(callOrder, ",") != "official,external" {
+		t.Fatalf("call order = %v, want official/external", callOrder)
+	}
+	if strings.Contains(strings.Join(callOrder, ","), "legacy") {
+		t.Fatalf("call order = %v, paid responses chain must not use legacy", callOrder)
+	}
+}
+
+func TestNewResponsesWorkflowClientFreeFallsBackOfficialExternalLegacy(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	if err := cfg.ApplyOverrides(map[string]map[string]any{
+		"external_responses": {
+			"enabled":         true,
+			"base_url":        "https://external.example",
+			"api_key":         "key",
+			"model":           "external-model",
+			"request_timeout": 5,
+		},
+	}); err != nil {
+		t.Fatalf("ApplyOverrides() returned error: %v", err)
+	}
+	server := NewServer(cfg, nil, nil)
+	defer server.Close()
+	callOrder := []string{}
+	server.responsesClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
+		return &fallbackStubClient{name: "official", route: "responses", generateErr: fmt.Errorf("official down"), callOrder: &callOrder}
+	}
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		return &fallbackStubClient{name: "external", route: "external_responses", generateErr: fmt.Errorf("external down"), callOrder: &callOrder}
+	}
+	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
+		return &fallbackStubClient{name: "legacy", route: "legacy", resultURL: "stub://legacy", callOrder: &callOrder}
+	}
+
+	client := server.newResponsesWorkflowClientForAccount("token", nil, accounts.PublicAccount{Type: "Free"})
 	images, err := client.GenerateImage(context.Background(), "draw", "model", 1, "", "", "")
 	if err != nil {
 		t.Fatalf("GenerateImage() returned error: %v", err)
@@ -241,9 +301,6 @@ func TestNewResponsesWorkflowClientFallsBackOfficialExternalLegacy(t *testing.T)
 	}
 	if len(images) != 1 || images[0].URL != "stub://legacy" {
 		t.Fatalf("images = %#v, want legacy result", images)
-	}
-	if got := client.(*fallbackResponsesClient).LastRoute(); got != "legacy" {
-		t.Fatalf("LastRoute = %q, want legacy", got)
 	}
 }
 

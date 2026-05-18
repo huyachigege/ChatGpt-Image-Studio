@@ -1408,8 +1408,8 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			return nil, err
 		}
 		attempted[authFile.AccessToken] = struct{}{}
-		data, retryable, err := s.runImageRequest(ctx, authFile, account, releaseLease, accounts.ImageAccountRoutingDecision{}, operation, responseFormat, true, requestedModel, responsesEligible, metadata, run, r)
-		if err == nil || len(attempted) >= maxAttempts || !(retryable || shouldRetryImageRequestWithNextAccount(err)) {
+		data, _, err := s.runImageRequest(ctx, authFile, account, releaseLease, accounts.ImageAccountRoutingDecision{}, operation, responseFormat, true, requestedModel, responsesEligible, metadata, run, r)
+		if err == nil || len(attempted) >= maxAttempts || !shouldRetryImageRequestWithNextAccount(err) {
 			return data, err
 		}
 		lastRetryableErr = err
@@ -1433,8 +1433,8 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 		}
 		attempted[authFile.AccessToken] = struct{}{}
 
-		data, retryable, err := s.runImageRequest(ctx, authFile, account, releaseLease, decision, operation, responseFormat, false, requestedModel, responsesEligible, metadata, run, r)
-		if err != nil && len(attempted) < maxAttempts && len(attempted) < 64 && (retryable || shouldRetryImageRequestWithNextAccount(err)) {
+		data, _, err := s.runImageRequest(ctx, authFile, account, releaseLease, decision, operation, responseFormat, false, requestedModel, responsesEligible, metadata, run, r)
+		if err != nil && len(attempted) < maxAttempts && len(attempted) < 64 && shouldRetryImageRequestWithNextAccount(err) {
 			lastRetryableErr = err
 			continue
 		}
@@ -1450,6 +1450,10 @@ func (s *Server) newOfficialWorkflowClient(accessToken string, authData map[stri
 }
 
 func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[string]any) imageWorkflowClient {
+	return s.newResponsesWorkflowClientForAccount(accessToken, authData, accounts.PublicAccount{})
+}
+
+func (s *Server) newResponsesWorkflowClientForAccount(accessToken string, authData map[string]any, account accounts.PublicAccount) imageWorkflowClient {
 	var official imageWorkflowClient
 	if s != nil && s.responsesClientFactory != nil {
 		official = s.responsesClientFactory(accessToken, s.cfg.ChatGPTProxyURL(), authData, s.imageRequestConfig())
@@ -1468,7 +1472,6 @@ func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[str
 	if !externalConfig.Enabled || externalConfig.BaseURL == "" || externalConfig.APIKey == "" || externalConfig.Model == "" {
 		return official
 	}
-	legacy := s.newOfficialWorkflowClient(accessToken, authData)
 	var external imageWorkflowClient
 	if s.externalResponsesClientFactory != nil {
 		external = s.externalResponsesClientFactory(externalConfig)
@@ -1479,6 +1482,10 @@ func (s *Server) newResponsesWorkflowClient(accessToken string, authData map[str
 		return official
 	}
 	responses := newNamedFallbackResponsesClient(official, external, "official responses", "external responses")
+	if isPaidImageAccountType(account.Type) {
+		return responses
+	}
+	legacy := s.newOfficialWorkflowClient(accessToken, authData)
 	return newNamedFallbackResponsesClient(responses, legacy, "responses", "legacy")
 }
 
@@ -1856,7 +1863,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
 		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
-			client = s.newResponsesWorkflowClient(authFile.AccessToken, authFile.Data)
+			client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
 			if setter, ok := client.(interface{ SetSessionID(string) }); ok {
 				scope := responsesSessionScopeFromContext(ctx)
 				setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
@@ -1925,7 +1932,8 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 	}
 	admissionInfo = imageAdmissionFromContext(ctx)
 	if err != nil {
-		if !isExternalResponsesRoute(route) {
+		modelRefused := isImageModelRefusalError(err)
+		if !modelRefused && !isExternalResponsesRoute(route) {
 			store.RecordImageResult(authFile.AccessToken, false)
 		}
 		entry := imageRequestLogEntry{
@@ -1960,7 +1968,7 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
-		if isImageRateLimitError(err) {
+		if isImageHTTPStatusError(err, 429) {
 			if !isExternalResponsesRoute(route) {
 				store.RemoveImageRouteCapability(authFile.AccessToken, route)
 				store.MarkImageAccountLimited(authFile.AccessToken)
@@ -2542,7 +2550,11 @@ func writeImageRequestError(w http.ResponseWriter, err error) {
 }
 
 func shouldRetryImageRequestWithNextAccount(err error) bool {
-	if err == nil {
+	return isImageAccountSwitchError(err)
+}
+
+func isImageAccountSwitchError(err error) bool {
+	if err == nil || isImageModelRefusalError(err) {
 		return false
 	}
 	if code := requestErrorCode(err); code != "" {
@@ -2553,14 +2565,19 @@ func shouldRetryImageRequestWithNextAccount(err error) bool {
 			return false
 		}
 	}
+	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429)
+}
+
+func isImageModelRefusalError(err error) bool {
+	if err == nil {
+		return false
+	}
+	code := requestErrorCode(err)
+	if code == "model_refused" || code == "content_policy_violation" {
+		return true
+	}
 	message := strings.ToLower(err.Error())
-	if strings.Contains(message, "image generation refused") {
-		return false
-	}
-	if strings.Contains(message, "no images generated") {
-		return false
-	}
-	return true
+	return strings.Contains(message, "image generation refused") || strings.Contains(message, "model_refused") || strings.Contains(message, "content_policy") || strings.Contains(message, "safety_violation")
 }
 
 func isInvalidImageTokenError(err error) bool {
@@ -2568,7 +2585,29 @@ func isInvalidImageTokenError(err error) bool {
 		return false
 	}
 	message := strings.ToLower(err.Error())
-	for _, token := range []string{"http 401", "status 401", "unauthorized", "invalid authentication", "invalid_token"} {
+	for _, token := range []string{"http 401", "status 401", "returned 401", "unauthorized", "invalid authentication", "invalid_token"} {
+		if strings.Contains(message, token) {
+			return true
+		}
+	}
+	return false
+}
+
+func isImageHTTPStatusError(err error, status int) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	code := fmt.Sprintf("%d", status)
+	for _, token := range []string{
+		"http " + code,
+		"http " + code + ":",
+		"status " + code,
+		"returned " + code,
+		"returned status " + code,
+		" " + code + ":",
+		" " + code + " ",
+	} {
 		if strings.Contains(message, token) {
 			return true
 		}

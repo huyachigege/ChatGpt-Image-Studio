@@ -588,7 +588,7 @@ func (c *fallbackResponsesClient) run(ctx context.Context, call func(imageWorkfl
 		c.captureRoute(c.primary)
 		return results, nil
 	}
-	if errors.Is(err, context.Canceled) || isResponsesPreviousResponseContextError(err) {
+	if errors.Is(err, context.Canceled) || isResponsesPreviousResponseContextError(err) || isImageModelRefusalError(err) {
 		return nil, err
 	}
 	c.lastFallbackReason = err.Error()

@@ -464,6 +464,51 @@ func TestResolveImageAcquireError(t *testing.T) {
 	}
 }
 
+func TestOnlyHTTP401And429SwitchImageAccount(t *testing.T) {
+	switchErrors := []error{
+		errors.New("conversation returned 401: unauthorized"),
+		errors.New("responses returned 429: too many requests"),
+		errors.New("http 401"),
+		errors.New("status 429"),
+	}
+	for _, err := range switchErrors {
+		if !shouldRetryImageRequestWithNextAccount(err) {
+			t.Fatalf("shouldRetryImageRequestWithNextAccount(%v) = false, want true", err)
+		}
+	}
+
+	nonSwitchErrors := []error{
+		errors.New("responses returned 500: upstream unavailable"),
+		errors.New("rate limit bucket temporarily unavailable"),
+		errors.New("quota exceeded"),
+		errors.New("stream error: unexpected eof"),
+	}
+	for _, err := range nonSwitchErrors {
+		if shouldRetryImageRequestWithNextAccount(err) {
+			t.Fatalf("shouldRetryImageRequestWithNextAccount(%v) = true, want false", err)
+		}
+	}
+}
+
+func TestImageModelRefusalDoesNotRetryNextAccount(t *testing.T) {
+	tests := []error{
+		errors.New("image generation refused: unsafe image request"),
+		errors.New("upstream returned model_refused"),
+		errors.New("content_policy violation"),
+		newRequestError("model_refused", "image generation refused"),
+		newRequestError("content_policy_violation", "safety violation"),
+	}
+
+	for _, err := range tests {
+		if !isImageModelRefusalError(err) {
+			t.Fatalf("isImageModelRefusalError(%v) = false, want true", err)
+		}
+		if shouldRetryImageRequestWithNextAccount(err) {
+			t.Fatalf("shouldRetryImageRequestWithNextAccount(%v) = true, want false", err)
+		}
+	}
+}
+
 func TestNormalizeGenerateImageSize(t *testing.T) {
 	tests := []struct {
 		name  string
