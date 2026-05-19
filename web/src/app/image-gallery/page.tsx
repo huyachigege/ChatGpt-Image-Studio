@@ -180,16 +180,19 @@ export default function ImageGalleryPage() {
   const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day") => {
     setIsLoading(true);
     try {
-      const [payload, localConversations, serverConversations] = await Promise.all([
-        listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode }),
-        exportLocalImageConversationsSnapshot().catch(() => []),
-        exportServerImageConversationsSnapshot().catch(() => []),
-      ]);
-      const conversationById = new Map<string, ImageConversation>();
-      for (const conversation of [...localConversations, ...serverConversations]) {
-        conversationById.set(conversation.id, conversation);
+      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode });
+      let nextItems = payload.items || [];
+      if (nextItems.some((item) => !item.prompt)) {
+        const [localConversations, serverConversations] = await Promise.all([
+          exportLocalImageConversationsSnapshot().catch(() => []),
+          exportServerImageConversationsSnapshot().catch(() => []),
+        ]);
+        const conversationById = new Map<string, ImageConversation>();
+        for (const conversation of [...localConversations, ...serverConversations]) {
+          conversationById.set(conversation.id, conversation);
+        }
+        nextItems = attachLocalPrompts(nextItems, [...conversationById.values()]);
       }
-      const nextItems = attachLocalPrompts(payload.items || [], [...conversationById.values()]);
       setItems(nextItems);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);

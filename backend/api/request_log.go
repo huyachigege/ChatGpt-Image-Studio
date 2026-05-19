@@ -149,11 +149,12 @@ type imageRequestLogFilterOptions struct {
 }
 
 type imageRequestLogStore struct {
-	mu         sync.Mutex
-	path       string
-	legacyPath string
-	db         *sql.DB
-	items      []imageRequestLogEntry
+	mu             sync.Mutex
+	path           string
+	legacyPath     string
+	db             *sql.DB
+	items          []imageRequestLogEntry
+	promptMetadata map[string]imageGalleryPromptMetadata
 }
 
 func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
@@ -202,6 +203,10 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 	if len(s.items) > maxImageRequestLogEntries {
 		s.items = s.items[:maxImageRequestLogEntries]
 	}
+	if s.promptMetadata == nil {
+		s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
+	}
+	addImageRequestLogPromptMetadata(s.promptMetadata, entry)
 	_ = s.append(entry)
 }
 
@@ -227,7 +232,20 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.promptMetadata == nil {
+		s.rebuildImagePromptMetadataLocked()
+	}
+	for key, metadata := range s.promptMetadata {
+		metadataByName[key] = metadata
+	}
+	return metadataByName
+}
 
+func (s *imageRequestLogStore) rebuildImagePromptMetadataLocked() {
+	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	if s == nil {
+		return
+	}
 	if s.db != nil {
 		rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
 		if err == nil {
@@ -243,14 +261,14 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 				}
 				addImageRequestLogPromptMetadata(metadataByName, entry)
 			}
-			return metadataByName
+			s.promptMetadata = metadataByName
+			return
 		}
 	}
-
 	for _, entry := range s.items {
 		addImageRequestLogPromptMetadata(metadataByName, entry)
 	}
-	return metadataByName
+	s.promptMetadata = metadataByName
 }
 
 func addImageRequestLogPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, entry imageRequestLogEntry) {
@@ -422,6 +440,7 @@ func (s *imageRequestLogStore) deleteFailed() (int64, error) {
 		}
 	}
 	s.items = next
+	s.rebuildImagePromptMetadataLocked()
 	return affected, nil
 }
 
@@ -469,6 +488,7 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 		next = append(next, item)
 	}
 	s.items = next
+	s.rebuildImagePromptMetadataLocked()
 	return deleted, nil
 }
 
@@ -518,6 +538,7 @@ func (s *imageRequestLogStore) loadFromDB() {
 		items = append(items, requestLogSummaryToEntry(summary))
 	}
 	s.items = items
+	s.rebuildImagePromptMetadataLocked()
 }
 
 func (s *imageRequestLogStore) append(entry imageRequestLogEntry) error {
