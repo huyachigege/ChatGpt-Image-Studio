@@ -2700,7 +2700,7 @@ func isImageModelRefusalError(err error) bool {
 		return true
 	}
 	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "image generation refused") || strings.Contains(message, "model_refused") || strings.Contains(message, "content_policy") || strings.Contains(message, "safety_violation")
+	return strings.Contains(message, "image generation refused") || strings.Contains(message, "model_refused") || strings.Contains(message, "content_policy") || strings.Contains(message, "safety_violation") || strings.Contains(message, "safety system") || strings.Contains(message, "safety_violations")
 }
 
 func isInvalidImageTokenError(err error) bool {

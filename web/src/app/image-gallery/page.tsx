@@ -16,7 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
-import { listImageConversations, type ImageConversation } from "@/store/image-conversations";
+import {
+  exportLocalImageConversationsSnapshot,
+  exportServerImageConversationsSnapshot,
+  type ImageConversation,
+} from "@/store/image-conversations";
 
 const GALLERY_ROWS = 3;
 
@@ -176,11 +180,16 @@ export default function ImageGalleryPage() {
   const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day") => {
     setIsLoading(true);
     try {
-      const [payload, conversations] = await Promise.all([
+      const [payload, localConversations, serverConversations] = await Promise.all([
         listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode }),
-        listImageConversations().catch(() => []),
+        exportLocalImageConversationsSnapshot().catch(() => []),
+        exportServerImageConversationsSnapshot().catch(() => []),
       ]);
-      const nextItems = attachLocalPrompts(payload.items || [], conversations);
+      const conversationById = new Map<string, ImageConversation>();
+      for (const conversation of [...localConversations, ...serverConversations]) {
+        conversationById.set(conversation.id, conversation);
+      }
+      const nextItems = attachLocalPrompts(payload.items || [], [...conversationById.values()]);
       setItems(nextItems);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);

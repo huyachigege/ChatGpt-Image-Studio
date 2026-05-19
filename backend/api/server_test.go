@@ -524,6 +524,7 @@ func TestImageModelRefusalDoesNotRetryNextAccount(t *testing.T) {
 		errors.New("image generation refused: unsafe image request"),
 		errors.New("upstream returned model_refused"),
 		errors.New("content_policy violation"),
+		errors.New("Your request was rejected by the safety system. safety_violations=[sexual]"),
 		newRequestError("model_refused", "image generation refused"),
 		newRequestError("content_policy_violation", "safety violation"),
 	}

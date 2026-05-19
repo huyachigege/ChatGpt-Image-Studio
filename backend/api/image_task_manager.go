@@ -19,7 +19,7 @@ const imageTaskRetentionAfterFinish = 30 * time.Minute
 
 var (
 	imageTaskRetryBackoffBase = 2 * time.Second
-	imageTaskRetryBackoffMax  = 20 * time.Second
+	imageTaskRetryBackoffMax  = 5 * time.Second
 )
 
 type imageTaskLease struct {
@@ -827,6 +827,9 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask) string {
 		return "responses"
 	}
 	if task.Mode == "generate" && task.Requirement.NeedPaid {
+		return "responses"
+	}
+	if task.Mode == "generate" && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") && m.server.externalResponsesConfigured() {
 		return "responses"
 	}
 	return "legacy"

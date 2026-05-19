@@ -78,6 +78,10 @@ func shouldImmediateExternalResponsesFallback(attemptClass imageAttemptErrorClas
 	return attemptClass != imageAttemptFatal
 }
 
+func shouldTryImageFallback(err error, attemptClass imageAttemptErrorClass) bool {
+	return err != nil && attemptClass != imageAttemptFatal
+}
+
 func (s *Server) rebindImageTaskConversationAccount(task *imageTask, failedAccessToken string, route string) {
 	if s == nil || task == nil {
 		return
@@ -256,6 +260,35 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				false,
 				"external_responses",
 			)
+			attemptClass = classifyImageAttemptError(err)
+		}
+		if shouldTryImageFallback(err, attemptClass) && len(imageFiles) > 0 {
+			items, _, err = s.runImageRequestWithAdmissionRoute(
+				taskCtx,
+				lease.auth,
+				lease.account,
+				func() {},
+				lease.decision,
+				"edit",
+				task.ResponseFormat,
+				false,
+				requestedModel,
+				responsesEligible,
+				metadata,
+				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+					applySystemHint(client)
+					prompt := effectivePrompt
+					if instructions != "" {
+						if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+							prompt = instructions + "\n\n" + prompt
+						}
+					}
+					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, nil, task.Size, task.Quality)
+				},
+				fakeReq,
+				false,
+				"legacy",
+			)
 		}
 	case task.Mode == "edit" || len(task.SourceImages) > 0:
 		var mask []byte
@@ -310,6 +343,35 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				fakeReq,
 				false,
 				"external_responses",
+			)
+			attemptClass = classifyImageAttemptError(err)
+		}
+		if shouldTryImageFallback(err, attemptClass) {
+			items, _, err = s.runImageRequestWithAdmissionRoute(
+				taskCtx,
+				lease.auth,
+				lease.account,
+				func() {},
+				lease.decision,
+				"generate",
+				task.ResponseFormat,
+				false,
+				requestedModel,
+				false,
+				metadata,
+				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+					applySystemHint(client)
+					prompt := effectivePrompt
+					if instructions != "" {
+						if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+							prompt = instructions + "\n\n" + prompt
+						}
+					}
+					return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+				},
+				fakeReq,
+				false,
+				"legacy",
 			)
 		}
 	default:
@@ -457,6 +519,24 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return attemptItems, attemptClass, attemptErr
 		}
+		tryExternal := func() ([]map[string]any, imageAttemptErrorClass, error) {
+			if !s.externalResponsesConfigured() {
+				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
+			}
+			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
+			attemptItems, attemptClass, attemptErr := tryRoute(lease, "external_responses")
+			if attemptErr != nil {
+				rememberAttempt(lease)
+			}
+			return attemptItems, attemptClass, attemptErr
+		}
+		trySameLegacy := func() ([]map[string]any, imageAttemptErrorClass, error) {
+			attemptItems, attemptClass, attemptErr := tryRoute(lease, "legacy")
+			if attemptErr != nil {
+				rememberAttempt(lease)
+			}
+			return attemptItems, attemptClass, attemptErr
+		}
 
 		var attemptClass imageAttemptErrorClass
 		startRoute := "legacy"
@@ -468,37 +548,31 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			rememberAttempt(lease)
 		}
 		if err != nil && attemptClass != imageAttemptFatal && startRoute == "legacy" {
+			if s.externalResponsesConfigured() {
+				items, attemptClass, err = tryExternal()
+			}
 			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 				items, attemptClass, err = tryNextLegacy()
 			}
 		} else if err != nil && attemptClass != imageAttemptFatal {
-			if task.Requirement.NeedPaid {
-				if s.externalResponsesConfigured() {
-					s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
-					items, attemptClass, err = tryRoute(lease, "external_responses")
-				} else {
-					for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal; i++ {
-						items, attemptClass, err = tryNextResponses()
-					}
-				}
-			} else if s.externalResponsesConfigured() {
-				s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
-				items, attemptClass, err = tryRoute(lease, "external_responses")
-				if err != nil && attemptClass != imageAttemptFatal {
-					items, attemptClass, err = tryRoute(lease, "legacy")
-				}
+			if s.externalResponsesConfigured() {
+				items, attemptClass, err = tryExternal()
 			} else {
-				items, attemptClass, err = tryNextResponses()
-				if err != nil && attemptClass != imageAttemptFatal {
-					items, attemptClass, err = tryRoute(lease, "legacy")
+				for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal; i++ {
+					items, attemptClass, err = tryNextResponses()
 				}
 			}
+			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid {
+				items, attemptClass, err = trySameLegacy()
+			}
 		}
-		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && !s.externalResponsesConfigured() && !accounts.AccountSupportsImageRoute(lease.account, "responses") {
-			items, attemptClass, err = tryRoute(lease, "legacy")
+		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+				items, attemptClass, err = tryNextLegacy()
+			}
 		}
 		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
-			items, attemptClass, err = tryRoute(lease, "legacy")
+			items, attemptClass, err = trySameLegacy()
 			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 				items, attemptClass, err = tryNextLegacy()
 			}

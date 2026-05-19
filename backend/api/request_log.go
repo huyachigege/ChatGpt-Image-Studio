@@ -227,20 +227,44 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for _, entry := range s.items {
-		prompt := strings.TrimSpace(entry.Prompt)
-		if prompt == "" || !entry.Success {
-			continue
-		}
-		metadata := imageGalleryPromptMetadata{Prompt: prompt}
-		for _, imageURL := range entry.ImageURLs {
-			addImageGalleryPromptMetadata(metadataByName, imageURL, metadata)
-		}
-		for _, imageName := range entry.ImageNames {
-			addImageGalleryPromptMetadata(metadataByName, imageName, metadata)
+
+	if s.db != nil {
+		rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
+		if err == nil {
+			defer rows.Close()
+			for rows.Next() {
+				var raw []byte
+				if err := rows.Scan(&raw); err != nil {
+					continue
+				}
+				var entry imageRequestLogEntry
+				if err := json.Unmarshal(raw, &entry); err != nil {
+					continue
+				}
+				addImageRequestLogPromptMetadata(metadataByName, entry)
+			}
+			return metadataByName
 		}
 	}
+
+	for _, entry := range s.items {
+		addImageRequestLogPromptMetadata(metadataByName, entry)
+	}
 	return metadataByName
+}
+
+func addImageRequestLogPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, entry imageRequestLogEntry) {
+	prompt := strings.TrimSpace(entry.Prompt)
+	if prompt == "" || !entry.Success {
+		return
+	}
+	metadata := imageGalleryPromptMetadata{Prompt: prompt}
+	for _, imageURL := range entry.ImageURLs {
+		addImageGalleryPromptMetadata(metadataByName, imageURL, metadata)
+	}
+	for _, imageName := range entry.ImageNames {
+		addImageGalleryPromptMetadata(metadataByName, imageName, metadata)
+	}
 }
 
 func (s *imageRequestLogStore) latestStartedAtByUser() map[string]string {
