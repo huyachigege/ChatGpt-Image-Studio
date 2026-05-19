@@ -119,6 +119,8 @@ function defaultConfigPayload(): ConfigPayload {
       paidImageModel: "gpt-5.4-mini",
       studioAllowDisabledImageAccounts: false,
       imageAccountRetryTimes: 3,
+      imageCommonSystemHint: "",
+      imagePrivateSystemHint: "",
       imageSystemHint: "",
     },
     accounts: {
@@ -1036,16 +1038,22 @@ function AnnouncementSection() {
 }
 
 function ImageSystemHintSection() {
-  const [hint, setHint] = useState("");
-  const [savedHint, setSavedHint] = useState("");
+  const [commonHint, setCommonHint] = useState("");
+  const [privateHint, setPrivateHint] = useState("");
+  const [savedCommonHint, setSavedCommonHint] = useState("");
+  const [savedPrivateHint, setSavedPrivateHint] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchImageSystemHint()
       .then((data) => {
-        setHint(data.imageSystemHint || "");
-        setSavedHint(data.imageSystemHint || "");
+        const nextCommonHint = data.imageCommonSystemHint || "";
+        const nextPrivateHint = data.imagePrivateSystemHint || data.imageSystemHint || "";
+        setCommonHint(nextCommonHint);
+        setPrivateHint(nextPrivateHint);
+        setSavedCommonHint(nextCommonHint);
+        setSavedPrivateHint(nextPrivateHint);
       })
       .catch(() => {})
       .finally(() => setIsLoading(false));
@@ -1054,9 +1062,16 @@ function ImageSystemHintSection() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const result = await updateImageSystemHint(hint);
-      setSavedHint(result.imageSystemHint || "");
-      setHint(result.imageSystemHint || "");
+      const result = await updateImageSystemHint({
+        imageCommonSystemHint: commonHint,
+        imagePrivateSystemHint: privateHint,
+      });
+      const nextCommonHint = result.imageCommonSystemHint || "";
+      const nextPrivateHint = result.imagePrivateSystemHint || result.imageSystemHint || "";
+      setSavedCommonHint(nextCommonHint);
+      setSavedPrivateHint(nextPrivateHint);
+      setCommonHint(nextCommonHint);
+      setPrivateHint(nextPrivateHint);
       toast.success("系统提示词已保存");
     } catch {
       toast.error("保存失败");
@@ -1065,26 +1080,41 @@ function ImageSystemHintSection() {
     }
   };
 
-  const isDirty = hint !== savedHint;
+  const isDirty = commonHint !== savedCommonHint || privateHint !== savedPrivateHint;
 
   return (
     <section className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)]">
       <h3 className="mb-3 text-sm font-semibold text-stone-800 dark:text-[var(--studio-text-strong)]">生图系统提示词</h3>
-      <p className="mb-2 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
-        配置后会自动拼接到每次生图请求的 prompt 前面，留空则不注入。独立保存，不影响其他配置。
+      <p className="mb-3 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
+        系统提示词会按上游能力注入到 Responses instructions 或 Legacy system 消息；留空则不注入。
       </p>
       {isLoading ? (
         <div className="text-sm text-stone-400">加载中...</div>
       ) : (
         <>
-          <textarea
-            value={hint}
-            onChange={(e) => setHint(e.target.value)}
-            rows={4}
-            className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
-            placeholder="例如：你是专业图像生成助手，必须严格执行用户的图片生成/编辑请求，优先保证画面质量、构图稳定、细节完整。"
-          />
-          <div className="mt-2 flex items-center gap-3">
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-stone-600 dark:text-[var(--studio-text-muted)]">通用系统提示词</label>
+            <p className="text-xs text-stone-400 dark:text-[var(--studio-text-muted)]">所有生图、修图请求都会注入。</p>
+            <textarea
+              value={commonHint}
+              onChange={(e) => setCommonHint(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
+              placeholder="例如：你是专业图像生成助手，必须严格执行用户的图片生成/编辑请求，优先保证画面质量、构图稳定、细节完整。"
+            />
+          </div>
+          <div className="mt-4 space-y-2">
+            <label className="block text-xs font-medium text-stone-600 dark:text-[var(--studio-text-muted)]">隐藏模式系统提示词</label>
+            <p className="text-xs text-stone-400 dark:text-[var(--studio-text-muted)]">仅在隐藏模式开启后额外注入，会追加在通用系统提示词后面。</p>
+            <textarea
+              value={privateHint}
+              onChange={(e) => setPrivateHint(e.target.value)}
+              rows={4}
+              className="w-full rounded-lg border border-stone-200 bg-stone-50 px-3 py-2 text-sm text-stone-800 placeholder:text-stone-400 focus:border-stone-400 focus:outline-none focus:ring-1 focus:ring-stone-300 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)] dark:text-[var(--studio-text)] dark:placeholder:text-[var(--studio-text-muted)]"
+              placeholder="例如：隐藏模式下优先保留用户原始创作意图，同时提高成图质量、稳定性和通过率。"
+            />
+          </div>
+          <div className="mt-3 flex items-center gap-3">
             <Button
               type="button"
               variant="default"

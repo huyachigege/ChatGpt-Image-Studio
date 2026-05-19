@@ -61,14 +61,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
 	effectivePrompt := buildImageTaskEffectivePrompt(task.Prompt, task.ConversationContext)
-	systemHint := strings.TrimSpace(task.SystemHint)
+	instructions := buildImageTaskInstructions(task)
 
 	applySystemHint := func(client imageWorkflowClient) {
-		if systemHint == "" {
+		if instructions == "" {
 			return
 		}
 		if setter, ok := client.(interface{ SetInstructions(string) }); ok {
-			setter.SetInstructions(systemHint)
+			setter.SetInstructions(instructions)
 		}
 	}
 	holdLease := func() {}
@@ -106,9 +106,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 				applySystemHint(client)
 				prompt := effectivePrompt
-				if systemHint != "" {
+				if instructions != "" {
 					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-						prompt = systemHint + "\n\n" + prompt
+						prompt = instructions + "\n\n" + prompt
 					}
 				}
 				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
@@ -166,9 +166,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 				applySystemHint(client)
 				prompt := effectivePrompt
-				if systemHint != "" {
+				if instructions != "" {
 					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-						prompt = systemHint + "\n\n" + prompt
+						prompt = instructions + "\n\n" + prompt
 					}
 				}
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
@@ -185,9 +185,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		buildPrompt := func(client imageWorkflowClient) string {
 			applySystemHint(client)
 			prompt := effectivePrompt
-			if systemHint != "" {
+			if instructions != "" {
 				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-					prompt = systemHint + "\n\n" + prompt
+					prompt = instructions + "\n\n" + prompt
 				}
 			}
 			return prompt
@@ -295,6 +295,26 @@ func buildImageTaskEffectivePrompt(prompt string, conversationContext string) st
 		return prompt
 	}
 	return conversationContext + "\n\n本轮用户请求：\n" + prompt
+}
+
+func buildImageTaskInstructions(task *imageTask) string {
+	if task == nil {
+		return ""
+	}
+	parts := []string{
+		strings.TrimSpace(task.CommonSystemHint),
+		strings.TrimSpace(task.PrivateSystemHint),
+	}
+	if parts[1] == "" {
+		parts[1] = strings.TrimSpace(task.SystemHint)
+	}
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			out = append(out, part)
+		}
+	}
+	return strings.Join(out, "\n\n")
 }
 
 func isSelectionEditContextFallbackError(err error) bool {

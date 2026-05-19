@@ -55,6 +55,7 @@ type UseImageSubmitOptions = {
     updater: (current: ImageConversation | null) => ImageConversation,
   ) => Promise<void>;
   resetComposer: (nextMode?: ImageMode) => void;
+  privatePhotoMode?: boolean;
   systemHint?: string;
 };
 
@@ -135,6 +136,7 @@ export function useImageSubmit({
   persistConversation,
   updateConversation,
   resetComposer,
+  privatePhotoMode,
   systemHint,
 }: UseImageSubmitOptions) {
   const isSelectionEditDispatchingRef = useRef(false);
@@ -244,6 +246,7 @@ export function useImageSubmit({
           sourceImages: draftTurn.sourceImages,
           sourceReference,
           conversationContext,
+          privatePhotoMode,
           systemHint,
         });
 
@@ -302,6 +305,7 @@ export function useImageSubmit({
       setImagePrompt,
       setSourceImages,
       setSubmitElapsedSeconds,
+      privatePhotoMode,
       systemHint,
       updateConversation,
     ],
@@ -412,6 +416,7 @@ export function useImageSubmit({
           sourceReference: turn.sourceReference,
           contextReference: turn.contextReference,
           conversationContext,
+          privatePhotoMode,
           systemHint,
         });
 
@@ -476,7 +481,15 @@ export function useImageSubmit({
         retryingTurnIdsRef.current.delete(turn.id);
       }
     },
-    [conversationTurns, focusConversation, makeId, setSubmitElapsedSeconds, systemHint, updateConversation],
+    [
+      conversationTurns,
+      focusConversation,
+      makeId,
+      setSubmitElapsedSeconds,
+      privatePhotoMode,
+      systemHint,
+      updateConversation,
+    ],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -556,6 +569,7 @@ export function useImageSubmit({
         referenceImages,
         contextReference,
         conversationContext,
+        privatePhotoMode,
         systemHint,
       });
 
@@ -618,6 +632,7 @@ export function useImageSubmit({
     setSourceImages,
     setSubmitElapsedSeconds,
     sourceImages,
+    privatePhotoMode,
     systemHint,
     updateConversation,
   ]);

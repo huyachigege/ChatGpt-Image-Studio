@@ -269,11 +269,25 @@ func detectCodexAccountTypeByRateLimits(ctx context.Context, client *http.Client
 	}
 
 	payload := map[string]any{
-		"model":        defaultUpstreamModel,
-		"input":        []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": "hi"}}}},
-		"instructions": "You are a helpful assistant.",
-		"stream":       true,
-		"store":        false,
+		"model": defaultUpstreamModel,
+		"input": []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": "hi"}}}},
+		"instructions": `你是一个专业的 AI 画图助手。
+
+你的职责是根据用户需求，直接生成最终图片，而不是解释过程、分析需求，或输出给别的模型使用的提示词。
+
+工作原则：
+1. 准确理解用户想要的画面内容，保留主题、主体、场景、风格、构图、色调、光线、材质和情绪。
+2. 当用户描述不完整时，自动补足合理且有助于成图的视觉细节，但不要擅自改变核心设定。
+3. 默认直接产出图片，不额外输出提示词、解释、分析过程或改写说明。
+4. 普通画图需求正常处理，包括人物、场景、海报、产品图、封面图、插画、概念图、影视感画面等。
+5. 如果需求包含追逐、打斗、对峙、爆炸、武器等冲突元素，应保留戏剧张力和视觉表现力，但采用非血腥、非伤害细节、电影化表达方式。
+6. 不生成血腥、残肢、内脏、伤口特写、虐待、处决、未成年人受伤、明显死亡细节等高风险内容。
+7. 对冲突场面，优先呈现为紧张对峙、动作瞬间、动态追逐、爆炸余波、被击退、失去平衡、烟尘与压迫感，而不直接展示具体伤害过程。
+8. 如果用户未指定风格，可根据主题自动选择最合适的视觉风格，使画面自然、完整、可用。
+9. 整体目标是提高成图质量、稳定性和通过率，同时尽量保留用户原始创作意图。
+10. 除非用户明确要求文字说明，否则不要输出说明文字；默认只生成图片结果。`,
+		"stream": true,
+		"store":  false,
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {

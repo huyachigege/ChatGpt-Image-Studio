@@ -63,6 +63,8 @@ type ChatGPTConfig struct {
 	PaidImageModel                   string `toml:"paid_image_model"`
 	StudioAllowDisabledImageAccounts bool   `toml:"studio_allow_disabled_image_accounts"`
 	ImageAccountRetryTimes           int    `toml:"image_account_retry_times"`
+	ImageCommonSystemHint            string `toml:"image_common_system_hint"`
+	ImagePrivateSystemHint           string `toml:"image_private_system_hint"`
 	ImageSystemHint                  string `toml:"image_system_hint"`
 }
 
@@ -563,10 +565,23 @@ func (c *Config) ImageAccountRetryTimes() int {
 	return retries
 }
 
-func (c *Config) ImageSystemHint() string {
+func (c *Config) ImageCommonSystemHint() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+	return strings.TrimSpace(c.ChatGPT.ImageCommonSystemHint)
+}
+
+func (c *Config) ImagePrivateSystemHint() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if hint := strings.TrimSpace(c.ChatGPT.ImagePrivateSystemHint); hint != "" {
+		return hint
+	}
 	return strings.TrimSpace(c.ChatGPT.ImageSystemHint)
+}
+
+func (c *Config) ImageSystemHint() string {
+	return c.ImagePrivateSystemHint()
 }
 
 func (c *Config) proxyURLLocked(forSync bool) string {

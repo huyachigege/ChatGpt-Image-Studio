@@ -935,6 +935,13 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		requirement.PolicySnapshot = &normalized
 	}
 
+	commonSystemHint := strings.TrimSpace(firstNonEmpty(req.CommonSystemHint, m.server.cfg.ImageCommonSystemHint()))
+	privateSystemHint := ""
+	if req.PrivatePhotoMode {
+		privateSystemHint = m.server.cfg.ImagePrivateSystemHint()
+	}
+	privateSystemHint = strings.TrimSpace(firstNonEmpty(req.PrivateSystemHint, privateSystemHint, req.SystemHint))
+
 	createdAt := time.Now().UTC()
 	images := make([]imagehistory.Image, 0, count)
 	units := make([]imageTaskUnit, 0, count)
@@ -967,7 +974,10 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		Quality:             strings.TrimSpace(req.Quality),
 		Background:          strings.TrimSpace(req.Background),
 		ResponseFormat:      "url",
-		SystemHint:          strings.TrimSpace(req.SystemHint),
+		PrivatePhotoMode:    req.PrivatePhotoMode,
+		CommonSystemHint:    commonSystemHint,
+		PrivateSystemHint:   privateSystemHint,
+		SystemHint:          privateSystemHint,
 		ConversationContext: normalizeImageConversationContext(req.ConversationContext),
 		SourceImages:        sourceImages,
 		ReferenceImages:     referenceImages,

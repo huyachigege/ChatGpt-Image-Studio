@@ -324,6 +324,8 @@ export type ConfigPayload = {
     paidImageModel: string;
     studioAllowDisabledImageAccounts: boolean;
     imageAccountRetryTimes: number;
+    imageCommonSystemHint: string;
+    imagePrivateSystemHint: string;
     imageSystemHint: string;
   };
   accounts: {
@@ -903,14 +905,34 @@ export type AccountImageTestResult = {
   latencyMs: number;
 };
 
+export type ImageSystemHintConfig = {
+  imageCommonSystemHint: string;
+  imagePrivateSystemHint: string;
+  imageSystemHint: string;
+};
+
 export async function fetchImageSystemHint() {
-  return httpRequest<{ imageSystemHint: string }>("/api/config/image-system-hint");
+  return httpRequest<ImageSystemHintConfig>("/api/config/image-system-hint");
 }
 
-export async function updateImageSystemHint(hint: string) {
-  return httpRequest<{ imageSystemHint: string }>("/api/config/image-system-hint", {
+export async function updateImageSystemHint(
+  hint:
+    | string
+    | {
+        imageCommonSystemHint?: string;
+        imagePrivateSystemHint?: string;
+      },
+) {
+  const body =
+    typeof hint === "string"
+      ? { imageSystemHint: hint }
+      : {
+          imageCommonSystemHint: hint.imageCommonSystemHint || "",
+          imagePrivateSystemHint: hint.imagePrivateSystemHint || "",
+        };
+  return httpRequest<ImageSystemHintConfig>("/api/config/image-system-hint", {
     method: "PUT",
-    body: { imageSystemHint: hint },
+    body,
   });
 }
 
@@ -1151,6 +1173,7 @@ export async function createImageTask(payload: {
   contextReference?: ImageContextReference;
   conversationContext?: string;
   policy?: StoredImageAccountPolicy;
+  privatePhotoMode?: boolean;
   systemHint?: string;
 }) {
   const policy = payload.policy ?? (await getImageAccountPolicyForRequest());
@@ -1177,6 +1200,7 @@ export async function createImageTask(payload: {
       contextReference: payload.contextReference,
       conversationContext: payload.conversationContext?.trim() || undefined,
       policy: normalizeImageAccountPolicy(policy),
+      privatePhotoMode: payload.privatePhotoMode || undefined,
       systemHint: payload.systemHint || undefined,
     },
   });

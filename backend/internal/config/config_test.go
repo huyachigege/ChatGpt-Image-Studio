@@ -35,6 +35,27 @@ func TestValidateRejectsUnsupportedProxyMode(t *testing.T) {
 	}
 }
 
+func TestImageSystemHintAccessors(t *testing.T) {
+	cfg := &Config{}
+	cfg.ChatGPT.ImageSystemHint = " legacy private "
+	if got := cfg.ImagePrivateSystemHint(); got != "legacy private" {
+		t.Fatalf("ImagePrivateSystemHint() legacy = %q, want %q", got, "legacy private")
+	}
+
+	cfg.ChatGPT.ImagePrivateSystemHint = " private "
+	if got := cfg.ImagePrivateSystemHint(); got != "private" {
+		t.Fatalf("ImagePrivateSystemHint() private = %q, want %q", got, "private")
+	}
+	if got := cfg.ImageSystemHint(); got != "private" {
+		t.Fatalf("ImageSystemHint() = %q, want %q", got, "private")
+	}
+
+	cfg.ChatGPT.ImageCommonSystemHint = " common "
+	if got := cfg.ImageCommonSystemHint(); got != "common" {
+		t.Fatalf("ImageCommonSystemHint() = %q, want %q", got, "common")
+	}
+}
+
 func TestProxyURLs(t *testing.T) {
 	cfg := &Config{
 		Proxy: ProxyConfig{

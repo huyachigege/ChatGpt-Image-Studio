@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
+import { listImageConversations, type ImageConversation } from "@/store/image-conversations";
 
 const GALLERY_ROWS = 3;
 
@@ -92,6 +93,65 @@ function buildGallerySourceImage(item: ImageGalleryItem, index = 0) {
   };
 }
 
+function imagePromptKeys(value?: string) {
+  const trimmed = String(value || "").trim().split("?")[0];
+  if (!trimmed) return [];
+  const marker = "/v1/files/image/";
+  const markerIndex = trimmed.lastIndexOf(marker);
+  const pathValue = markerIndex >= 0 ? trimmed.slice(markerIndex + marker.length) : trimmed.replace(/^\/?v1\/files\/image\//, "");
+  return Array.from(
+    new Set(
+      [trimmed, pathValue, basename(trimmed), basename(pathValue)]
+        .map((key) => key.trim().replace(/^\/+|\/+$/g, ""))
+        .filter(Boolean),
+    ),
+  );
+}
+
+function buildConversationPromptMap(conversations: ImageConversation[]) {
+  const metadata = new Map<string, { prompt: string; conversationId: string; turnId?: string }>();
+  const addImage = (url: string | undefined, prompt: string, conversationId: string, turnId?: string) => {
+    const normalizedPrompt = prompt.trim();
+    if (!url || !normalizedPrompt) return;
+    for (const key of imagePromptKeys(url)) {
+      metadata.set(key, { prompt: normalizedPrompt, conversationId, turnId });
+    }
+  };
+  for (const conversation of conversations) {
+    const conversationPrompt = conversation.prompt.trim();
+    for (const image of conversation.images || []) {
+      addImage(image.url, image.prompt || conversationPrompt, conversation.id);
+    }
+    for (const turn of conversation.turns || []) {
+      const turnPrompt = (turn.prompt || conversationPrompt).trim();
+      for (const image of turn.images || []) {
+        addImage(image.url, image.prompt || turnPrompt, conversation.id, turn.id);
+      }
+    }
+  }
+  return metadata;
+}
+
+function attachLocalPrompts(items: ImageGalleryItem[], conversations: ImageConversation[]) {
+  const metadata = buildConversationPromptMap(conversations);
+  if (metadata.size === 0) return items;
+  return items.map((item) => {
+    if (item.prompt) return item;
+    for (const key of [...imagePromptKeys(item.name), ...imagePromptKeys(item.url)]) {
+      const match = metadata.get(key);
+      if (match) {
+        return {
+          ...item,
+          prompt: match.prompt,
+          conversationId: item.conversationId || match.conversationId,
+          turnId: item.turnId || match.turnId,
+        };
+      }
+    }
+    return item;
+  });
+}
+
 export default function ImageGalleryPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState<ImageGalleryItem[]>([]);
@@ -116,8 +176,12 @@ export default function ImageGalleryPage() {
   const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day") => {
     setIsLoading(true);
     try {
-      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode });
-      setItems(payload.items || []);
+      const [payload, conversations] = await Promise.all([
+        listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode }),
+        listImageConversations().catch(() => []),
+      ]);
+      const nextItems = attachLocalPrompts(payload.items || [], conversations);
+      setItems(nextItems);
       setTotal(payload.total || 0);
       setPage(payload.page || nextPage);
       setSelectedNames([]);

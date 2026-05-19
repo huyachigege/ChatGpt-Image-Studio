@@ -10,7 +10,6 @@ import {
   cancelImageTask,
   consumeImageTaskStream,
   fetchImageQuota,
-  fetchImageSystemHint,
   listImageTasks,
   type ImageTaskSnapshot,
   type ImageTaskView,
@@ -466,7 +465,6 @@ export default function ImagePage() {
   const consecutiveSubmitRef = useRef(0);
   const lastSubmitTimeRef = useRef(0);
   const [privatePhotoMode, setPrivatePhotoMode] = useState(false);
-  const cachedSystemHintRef = useRef("");
   const [isMobileComposerCollapsed, setIsMobileComposerCollapsed] =
     useState(true);
   const [taskItems, setTaskItems] = useState<ImageTaskView[]>([]);
@@ -1243,10 +1241,6 @@ export default function ImagePage() {
     navigate(pathname, { replace: true, state: null });
   }, [currentImageView, location.state, navigate, openDraftConversation, pathname, setSourceImages]);
 
-  const privatePhotoSystemHint = privatePhotoMode
-    ? (cachedSystemHintRef.current || undefined)
-    : undefined;
-
   const { handleSelectionEditSubmit, handleRetryTurn, handleSubmit: rawHandleSubmit } =
     useImageSubmit({
       mode,
@@ -1271,7 +1265,7 @@ export default function ImagePage() {
       persistConversation,
       updateConversation,
       resetComposer,
-      systemHint: privatePhotoSystemHint,
+      privatePhotoMode,
     });
 
   const handleSubmit = rawHandleSubmit;
@@ -1453,9 +1447,6 @@ export default function ImagePage() {
             if (consecutiveSubmitRef.current >= 5 && !privatePhotoMode) {
               setPrivatePhotoMode(true);
               toast("你懂的 😏", { duration: 2000 });
-              fetchImageSystemHint()
-                .then((data) => { cachedSystemHintRef.current = data.imageSystemHint || ""; })
-                .catch(() => {});
             }
           }
           setMode(value);

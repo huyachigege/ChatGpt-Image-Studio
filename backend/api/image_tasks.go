@@ -79,6 +79,9 @@ type createImageTaskRequest struct {
 	Background          string                              `json:"background,omitempty"`
 	ResponseFormat      string                              `json:"responseFormat,omitempty"`
 	RetryImageIndex     *int                                `json:"retryImageIndex,omitempty"`
+	PrivatePhotoMode    bool                                `json:"privatePhotoMode,omitempty"`
+	CommonSystemHint    string                              `json:"commonSystemHint,omitempty"`
+	PrivateSystemHint   string                              `json:"privateSystemHint,omitempty"`
 	SourceImages        []imageTaskSourceImagePayload       `json:"sourceImages,omitempty"`
 	ReferenceImages     []imageTaskReferenceImagePayload    `json:"referenceImages,omitempty"`
 	SourceReference     *imageTaskSourceReferencePayload    `json:"sourceReference,omitempty"`
@@ -201,6 +204,9 @@ type imageTask struct {
 	Quality             string
 	Background          string
 	ResponseFormat      string
+	PrivatePhotoMode    bool
+	CommonSystemHint    string
+	PrivateSystemHint   string
 	SystemHint          string
 	ConversationContext string
 	SourceImages        []imageTaskSourceImage

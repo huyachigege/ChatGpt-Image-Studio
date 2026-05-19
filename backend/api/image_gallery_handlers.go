@@ -407,39 +407,51 @@ func buildImageGalleryPromptMetadata(conversations []imagehistory.Conversation) 
 }
 
 func addImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, imageURL string, metadata imageGalleryPromptMetadata) {
-	imageURL = strings.TrimSpace(imageURL)
-	if imageURL == "" || metadata.Prompt == "" {
+	if metadata.Prompt == "" {
 		return
 	}
-	withoutQuery := strings.Split(imageURL, "?")[0]
-	keys := []string{
-		withoutQuery,
-		extractImagePathFromURL(withoutQuery),
-		path.Base(withoutQuery),
-	}
-	for _, key := range keys {
-		key = strings.Trim(strings.TrimSpace(key), "/")
-		if key == "" || key == "." {
-			continue
-		}
+	for _, key := range imageGalleryPromptKeys(imageURL) {
 		metadataByName[key] = metadata
 	}
 }
 
 func lookupImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, item imageGalleryItem) (imageGalleryPromptMetadata, bool) {
-	keys := []string{
-		item.Name,
-		strings.TrimPrefix(item.URL, "/v1/files/image/"),
-		path.Base(item.Name),
-		path.Base(item.URL),
-	}
+	keys := append(imageGalleryPromptKeys(item.Name), imageGalleryPromptKeys(item.URL)...)
 	for _, key := range keys {
-		key = strings.Trim(strings.TrimSpace(key), "/")
 		if metadata, ok := metadataByName[key]; ok {
 			return metadata, true
 		}
 	}
 	return imageGalleryPromptMetadata{}, false
+}
+
+func imageGalleryPromptKeys(value string) []string {
+	value = strings.TrimSpace(strings.Split(value, "?")[0])
+	if value == "" {
+		return nil
+	}
+	pathValue := extractImagePathFromURL(value)
+	candidates := []string{
+		value,
+		pathValue,
+		strings.TrimPrefix(value, imagePathMarker),
+		path.Base(value),
+		path.Base(pathValue),
+	}
+	keys := make([]string, 0, len(candidates))
+	seen := make(map[string]struct{}, len(candidates))
+	for _, candidate := range candidates {
+		key := strings.Trim(strings.TrimSpace(candidate), "/")
+		if key == "" || key == "." {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		keys = append(keys, key)
+	}
+	return keys
 }
 
 func (s *Server) resolveScopedImageGalleryPath(identity authIdentity, name string) (string, string, error) {

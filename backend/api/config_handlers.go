@@ -42,6 +42,8 @@ type configPayload struct {
 		PaidImageModel                   string `json:"paidImageModel"`
 		StudioAllowDisabledImageAccounts bool   `json:"studioAllowDisabledImageAccounts"`
 		ImageAccountRetryTimes           int    `json:"imageAccountRetryTimes"`
+		ImageCommonSystemHint            string `json:"imageCommonSystemHint"`
+		ImagePrivateSystemHint           string `json:"imagePrivateSystemHint"`
 		ImageSystemHint                  string `json:"imageSystemHint"`
 	} `json:"chatgpt"`
 	Accounts struct {
@@ -144,6 +146,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	previous := s.buildConfigPayload()
+	privateSystemHint := firstNonEmpty(payload.ChatGPT.ImagePrivateSystemHint, payload.ChatGPT.ImageSystemHint)
 
 	overrides := map[string]map[string]any{
 		"app": {
@@ -176,7 +179,9 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"paid_image_model":                     payload.ChatGPT.PaidImageModel,
 			"studio_allow_disabled_image_accounts": payload.ChatGPT.StudioAllowDisabledImageAccounts,
 			"image_account_retry_times":            payload.ChatGPT.ImageAccountRetryTimes,
-			"image_system_hint":                    payload.ChatGPT.ImageSystemHint,
+			"image_common_system_hint":             payload.ChatGPT.ImageCommonSystemHint,
+			"image_private_system_hint":            privateSystemHint,
+			"image_system_hint":                    privateSystemHint,
 		},
 		"accounts": {
 			"default_quota":                   payload.Accounts.DefaultQuota,
@@ -271,22 +276,28 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleGetImageSystemHint(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
-		"imageSystemHint": s.cfg.ImageSystemHint(),
-	})
+	writeJSON(w, http.StatusOK, imageSystemHintResponse(s.cfg))
 }
 
 func (s *Server) handleSetImageSystemHint(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		ImageSystemHint string `json:"imageSystemHint"`
+		ImageCommonSystemHint  string `json:"imageCommonSystemHint"`
+		ImagePrivateSystemHint string `json:"imagePrivateSystemHint"`
+		ImageSystemHint        string `json:"imageSystemHint"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
 		return
 	}
+	privateHint := body.ImagePrivateSystemHint
+	if privateHint == "" {
+		privateHint = body.ImageSystemHint
+	}
 	overrides := map[string]map[string]any{
 		"chatgpt": {
-			"image_system_hint": body.ImageSystemHint,
+			"image_common_system_hint":  body.ImageCommonSystemHint,
+			"image_private_system_hint": privateHint,
+			"image_system_hint":         privateHint,
 		},
 	}
 	target := configSaveTarget{ConfigBackend: s.cfg.Storage.ConfigBackend, RedisAddr: s.cfg.Storage.RedisAddr, RedisPassword: s.cfg.Storage.RedisPassword, RedisDB: s.cfg.Storage.RedisDB, RedisPrefix: s.cfg.Storage.RedisPrefix}
@@ -294,9 +305,16 @@ func (s *Server) handleSetImageSystemHint(w http.ResponseWriter, r *http.Request
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"imageSystemHint": s.cfg.ImageSystemHint(),
-	})
+	writeJSON(w, http.StatusOK, imageSystemHintResponse(s.cfg))
+}
+
+func imageSystemHintResponse(cfg *config.Config) map[string]any {
+	privateHint := cfg.ImagePrivateSystemHint()
+	return map[string]any{
+		"imageCommonSystemHint":  cfg.ImageCommonSystemHint(),
+		"imagePrivateSystemHint": privateHint,
+		"imageSystemHint":        privateHint,
+	}
 }
 
 func (s *Server) handleListRequestLogs(w http.ResponseWriter, r *http.Request) {
@@ -396,7 +414,9 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ChatGPT.PaidImageModel = cfg.ChatGPT.PaidImageModel
 	payload.ChatGPT.StudioAllowDisabledImageAccounts = cfg.ChatGPT.StudioAllowDisabledImageAccounts
 	payload.ChatGPT.ImageAccountRetryTimes = cfg.ChatGPT.ImageAccountRetryTimes
-	payload.ChatGPT.ImageSystemHint = cfg.ChatGPT.ImageSystemHint
+	payload.ChatGPT.ImageCommonSystemHint = cfg.ChatGPT.ImageCommonSystemHint
+	payload.ChatGPT.ImagePrivateSystemHint = cfg.ImagePrivateSystemHint()
+	payload.ChatGPT.ImageSystemHint = cfg.ImagePrivateSystemHint()
 
 	payload.Accounts.DefaultQuota = cfg.Accounts.DefaultQuota
 	payload.Accounts.PreferRemoteRefresh = cfg.Accounts.PreferRemoteRefresh
