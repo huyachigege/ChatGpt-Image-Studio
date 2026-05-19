@@ -54,6 +54,8 @@ var accountTypeMap = map[string]string{
 
 const proFallbackImageGenQuota = 999
 
+var defaultCodexDesktopUserAgent = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
+
 func FetchAccountInfo(ctx context.Context, accessToken string, authData map[string]any, timeout time.Duration) (*RemoteAccountInfo, error) {
 	return FetchAccountInfoWithProxy(ctx, accessToken, authData, timeout, "")
 }
@@ -115,7 +117,7 @@ func buildAccountHeaders(accessToken string, authData map[string]any) map[string
 		"sec-fetch-dest":     "empty",
 		"sec-fetch-mode":     "cors",
 		"sec-fetch-site":     "same-origin",
-		"user-agent":         stringOrDefault(authData, "user-agent", defaultUserAgent),
+		"user-agent":         stringOrDefault(authData, "user-agent", defaultCodexDesktopUserAgent),
 		"sec-ch-ua":          stringOrDefault(authData, "sec-ch-ua", `"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"`),
 		"sec-ch-ua-mobile":   stringOrDefault(authData, "sec-ch-ua-mobile", "?0"),
 		"sec-ch-ua-platform": stringOrDefault(authData, "sec-ch-ua-platform", `"Windows"`),
