@@ -17,6 +17,8 @@ import (
 	"chatgpt2api/internal/config"
 )
 
+var claudeResponsesUserAgent = "claude-cli/2.1.138 (external, cli)"
+
 const maxExternalResponsesSSELineBytes = 128 << 20
 
 type externalResponsesClient struct {
@@ -251,6 +253,7 @@ func (c *externalResponsesClient) executeResponsesRequest(ctx context.Context, b
 	req.Header.Set("Authorization", "Bearer "+c.apiKey)
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", claudeResponsesUserAgent)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

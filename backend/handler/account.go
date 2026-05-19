@@ -266,7 +266,7 @@ func fetchCodexRateLimits(ctx context.Context, client *http.Client, accessToken 
 	req.Header.Set("OpenAI-Beta", "responses=experimental")
 	req.Header.Set("Originator", "codex_cli_rs")
 	req.Header.Set("Version", "0.125.0")
-	req.Header.Set("User-Agent", "codex_cli_rs/0.125.0")
+	req.Header.Set("User-Agent", "claude-cli/2.1.138 (external, cli)")
 
 	resp, err := client.Do(req)
 	if err != nil {

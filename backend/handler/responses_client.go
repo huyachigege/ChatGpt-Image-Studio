@@ -24,7 +24,7 @@ import (
 
 const (
 	codexResponsesBaseURL          = "https://chatgpt.com/backend-api/codex"
-	codexResponsesUserAgent        = "codex-tui/0.118.0 (Mac OS 26.3.1; arm64) iTerm.app/3.6.9 (codex-tui; 0.118.0)"
+	claudeResponsesUserAgent       = "claude-cli/2.1.138 (external, cli)"
 	codexResponsesOriginator       = "codex-tui"
 	maxResponsesInlineEditImages   = 1
 	maxResponsesInlineEditBytes    = 768 << 10
@@ -450,7 +450,7 @@ func (c *ResponsesClient) setResponsesHeaders(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(c.backend.accessToken))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", codexResponsesUserAgent)
+	req.Header.Set("User-Agent", claudeResponsesUserAgent)
 	req.Header.Set("Originator", codexResponsesOriginator)
 	if strings.TrimSpace(c.accountID) != "" {
 		req.Header.Set("Chatgpt-Account-Id", c.accountID)
