@@ -745,8 +745,12 @@ func normalizeResponsesImageBackground(value string) string {
 
 func normalizeResponsesImageToolModel(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "", "auto", "gpt-image-1", "gpt-image-2":
+	case "", "auto":
 		return ""
+	case "gpt-image-1":
+		return "gpt-image-1"
+	case "gpt-image-2":
+		return "gpt-image-2"
 	case "gpt-5.4-mini":
 		return "gpt-5.4-mini"
 	case "gpt-5.4":

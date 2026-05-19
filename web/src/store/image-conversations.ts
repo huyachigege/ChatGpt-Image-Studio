@@ -7,6 +7,7 @@ import {
   type ImageContextReference,
   type ImageModel,
   type ImageQuality,
+  type ImageRejectionDiagnostic,
   type ImageResolutionAccess,
   type InpaintSourceReference,
 } from "@/lib/api";
@@ -74,6 +75,7 @@ export type ImageConversationTurn = {
   startedAt?: string;
   finishedAt?: string;
   cancelRequested?: boolean;
+  diagnostic?: ImageRejectionDiagnostic;
 };
 
 export type ImageConversation = {

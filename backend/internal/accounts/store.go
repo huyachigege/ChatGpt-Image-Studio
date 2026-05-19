@@ -1010,6 +1010,10 @@ func (s *Store) FindImageAuthByID(accountID string) (*LocalAuth, PublicAccount, 
 }
 
 func (s *Store) FindImageAuthByIDWithLease(accountID string) (*LocalAuth, PublicAccount, func(), error) {
+	return s.FindImageAuthByIDWithLeaseForUserRoute(accountID, "", "")
+}
+
+func (s *Store) FindImageAuthByIDWithLeaseForUserRoute(accountID, userID, route string) (*LocalAuth, PublicAccount, func(), error) {
 	localAuths, err := s.loadAuths()
 	if err != nil {
 		return nil, PublicAccount{}, nil, err
@@ -1028,9 +1032,16 @@ func (s *Store) FindImageAuthByIDWithLease(accountID string) (*LocalAuth, Public
 		if account.ID != target {
 			continue
 		}
-		release, leaseErr := s.acquireImageLeaseLocked(auth.AccessToken, "", "")
+		normalizedRoute := NormalizeImageRouteCapability(route)
+		if normalizedRoute != "" && !AccountSupportsImageRoute(account, normalizedRoute) {
+			return nil, PublicAccount{}, nil, ErrSourceAccountNotFound
+		}
+		release, leaseErr := s.acquireImageLeaseLocked(auth.AccessToken, userID, normalizedRoute)
 		if leaseErr != nil {
 			return nil, PublicAccount{}, nil, leaseErr
+		}
+		if strings.TrimSpace(userID) != "" {
+			s.rememberImageAccountUserLocked(auth.AccessToken, userID, normalizedRoute)
 		}
 		return &auth, account, release, nil
 	}
@@ -1154,7 +1165,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		if s.isImageLeasedLocked(auth.AccessToken) && !s.canShareImageLeaseLocked(auth.AccessToken, userID, preferredRoute) {
 			continue
 		}
-		if s.imageAccountUsedByOtherUserLocked(auth.AccessToken, userID, "") {
+		if s.imageAccountUsedByOtherUserLocked(auth.AccessToken, userID, preferredRoute) {
 			continue
 		}
 		if allow != nil && !allow(account) {
@@ -1318,7 +1329,6 @@ func (s *Store) imageUserBoundTokenLocked(userID, route string) string {
 		return ""
 	}
 	normalizedRoute := NormalizeImageRouteCapability(route)
-	fallbackToken := ""
 	for key, boundUser := range s.imageAccountUsers {
 		if strings.TrimSpace(boundUser) != user {
 			continue
@@ -1331,14 +1341,11 @@ func (s *Store) imageUserBoundTokenLocked(userID, route string) string {
 		if token == "" {
 			continue
 		}
-		if fallbackToken == "" {
-			fallbackToken = token
-		}
-		if normalizedRoute != "" && strings.HasSuffix(key, "\x00"+normalizedRoute) {
+		if normalizedRoute == "" || strings.HasSuffix(key, "\x00"+normalizedRoute) {
 			return token
 		}
 	}
-	return fallbackToken
+	return ""
 }
 
 func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID, route string) bool {
@@ -1390,13 +1397,7 @@ func (s *Store) imageConversationBoundTokenLocked(userID, conversationID, route 
 	if key == "" || s.imageConversationAccounts == nil {
 		return ""
 	}
-	if token := strings.TrimSpace(s.imageConversationAccounts[key]); token != "" {
-		return token
-	}
-	if siblingRoute := siblingImageRoute(route); siblingRoute != "" {
-		return strings.TrimSpace(s.imageConversationAccounts[imageConversationAccountKey(userID, conversationID, siblingRoute)])
-	}
-	return ""
+	return strings.TrimSpace(s.imageConversationAccounts[key])
 }
 
 func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conversationID, route string) {
@@ -1409,22 +1410,6 @@ func (s *Store) rememberImageConversationAccountLocked(accessToken, userID, conv
 		s.imageConversationAccounts = map[string]string{}
 	}
 	s.imageConversationAccounts[key] = token
-	if siblingRoute := siblingImageRoute(route); siblingRoute != "" {
-		if siblingKey := imageConversationAccountKey(userID, conversationID, siblingRoute); siblingKey != "" {
-			s.imageConversationAccounts[siblingKey] = token
-		}
-	}
-}
-
-func siblingImageRoute(route string) string {
-	switch NormalizeImageRouteCapability(route) {
-	case "legacy":
-		return "responses"
-	case "responses":
-		return "legacy"
-	default:
-		return ""
-	}
 }
 
 func imageAccountUserKey(accessToken, route string) string {

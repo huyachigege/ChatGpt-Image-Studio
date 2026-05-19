@@ -712,8 +712,9 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	allowDisabled := m.server.allowDisabledStudioImageAccounts()
 
 	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
+	preferredRoute := m.preferredRouteForTask(task)
 	if task.Requirement.SourceAccountID != "" {
-		auth, account, release, err := store.FindImageAuthByIDWithLease(task.Requirement.SourceAccountID)
+		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, preferredRoute)
 		if err == nil {
 			if _, attempted := excluded[auth.AccessToken]; !attempted {
 				return &imageTaskLease{
@@ -735,7 +736,6 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	}
 
 	allowAccount := m.allowAccountFn(task)
-	preferredRoute := m.preferredRouteForTask(task)
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
 		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
 			excluded,

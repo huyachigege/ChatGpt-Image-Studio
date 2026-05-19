@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import {
   Brush,
   Clock3,
@@ -139,6 +139,14 @@ type ConversationTurnsProps = {
     turn: ImageConversationTurn,
     imageIndex?: number,
   ) => Promise<void>;
+  onDiagnoseTurn: (
+    conversationId: string,
+    turn: ImageConversationTurn,
+  ) => Promise<void>;
+  onRetryWithDiagnostic: (
+    conversationId: string,
+    turn: ImageConversationTurn,
+  ) => Promise<void>;
   onCancelTurn: (
     conversationId: string,
     turn: ImageConversationTurn,
@@ -160,8 +168,37 @@ export const ConversationTurns = memo(function ConversationTurns({
   onOpenSelectionEditor,
   onSeedFromResult,
   onRetryTurn,
+  onDiagnoseTurn,
+  onRetryWithDiagnostic,
   onCancelTurn,
 }: ConversationTurnsProps) {
+  const [diagnosingTurnIds, setDiagnosingTurnIds] = useState<string[]>([]);
+  const [diagnosticRetryingTurnIds, setDiagnosticRetryingTurnIds] = useState<string[]>([]);
+
+  const runDiagnoseTurn = async (turn: ImageConversationTurn) => {
+    if (diagnosingTurnIds.includes(turn.id)) {
+      return;
+    }
+    setDiagnosingTurnIds((current) => [...current, turn.id]);
+    try {
+      await onDiagnoseTurn(conversationId, turn);
+    } finally {
+      setDiagnosingTurnIds((current) => current.filter((id) => id !== turn.id));
+    }
+  };
+
+  const runRetryWithDiagnostic = async (turn: ImageConversationTurn) => {
+    if (diagnosticRetryingTurnIds.includes(turn.id)) {
+      return;
+    }
+    setDiagnosticRetryingTurnIds((current) => [...current, turn.id]);
+    try {
+      await onRetryWithDiagnostic(conversationId, turn);
+    } finally {
+      setDiagnosticRetryingTurnIds((current) => current.filter((id) => id !== turn.id));
+    }
+  };
+
   return (
     <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-8 px-4 pt-0 pb-8 sm:px-6 sm:py-8">
       {turns.map((turn) => {
@@ -211,6 +248,11 @@ export const ConversationTurns = memo(function ConversationTurns({
               : cancelTaskId
               ? "取消排队"
               : "准备中";
+        const diagnosingTurn = diagnosingTurnIds.includes(turn.id);
+        const diagnosticRetryingTurn = diagnosticRetryingTurnIds.includes(turn.id);
+        const diagnosticReference = turn.diagnostic?.referenceImages?.find(
+          (item) => item.dataUrl || item.url,
+        );
 
         return (
           <div key={turn.id} className="space-y-4">
@@ -421,6 +463,38 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 image.error || "处理失败",
                               )}
                             </div>
+                            {turn.diagnostic ? (
+                              <div className="space-y-3 border-t border-stone-100 bg-amber-50/60 px-4 py-3 text-left text-xs leading-6 text-stone-700">
+                                <div>
+                                  <div className="font-semibold text-stone-900">诊断建议</div>
+                                  <div>{turn.diagnostic.reason}</div>
+                                </div>
+                                <div>
+                                  <div className="font-semibold text-stone-900">新提示词</div>
+                                  <div className="line-clamp-4 whitespace-pre-wrap rounded-2xl bg-white/80 p-3 text-stone-700">
+                                    {turn.diagnostic.revisedPrompt}
+                                  </div>
+                                </div>
+                                {diagnosticReference ? (
+                                  <div>
+                                    <div className="font-semibold text-stone-900">新参考图</div>
+                                    <Image
+                                      src={diagnosticReference.dataUrl || diagnosticReference.url || ""}
+                                      alt="Diagnostic reference"
+                                      width={180}
+                                      height={120}
+                                      unoptimized
+                                      className="mt-1 h-24 w-full rounded-2xl bg-white object-contain"
+                                    />
+                                  </div>
+                                ) : null}
+                                {turn.diagnostic.omitOriginalReferences ? (
+                                  <div className="rounded-2xl bg-white/80 px-3 py-2 text-amber-700">
+                                    已判断原参考图可能触发拒绝，引用重试时不会携带失败参考图。
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
                             <div className="flex flex-wrap items-center gap-2 border-t border-stone-100 px-4 py-3">
                               <button
                                 type="button"
@@ -434,6 +508,30 @@ export const ConversationTurns = memo(function ConversationTurns({
                               >
                                 <RotateCcw className="size-4" />
                               </button>
+                              <button
+                                type="button"
+                                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 text-xs font-medium text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={() => void runDiagnoseTurn(turn)}
+                                disabled={turnProcessing || diagnosingTurn}
+                                title={diagnosingTurn ? "诊断中" : "诊断拒绝原因"}
+                                aria-label="诊断拒绝原因"
+                              >
+                                <Sparkles className="size-3.5" />
+                                {diagnosingTurn ? "诊断中" : "诊断"}
+                              </button>
+                              {turn.diagnostic ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex h-9 items-center gap-1.5 rounded-full border border-stone-900 bg-stone-950 px-3 text-xs font-medium text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-60"
+                                  onClick={() => void runRetryWithDiagnostic(turn)}
+                                  disabled={turnProcessing || diagnosticRetryingTurn}
+                                  title="引用诊断建议重试"
+                                  aria-label="引用诊断建议重试"
+                                >
+                                  <RotateCcw className="size-3.5" />
+                                  {diagnosticRetryingTurn ? "重试中" : "引用重试"}
+                                </button>
+                              ) : null}
                             </div>
                           </div>
                         ) : (

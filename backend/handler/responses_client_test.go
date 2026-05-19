@@ -338,8 +338,8 @@ func TestNormalizeResponsesImageToolModel(t *testing.T) {
 		input string
 		want  string
 	}{
-		{name: "gpt image 1 is omitted", input: "gpt-image-1", want: ""},
-		{name: "gpt image 2 is omitted", input: "gpt-image-2", want: ""},
+		{name: "gpt image 1 is preserved", input: "gpt-image-1", want: "gpt-image-1"},
+		{name: "gpt image 2 is preserved", input: "gpt-image-2", want: "gpt-image-2"},
 		{name: "auto is omitted", input: "auto", want: ""},
 		{name: "gpt 5 4 mini is preserved", input: "gpt-5.4-mini", want: "gpt-5.4-mini"},
 		{name: "unknown values are omitted", input: "unknown-model", want: ""},

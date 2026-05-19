@@ -124,6 +124,22 @@ export type ImageReferenceImage = {
   url?: string;
 };
 
+export type ImageDiagnosticReferenceImage = {
+  id: string;
+  name: string;
+  dataUrl?: string;
+  url?: string;
+};
+
+export type ImageRejectionDiagnostic = {
+  reason: string;
+  revisedPrompt: string;
+  referencePrompt?: string;
+  omitOriginalReferences: boolean;
+  referenceImages?: ImageDiagnosticReferenceImage[];
+  notes?: string[];
+};
+
 export type ImageContextReference = {
   conversation_id?: string;
   parent_message_id?: string;
@@ -1217,6 +1233,34 @@ export async function createImageTask(payload: {
       privatePhotoMode: payload.privatePhotoMode || undefined,
       systemHint: payload.systemHint || undefined,
     },
+  });
+}
+
+export async function diagnoseImageRejection(payload: {
+  prompt: string;
+  error?: string;
+  mode?: "generate" | "edit" | string;
+  size?: string;
+  quality?: ImageQuality;
+  sourceImages?: Array<{
+    id: string;
+    role: "image" | "mask";
+    name: string;
+    dataUrl?: string;
+    url?: string;
+  }>;
+}) {
+  return httpRequest<ImageRejectionDiagnostic>("/api/image/diagnose-rejection", {
+    method: "POST",
+    body: {
+      prompt: payload.prompt,
+      error: payload.error,
+      mode: payload.mode,
+      size: payload.size,
+      quality: payload.quality,
+      sourceImages: payload.sourceImages ?? [],
+    },
+    timeoutMs: 360_000,
   });
 }
 

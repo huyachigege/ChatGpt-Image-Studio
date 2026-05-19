@@ -5,8 +5,10 @@ import { toast } from "sonner";
 
 import {
   createImageTask,
+  diagnoseImageRejection,
   type ImageModel,
   type ImageQuality,
+  type ImageRejectionDiagnostic,
   type ImageResolutionAccess,
 } from "@/lib/api";
 import type {
@@ -58,6 +60,26 @@ type UseImageSubmitOptions = {
   privatePhotoMode?: boolean;
   systemHint?: string;
 };
+
+type RetryTurnOverride = {
+  prompt?: string;
+  sourceImages?: StoredSourceImage[];
+  omitOriginalReferences?: boolean;
+};
+
+function diagnosticToSourceImages(
+  diagnostic: ImageRejectionDiagnostic,
+): StoredSourceImage[] {
+  return (diagnostic.referenceImages ?? [])
+    .filter((item) => item.dataUrl || item.url)
+    .map((item) => ({
+      id: item.id,
+      role: "image" as const,
+      name: item.name || "diagnostic-reference.png",
+      dataUrl: item.dataUrl,
+      url: item.url,
+    }));
+}
 
 function buildConversationBase(
   conversationId: string,
@@ -174,6 +196,7 @@ export function useImageSubmit({
       const conversationContext = buildImageConversationContext(conversationTurns);
       const supportsEditableOutputOptions = false;
       const nextQuality = normalizeImageQuality(overrideQuality, imageQuality);
+      const useSourceContextEdit = Boolean(sourceReference?.source_account_id);
       const turnId = makeId();
       const now = new Date().toISOString();
       const draftTurn = createConversationTurn({
@@ -202,7 +225,7 @@ export function useImageSubmit({
             dataUrl: mask.previewDataUrl,
           },
         ],
-        sourceReference,
+        sourceReference: useSourceContextEdit ? sourceReference : undefined,
         images: createLoadingImages(1, turnId),
         createdAt: now,
         status: "queued",
@@ -244,7 +267,7 @@ export function useImageSubmit({
             : undefined,
           quality: nextQuality,
           sourceImages: draftTurn.sourceImages,
-          sourceReference,
+          sourceReference: useSourceContextEdit ? sourceReference : undefined,
           conversationContext,
           privatePhotoMode,
           systemHint,
@@ -316,14 +339,17 @@ export function useImageSubmit({
       conversationId: string,
       turn: ImageConversationTurn,
       imageIndex?: number,
+      override?: RetryTurnOverride,
     ) => {
       if (retryingTurnIdsRef.current.has(turn.id)) {
         return;
       }
 
-      const prompt = turn.prompt?.trim() ?? "";
+      const prompt = (override?.prompt ?? turn.prompt)?.trim() ?? "";
       const turnMode = turn.mode || "generate";
-      const turnSourceImages = Array.isArray(turn.sourceImages)
+      const turnSourceImages = Array.isArray(override?.sourceImages)
+        ? override.sourceImages
+        : Array.isArray(turn.sourceImages)
         ? turn.sourceImages
         : [];
       const turnImageSources = turnSourceImages.filter(
@@ -360,14 +386,17 @@ export function useImageSubmit({
               : image,
           )
         : createLoadingImages(requestCount, turn.id);
+      const omitOriginalReferences = Boolean(override?.omitOriginalReferences);
       const conversationContext = buildImageConversationContext(conversationTurns, {
         excludeTurnId: turn.id,
       });
-      const referenceImage = buildLatestImageReferenceImage(
-        conversationTurns,
-        buildImageDataUrl,
-        { excludeTurnId: turn.id },
-      );
+      const referenceImage = omitOriginalReferences
+        ? null
+        : buildLatestImageReferenceImage(
+            conversationTurns,
+            buildImageDataUrl,
+            { excludeTurnId: turn.id },
+          );
       const referenceImages = referenceImage && turnSourceImages.length === 0 ? [referenceImage] : undefined;
       const draftTurn = createConversationTurn({
         turnId: turn.id,
@@ -380,8 +409,8 @@ export function useImageSubmit({
         resolutionAccess: turn.resolutionAccess,
         quality: turnQuality,
         sourceImages: turnSourceImages,
-        sourceReference: turn.sourceReference,
-        contextReference: turn.contextReference,
+        sourceReference: omitOriginalReferences ? undefined : turn.sourceReference,
+        contextReference: omitOriginalReferences ? undefined : turn.contextReference,
         images: nextImages,
         createdAt: new Date().toISOString(),
         status: isSingleImageRetry ? "running" : "queued",
@@ -413,8 +442,8 @@ export function useImageSubmit({
           quality: turnQuality,
           sourceImages: turnSourceImages,
           referenceImages,
-          sourceReference: turn.sourceReference,
-          contextReference: turn.contextReference,
+          sourceReference: omitOriginalReferences ? undefined : turn.sourceReference,
+          contextReference: omitOriginalReferences ? undefined : turn.contextReference,
           conversationContext,
           privatePhotoMode,
           systemHint,
@@ -490,6 +519,63 @@ export function useImageSubmit({
       systemHint,
       updateConversation,
     ],
+  );
+
+  const handleDiagnoseTurn = useCallback(
+    async (conversationId: string, turn: ImageConversationTurn) => {
+      const prompt = turn.prompt?.trim() ?? "";
+      if (!prompt) {
+        toast.error("该记录缺少提示词，无法诊断");
+        return;
+      }
+      try {
+        const diagnostic = await diagnoseImageRejection({
+          prompt,
+          error: turn.error || turn.images.find((image) => image.error)?.error,
+          mode: turn.mode,
+          size: turn.size,
+          quality: turn.quality,
+          sourceImages: turn.sourceImages ?? [],
+        });
+        await updateConversation(conversationId, (current) => ({
+          ...(current ?? buildConversationBase(conversationId, turn)),
+          turns: (current?.turns ?? [turn]).map((item) =>
+            item.id === turn.id
+              ? {
+                  ...item,
+                  diagnostic,
+                }
+              : item,
+          ),
+        }));
+        toast.success("诊断完成，可以引用重试");
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "诊断失败");
+      }
+    },
+    [updateConversation],
+  );
+
+  const handleRetryWithDiagnostic = useCallback(
+    async (conversationId: string, turn: ImageConversationTurn) => {
+      const diagnostic = turn.diagnostic;
+      if (!diagnostic) {
+        toast.error("请先诊断后再引用重试");
+        return;
+      }
+      const diagnosticSources = diagnosticToSourceImages(diagnostic);
+      await handleRetryTurn(conversationId, turn, undefined, {
+        prompt: diagnostic.revisedPrompt || turn.prompt,
+        sourceImages:
+          diagnosticSources.length > 0
+            ? diagnosticSources
+            : diagnostic.omitOriginalReferences
+            ? []
+            : turn.sourceImages,
+        omitOriginalReferences: diagnostic.omitOriginalReferences,
+      });
+    },
+    [handleRetryTurn],
   );
 
   const handleSubmit = useCallback(async () => {
@@ -640,6 +726,8 @@ export function useImageSubmit({
   return {
     handleSelectionEditSubmit,
     handleRetryTurn,
+    handleDiagnoseTurn,
+    handleRetryWithDiagnostic,
     handleSubmit,
   };
 }

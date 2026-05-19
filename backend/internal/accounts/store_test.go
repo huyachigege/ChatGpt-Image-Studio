@@ -394,7 +394,7 @@ func TestAcquireImageAuthLeaseForUserPrefersAccountNotUsedByOtherUser(t *testing
 	}
 }
 
-func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *testing.T) {
+func TestAcquireImageAuthLeaseForUserConversationKeepsRouteBindingsSeparate(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")
 	syncDir := filepath.Join(rootDir, "sync")
@@ -446,8 +446,8 @@ func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *test
 		t.Fatalf("Acquire legacy route error = %v", err)
 	}
 	defer releaseL()
-	if authL.AccessToken != "token-first" {
-		t.Fatalf("legacy token = %q, want token-first", authL.AccessToken)
+	if authL.AccessToken != "token-second" {
+		t.Fatalf("legacy token = %q, want token-second", authL.AccessToken)
 	}
 }
 

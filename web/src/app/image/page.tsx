@@ -1241,8 +1241,13 @@ export default function ImagePage() {
     navigate(pathname, { replace: true, state: null });
   }, [currentImageView, location.state, navigate, openDraftConversation, pathname, setSourceImages]);
 
-  const { handleSelectionEditSubmit, handleRetryTurn, handleSubmit: rawHandleSubmit } =
-    useImageSubmit({
+  const {
+    handleSelectionEditSubmit,
+    handleRetryTurn,
+    handleDiagnoseTurn,
+    handleRetryWithDiagnostic,
+    handleSubmit: rawHandleSubmit,
+  } = useImageSubmit({
       mode,
       imagePrompt,
       imageModel: "gpt-image-2",
@@ -1393,6 +1398,8 @@ export default function ImagePage() {
               onOpenSelectionEditor={openSelectionEditor}
               onSeedFromResult={seedFromResult}
               onRetryTurn={handleRetryTurn}
+              onDiagnoseTurn={handleDiagnoseTurn}
+              onRetryWithDiagnostic={handleRetryWithDiagnostic}
               onCancelTurn={handleCancelTurn}
             />
           )}

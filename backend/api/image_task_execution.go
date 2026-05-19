@@ -82,25 +82,6 @@ func shouldTryImageFallback(err error, attemptClass imageAttemptErrorClass) bool
 	return err != nil && attemptClass != imageAttemptFatal
 }
 
-func (s *Server) rebindImageTaskConversationAccount(task *imageTask, failedAccessToken string, route string) {
-	if s == nil || task == nil {
-		return
-	}
-	failedAccessToken = strings.TrimSpace(failedAccessToken)
-	route = accounts.NormalizeImageRouteCapability(route)
-	if failedAccessToken == "" || route == "" {
-		return
-	}
-	excluded := map[string]struct{}{failedAccessToken: {}}
-	nextLease, err := s.acquireImageTaskAttemptLease(task, excluded, route)
-	if err != nil || nextLease == nil {
-		return
-	}
-	if nextLease.release != nil {
-		nextLease.release()
-	}
-}
-
 func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) bool {
 	if task == nil {
 		return nil
@@ -122,6 +103,13 @@ func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[stri
 	store := s.getStore()
 	allowDisabled := s.allowDisabledStudioImageAccounts()
 	allowAccount := imageTaskAttemptAllowAccount(task)
+	if task.Requirement.SourceAccountID != "" {
+		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, route)
+		if err != nil {
+			return nil, err
+		}
+		return &imageTaskLease{auth: auth, account: account, release: release}, nil
+	}
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
 		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, route)
 		if err != nil {
@@ -186,7 +174,8 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if len(mask) == 0 {
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
-		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
+		selectionEditModel := "gpt-image-2"
+		responsesEligible := false
 		selectionEditRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			applySystemHint(client)
 			prompt := effectivePrompt
@@ -224,7 +213,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return results, err
 		}
-		items, _, err = s.runImageRequestWithAdmission(
+		items, _, err = s.runImageRequestWithAdmissionRoute(
 			taskCtx,
 			lease.auth,
 			lease.account,
@@ -233,34 +222,15 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			"selection-edit",
 			task.ResponseFormat,
 			true,
-			requestedModel,
-			responsesEligible,
+			"gpt-image-2",
+			false,
 			metadata,
 			selectionEditRun,
 			fakeReq,
 			false,
+			"legacy",
 		)
 		attemptClass := classifyImageAttemptError(err)
-		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
-			items, _, err = s.runImageRequestWithAdmissionRoute(
-				taskCtx,
-				lease.auth,
-				lease.account,
-				func() {},
-				lease.decision,
-				"selection-edit",
-				task.ResponseFormat,
-				true,
-				requestedModel,
-				true,
-				metadata,
-				selectionEditRun,
-				fakeReq,
-				false,
-				"external_responses",
-			)
-			attemptClass = classifyImageAttemptError(err)
-		}
 		if shouldTryImageFallback(err, attemptClass) && len(imageFiles) > 0 {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
@@ -271,8 +241,8 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				"edit",
 				task.ResponseFormat,
 				false,
-				requestedModel,
-				responsesEligible,
+				selectionEditModel,
+				false,
 				metadata,
 				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 					applySystemHint(client)
@@ -351,22 +321,13 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				lease.account,
 				func() {},
 				lease.decision,
-				"generate",
+				"edit",
 				task.ResponseFormat,
 				false,
 				requestedModel,
 				false,
 				metadata,
-				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-					applySystemHint(client)
-					prompt := effectivePrompt
-					if instructions != "" {
-						if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-							prompt = instructions + "\n\n" + prompt
-						}
-					}
-					return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
-				},
+				editRun,
 				fakeReq,
 				false,
 				"legacy",
@@ -391,7 +352,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		sameSourceAccount := task.ContextReference != nil && strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
-			if task.ContextReference != nil {
+			if task.ContextReference != nil && len(referenceImageFiles) == 0 {
 				if sameSourceAccount && task.ContextReference.ResponseID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
@@ -597,6 +558,18 @@ func buildImageTaskEffectivePrompt(prompt string, conversationContext string) st
 		return prompt
 	}
 	return conversationContext + "\n\n本轮用户请求：\n" + prompt
+}
+
+func taskHasMask(task *imageTask) bool {
+	if task == nil {
+		return false
+	}
+	for _, source := range task.SourceImages {
+		if strings.EqualFold(strings.TrimSpace(source.Role), "mask") {
+			return true
+		}
+	}
+	return false
 }
 
 func buildImageTaskInstructions(task *imageTask) string {
