@@ -17,7 +17,7 @@ import (
 	"chatgpt2api/internal/config"
 )
 
-var claudeResponsesUserAgent = "claude-cli/2.1.138 (external, cli)"
+var claudeResponsesUserAgent = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
 
 const maxExternalResponsesSSELineBytes = 128 << 20
 

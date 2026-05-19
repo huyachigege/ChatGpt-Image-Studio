@@ -311,7 +311,7 @@ func probeEndpoint(parent context.Context, targetURL, proxyURL string, timeout t
 	if err != nil {
 		return 0, err
 	}
-	req.Header.Set("User-Agent", "chatgpt-image-studio/diagnostics")
+	req.Header.Set("User-Agent", "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)")
 	resp, err := client.Do(req)
 	if err != nil {
 		return 0, err

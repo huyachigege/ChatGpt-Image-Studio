@@ -24,7 +24,7 @@ import (
 
 const (
 	codexResponsesBaseURL          = "https://chatgpt.com/backend-api/codex"
-	claudeResponsesUserAgent       = "claude-cli/2.1.138 (external, cli)"
+	claudeResponsesUserAgent       = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
 	codexResponsesOriginator       = "codex-tui"
 	maxResponsesInlineEditImages   = 1
 	maxResponsesInlineEditBytes    = 768 << 10
