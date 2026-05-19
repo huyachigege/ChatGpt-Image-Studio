@@ -7,22 +7,39 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type RemoteAccountInfo struct {
-	Email            string           `json:"email"`
-	UserID           string           `json:"user_id"`
-	AccountType      string           `json:"type"`
-	Quota            int              `json:"quota"`
-	LimitsProgress   []map[string]any `json:"limits_progress"`
-	DefaultModelSlug string           `json:"default_model_slug"`
-	RestoreAt        string           `json:"restore_at"`
-	Status           string           `json:"status"`
+	Email                    string           `json:"email"`
+	UserID                   string           `json:"user_id"`
+	AccountType              string           `json:"type"`
+	Quota                    int              `json:"quota"`
+	LimitsProgress           []map[string]any `json:"limits_progress"`
+	DefaultModelSlug         string           `json:"default_model_slug"`
+	RestoreAt                string           `json:"restore_at"`
+	Status                   string           `json:"status"`
+	CodexQuotaKnown          bool             `json:"codex_quota_known,omitempty"`
+	Codex7dUsedPercent       *float64         `json:"codex_7d_used_percent,omitempty"`
+	Codex7dResetAfterSeconds *int             `json:"codex_7d_reset_after_seconds,omitempty"`
+	Codex7dWindowMinutes     *int             `json:"codex_7d_window_minutes,omitempty"`
+	Codex5hUsedPercent       *float64         `json:"codex_5h_used_percent,omitempty"`
+	Codex5hResetAfterSeconds *int             `json:"codex_5h_reset_after_seconds,omitempty"`
+	Codex5hWindowMinutes     *int             `json:"codex_5h_window_minutes,omitempty"`
+}
+
+type CodexRateLimitInfo struct {
+	CodexQuotaKnown          bool
+	Codex7dUsedPercent       *float64
+	Codex7dResetAfterSeconds *int
+	Codex7dWindowMinutes     *int
+	Codex5hUsedPercent       *float64
+	Codex5hResetAfterSeconds *int
+	Codex5hWindowMinutes     *int
 }
 
 var accountTypeMap = map[string]string{
@@ -54,86 +71,35 @@ func FetchAccountInfoWithProxy(ctx context.Context, accessToken string, authData
 		Transport: newChromeTransport(proxyURL),
 	}
 
-	meHeaders := buildAccountHeaders(accessToken, authData)
-	meHeaders["x-openai-target-path"] = "/backend-api/me"
-	meHeaders["x-openai-target-route"] = "/backend-api/me"
-
-	initHeaders := buildAccountHeaders(accessToken, authData)
-	initBody := map[string]any{
-		"gizmo_id":                nil,
-		"requested_default_model": nil,
-		"conversation_id":         nil,
-		"timezone_offset_min":     -480,
+	codexLimits, err := fetchCodexRateLimits(ctx, client, accessToken, authData)
+	if err != nil {
+		return nil, err
 	}
 
-	type responseResult struct {
-		payload map[string]any
-		err     error
+	accountType := detectAccountTypeFromAuthData(authData)
+	if accountType == "" {
+		accountType = "Free"
 	}
-
-	meCh := make(chan responseResult, 1)
-	initCh := make(chan responseResult, 1)
-
-	go func() {
-		payload, err := doJSONRequest(ctx, client, http.MethodGet, baseURL+"/me", meHeaders, nil)
-		if err != nil {
-			meCh <- responseResult{err: fmt.Errorf("/backend-api/me failed: %w", err)}
-			return
-		}
-		meCh <- responseResult{payload: payload}
-	}()
-
-	go func() {
-		payload, err := doJSONRequest(ctx, client, http.MethodPost, baseURL+"/conversation/init", initHeaders, initBody)
-		if err != nil {
-			initCh <- responseResult{err: fmt.Errorf("/backend-api/conversation/init failed: %w", err)}
-			return
-		}
-		initCh <- responseResult{payload: payload}
-	}()
-
-	meResp := <-meCh
-	initResp := <-initCh
-
-	if meResp.err != nil {
-		return nil, meResp.err
-	}
-	if initResp.err != nil {
-		return nil, initResp.err
-	}
-
-	limitsProgress := normalizeLimitsProgress(initResp.payload["limits_progress"])
-	quota, restoreAt := extractQuotaAndRestoreAt(limitsProgress)
-	accountType := detectAccountType(accessToken, meResp.payload, initResp.payload)
-	if authDataType := detectAccountTypeFromAuthData(authData); accountType == "Free" && authDataType != "" && authDataType != "Free" {
-		accountType = authDataType
-	}
-	if accountType == "Free" {
-		if detected, err := detectCodexAccountTypeByRateLimits(ctx, client, accessToken, authData); err == nil && detected != "" {
-			accountType = detected
-		}
-	}
-	if accountType == "Pro" && !hasLimitFeature(limitsProgress, "image_gen") {
-		quota = proFallbackImageGenQuota
-		limitsProgress = append(limitsProgress, map[string]any{
-			"feature_name": "image_gen",
-			"remaining":    quota,
-		})
+	if codexLimits.Codex5hWindowMinutes != nil && accountType == "Free" {
+		accountType = "Plus"
 	}
 	status := "正常"
-	if quota == 0 {
+	if codexLimits.Codex7dUsedPercent != nil && *codexLimits.Codex7dUsedPercent >= 100 {
 		status = "限流"
 	}
 
 	return &RemoteAccountInfo{
-		Email:            stringValue(meResp.payload["email"]),
-		UserID:           stringValue(meResp.payload["id"]),
-		AccountType:      accountType,
-		Quota:            quota,
-		LimitsProgress:   limitsProgress,
-		DefaultModelSlug: stringValue(initResp.payload["default_model_slug"]),
-		RestoreAt:        restoreAt,
-		Status:           status,
+		Email:                    firstString(authData, "email"),
+		UserID:                   firstString(authData, "user_id", "account_id"),
+		AccountType:              accountType,
+		Status:                   status,
+		CodexQuotaKnown:          codexLimits.CodexQuotaKnown,
+		Codex7dUsedPercent:       codexLimits.Codex7dUsedPercent,
+		Codex7dResetAfterSeconds: codexLimits.Codex7dResetAfterSeconds,
+		Codex7dWindowMinutes:     codexLimits.Codex7dWindowMinutes,
+		Codex5hUsedPercent:       codexLimits.Codex5hUsedPercent,
+		Codex5hResetAfterSeconds: codexLimits.Codex5hResetAfterSeconds,
+		Codex5hWindowMinutes:     codexLimits.Codex5hWindowMinutes,
 	}, nil
 }
 
@@ -256,91 +222,132 @@ func detectAccountTypeFromAuthData(authData map[string]any) string {
 }
 
 func detectCodexAccountTypeByRateLimits(ctx context.Context, client *http.Client, accessToken string, authData map[string]any) (string, error) {
+	info, err := fetchCodexRateLimits(ctx, client, accessToken, authData)
+	if err != nil {
+		return "", err
+	}
+	if info.Codex5hWindowMinutes != nil && *info.Codex5hWindowMinutes > 0 && *info.Codex5hWindowMinutes <= 360 {
+		return "Plus", nil
+	}
+	return "", nil
+}
+
+func fetchCodexRateLimits(ctx context.Context, client *http.Client, accessToken string, authData map[string]any) (*CodexRateLimitInfo, error) {
 	if client == nil {
-		return "", fmt.Errorf("http client is required")
+		return nil, fmt.Errorf("http client is required")
 	}
 	accessToken = strings.TrimSpace(accessToken)
 	if accessToken == "" {
-		return "", fmt.Errorf("access token is required")
+		return nil, fmt.Errorf("access token is required")
 	}
 	accountID := resolveChatGPTAccountID(accessToken, authData)
-	if strings.TrimSpace(accountID) == "" {
-		return "", nil
-	}
 
 	payload := map[string]any{
-		"model": defaultUpstreamModel,
-		"input": []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": "hi"}}}},
-		"instructions": `你是一个专业的 AI 画图助手。
-
-你的职责是根据用户需求，直接生成最终图片，而不是解释过程、分析需求，或输出给别的模型使用的提示词。
-
-工作原则：
-1. 准确理解用户想要的画面内容，保留主题、主体、场景、风格、构图、色调、光线、材质和情绪。
-2. 当用户描述不完整时，自动补足合理且有助于成图的视觉细节，但不要擅自改变核心设定。
-3. 默认直接产出图片，不额外输出提示词、解释、分析过程或改写说明。
-4. 普通画图需求正常处理，包括人物、场景、海报、产品图、封面图、插画、概念图、影视感画面等。
-5. 如果需求包含追逐、打斗、对峙、爆炸、武器等冲突元素，应保留戏剧张力和视觉表现力，但采用非血腥、非伤害细节、电影化表达方式。
-6. 不生成血腥、残肢、内脏、伤口特写、虐待、处决、未成年人受伤、明显死亡细节等高风险内容。
-7. 对冲突场面，优先呈现为紧张对峙、动作瞬间、动态追逐、爆炸余波、被击退、失去平衡、烟尘与压迫感，而不直接展示具体伤害过程。
-8. 如果用户未指定风格，可根据主题自动选择最合适的视觉风格，使画面自然、完整、可用。
-9. 整体目标是提高成图质量、稳定性和通过率，同时尽量保留用户原始创作意图。
-10. 除非用户明确要求文字说明，否则不要输出说明文字；默认只生成图片结果。`,
-		"stream": true,
-		"store":  false,
+		"model":        "gpt-5.4-mini",
+		"input":        []any{map[string]any{"role": "user", "content": []any{map[string]any{"type": "input_text", "text": "hi"}}}},
+		"stream":       true,
+		"store":        false,
+		"instructions": "You are a helpful assistant.",
 	}
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, codexResponsesBaseURL+"/responses", bytes.NewReader(raw))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
-	req.Header.Set("Chatgpt-Account-Id", accountID)
+	if accountID != "" {
+		req.Header.Set("chatgpt-account-id", accountID)
+	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	req.Header.Set("User-Agent", codexResponsesUserAgent)
-	req.Header.Set("Originator", codexResponsesOriginator)
-	req.Header.Set("Session_id", uuid.NewString())
-	req.Header.Set("Connection", "Keep-Alive")
+	req.Header.Set("OpenAI-Beta", "responses=experimental")
+	req.Header.Set("Originator", "codex_cli_rs")
+	req.Header.Set("Version", "0.125.0")
+	req.Header.Set("User-Agent", "codex_cli_rs/0.125.0")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		io.Copy(io.Discard, io.LimitReader(resp.Body, 1024))
-		return "", fmt.Errorf("codex rate limit probe returned HTTP %d", resp.StatusCode)
+		return nil, fmt.Errorf("codex rate limit probe returned HTTP %d", resp.StatusCode)
 	}
-	return detectCodexAccountTypeFromRateLimitHeaders(resp.Header), nil
+	return parseCodexRateLimitHeaders(resp.Header), nil
 }
 
 func detectCodexAccountTypeFromRateLimitHeaders(headers http.Header) string {
-	windows := []int{
-		parseHeaderInt(headers.Get("x-codex-primary-window-minutes")),
-		parseHeaderInt(headers.Get("x-codex-secondary-window-minutes")),
-	}
-	for _, window := range windows {
-		if window > 0 && window <= 360 {
-			return "Plus"
-		}
+	info := parseCodexRateLimitHeaders(headers)
+	if info.Codex5hWindowMinutes != nil && *info.Codex5hWindowMinutes > 0 && *info.Codex5hWindowMinutes <= 360 {
+		return "Plus"
 	}
 	return ""
 }
 
+func parseCodexRateLimitHeaders(headers http.Header) *CodexRateLimitInfo {
+	info := &CodexRateLimitInfo{}
+	applyCodexRateLimitWindow(info,
+		parseHeaderPercent(headers.Get("x-codex-primary-used-percent")),
+		parseHeaderIntPtr(headers.Get("x-codex-primary-reset-after-seconds")),
+		parseHeaderIntPtr(headers.Get("x-codex-primary-window-minutes")),
+	)
+	applyCodexRateLimitWindow(info,
+		parseHeaderPercent(headers.Get("x-codex-secondary-used-percent")),
+		parseHeaderIntPtr(headers.Get("x-codex-secondary-reset-after-seconds")),
+		parseHeaderIntPtr(headers.Get("x-codex-secondary-window-minutes")),
+	)
+	info.CodexQuotaKnown = info.Codex7dUsedPercent != nil || info.Codex7dResetAfterSeconds != nil || info.Codex7dWindowMinutes != nil || info.Codex5hUsedPercent != nil || info.Codex5hResetAfterSeconds != nil || info.Codex5hWindowMinutes != nil
+	return info
+}
+
+func applyCodexRateLimitWindow(info *CodexRateLimitInfo, usedPercent *float64, resetAfterSeconds *int, windowMinutes *int) {
+	if info == nil || windowMinutes == nil {
+		return
+	}
+	if *windowMinutes > 0 && *windowMinutes <= 360 {
+		info.Codex5hUsedPercent = usedPercent
+		info.Codex5hResetAfterSeconds = resetAfterSeconds
+		info.Codex5hWindowMinutes = windowMinutes
+		return
+	}
+	info.Codex7dUsedPercent = usedPercent
+	info.Codex7dResetAfterSeconds = resetAfterSeconds
+	info.Codex7dWindowMinutes = windowMinutes
+}
+
 func parseHeaderInt(value string) int {
+	if parsed := parseHeaderIntPtr(value); parsed != nil {
+		return *parsed
+	}
+	return 0
+}
+
+func parseHeaderIntPtr(value string) *int {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return 0
+		return nil
 	}
-	var result int
-	if _, err := fmt.Sscanf(value, "%d", &result); err != nil {
-		return 0
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return nil
 	}
-	return result
+	return &parsed
+}
+
+func parseHeaderPercent(value string) *float64 {
+	value = strings.TrimSpace(strings.TrimSuffix(value, "%"))
+	if value == "" {
+		return nil
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil || math.IsNaN(parsed) || math.IsInf(parsed, 0) {
+		return nil
+	}
+	return &parsed
 }
 
 func decodeAccessTokenPayload(accessToken string) map[string]any {

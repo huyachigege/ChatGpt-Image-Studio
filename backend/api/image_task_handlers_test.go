@@ -988,6 +988,119 @@ func TestCreateImageGenerateTaskAutoPaidUsesPaidAccount(t *testing.T) {
 	}
 }
 
+func TestCreateImageGenerateTaskDeletesAccountOnResponsesUnauthorized(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{
+				fileName:    "paid-unauthorized-first.json",
+				accessToken: "token-paid-unauthorized-first",
+				accountType: "Plus",
+				priority:    100,
+				quota:       5,
+				status:      "正常",
+			},
+			{
+				fileName:    "paid-unauthorized-second.json",
+				accessToken: "token-paid-unauthorized-second",
+				accountType: "Plus",
+				priority:    10,
+				quota:       5,
+				status:      "正常",
+			},
+		},
+		behavior: compatClientBehavior{
+			responsesGenerateErrors: map[string]error{
+				"token-paid-unauthorized-first": errors.New("responses returned 401: unauthorized"),
+			},
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID:   "conv-generate-unauthorized-delete-1",
+		TurnID:           "turn-generate-unauthorized-delete-1",
+		Mode:             "generate",
+		Prompt:           "unauthorized delete generate",
+		Model:            "gpt-image-2",
+		Count:            1,
+		Size:             "",
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-generate-unauthorized-delete-1", imageTaskStatusSucceeded)
+	if _, err := server.store.GetAccountByToken("token-paid-unauthorized-first"); err == nil {
+		t.Fatal("unauthorized account still exists, want deleted")
+	}
+	if _, err := server.store.GetAccountByToken("token-paid-unauthorized-second"); err != nil {
+		t.Fatalf("fallback account missing: %v", err)
+	}
+	if len(recorder.callSequence) != 2 || !strings.HasPrefix(recorder.callSequence[0], "responses:token-paid-unauthorized-first:generate") || !strings.HasPrefix(recorder.callSequence[1], "responses:token-paid-unauthorized-second:generate") {
+		t.Fatalf("callSequence = %#v, want first account 401 then second account responses", recorder.callSequence)
+	}
+}
+
+func TestCreateImageGenerateTaskFallsBackToExternalResponsesOnResponsesLimit(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
+		accounts: []compatSeedAccount{
+			{
+				fileName:    "paid-external-fallback.json",
+				accessToken: "token-paid-external-fallback",
+				accountType: "Plus",
+				priority:    100,
+				quota:       5,
+				status:      "正常",
+			},
+		},
+		behavior: compatClientBehavior{
+			responsesGenerateErrors: map[string]error{
+				"token-paid-external-fallback": errors.New("responses returned 429: 5h limit reached"),
+			},
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID:   "conv-generate-external-fallback-1",
+		TurnID:           "turn-generate-external-fallback-1",
+		Mode:             "generate",
+		Prompt:           "external fallback generate",
+		Model:            "gpt-image-2",
+		Count:            1,
+		Size:             "",
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-generate-external-fallback-1", imageTaskStatusSucceeded)
+	if _, err := server.store.GetAccountByToken("token-paid-external-fallback"); err != nil {
+		t.Fatalf("limited account was deleted, want responses route disabled only: %v", err)
+	}
+	if recorder.responsesCalls != 1 || recorder.externalCalls != 1 {
+		t.Fatalf("responsesCalls/externalCalls = %d/%d, want 1/1; sequence = %#v", recorder.responsesCalls, recorder.externalCalls, recorder.callSequence)
+	}
+	if len(recorder.callSequence) != 2 || !strings.HasPrefix(recorder.callSequence[0], "responses:token-paid-external-fallback:generate") || !strings.HasPrefix(recorder.callSequence[1], "external_responses:external_responses:generate") {
+		t.Fatalf("callSequence = %#v, want responses then external_responses", recorder.callSequence)
+	}
+}
+
 func TestCreateImageGenerateUsesPreviousResponseOnlyForSameResponsesAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",

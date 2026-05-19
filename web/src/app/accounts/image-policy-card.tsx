@@ -54,6 +54,13 @@ function formatImportedAt(value?: string | null) {
   }).format(date);
 }
 
+function formatCodexPercent(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "—";
+  }
+  return `${Math.max(0, Math.min(100, value)).toFixed(1).replace(/\.0$/, "")}%`;
+}
+
 export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
   const [imagePolicy, setImagePolicy] = useState<StoredImageAccountPolicy>(
     () => normalizeImageAccountPolicy(null),
@@ -255,7 +262,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
               <SelectContent>
                 <SelectItem value="imported_at">按导入时间</SelectItem>
                 <SelectItem value="name">按名称</SelectItem>
-                <SelectItem value="quota">按剩余额度</SelectItem>
+                <SelectItem value="quota">按对话额度</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -407,7 +414,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
                             <span>账号 {group.accounts.length}</span>
                             <span>可用 {group.availableCount}</span>
-                            <span>总剩余 {group.totalRemaining}</span>
+                            <span>对话可用合计 {group.totalRemaining}</span>
                             <span>平均 {group.averageRemaining}</span>
                             <span>
                               首个 {formatImportedAt(group.accounts[0]?.importedAt)}
@@ -428,7 +435,7 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                               <tr>
                                 <th className="px-3 py-2 text-left font-medium">邮箱 / 文件</th>
                                 <th className="px-3 py-2 text-center font-medium">状态</th>
-                                <th className="px-3 py-2 text-center font-medium">额度</th>
+                                <th className="px-3 py-2 text-center font-medium">对话额度</th>
                                 <th className="px-3 py-2 text-center font-medium">检测</th>
                               </tr>
                             </thead>
@@ -439,7 +446,10 @@ export function ImagePolicyCard({ accounts }: ImagePolicyCardProps) {
                                   <td className="px-3 py-2 text-center">
                                     <Badge variant={acc.status === "正常" ? "success" : acc.status === "限流" ? "warning" : "destructive"} className="text-[10px]">{acc.status}</Badge>
                                   </td>
-                                  <td className="px-3 py-2 text-center text-stone-600">{acc.quota}</td>
+                                  <td className="px-3 py-2 text-center text-stone-600">
+                                    <div>5h {formatCodexPercent(acc.codex_5h_used_percent)}</div>
+                                    <div className="mt-0.5 text-stone-400">7d {formatCodexPercent(acc.codex_7d_used_percent)}</div>
+                                  </td>
                                   <td className="px-3 py-2 text-center">
                                     <div className="flex items-center justify-center gap-1">
                                       {accountSupportsRoute(acc, "responses") ? (

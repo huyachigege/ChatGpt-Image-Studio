@@ -816,12 +816,7 @@ func (m *imageTaskManager) hasPotentialCompatibleAccounts(task *imageTask) (bool
 }
 
 func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicAccount) bool {
-	if !task.Requirement.NeedPaid {
-		return nil
-	}
-	return func(account accounts.PublicAccount) bool {
-		return isPaidImageAccountType(account.Type)
-	}
+	return imageTaskAttemptAllowAccount(task)
 }
 
 func (m *imageTaskManager) preferredRouteForTask(task *imageTask) string {

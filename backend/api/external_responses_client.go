@@ -466,14 +466,36 @@ func (c *fallbackResponsesClient) GenerateImage(ctx context.Context, prompt, mod
 }
 
 func (c *fallbackResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.run(ctx, func(client imageWorkflowClient) ([]handler.ImageResult, error) {
+	if c == nil || c.primary == nil || c.fallback == nil {
+		return nil, fmt.Errorf("responses fallback client is required")
+	}
+	call := func(client imageWorkflowClient) ([]handler.ImageResult, error) {
 		if generator, ok := client.(interface {
 			GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
 		}); ok {
 			return generator.GenerateImageWithPreviousResponse(ctx, prompt, model, n, size, quality, background, previousResponseID)
 		}
 		return client.GenerateImage(ctx, prompt, model, n, size, quality, background)
-	})
+	}
+	results, err := call(c.primary)
+	if err == nil {
+		c.lastFallbackReason = ""
+		c.captureRoute(c.primary)
+		return results, nil
+	}
+	if errors.Is(err, context.Canceled) || isImageModelRefusalError(err) {
+		return nil, err
+	}
+	if (isResponsesPreviousResponseContextError(err) || isTransientImageStreamError(err)) && !isImageRateLimitError(err) {
+		return nil, markResponsesPreviousResponseContextError(err)
+	}
+	c.lastFallbackReason = err.Error()
+	fallbackResults, fallbackErr := call(c.fallback)
+	if fallbackErr == nil {
+		c.captureRoute(c.fallback)
+		return fallbackResults, nil
+	}
+	return nil, fmt.Errorf("%s failed: %v; %s fallback failed: %w", c.primaryName(), err, c.fallbackName(), fallbackErr)
 }
 
 func (c *fallbackResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
@@ -494,14 +516,36 @@ func (c *fallbackResponsesClient) EditImageByUpload(ctx context.Context, prompt,
 }
 
 func (c *fallbackResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.run(ctx, func(client imageWorkflowClient) ([]handler.ImageResult, error) {
+	if c == nil || c.primary == nil || c.fallback == nil {
+		return nil, fmt.Errorf("responses fallback client is required")
+	}
+	call := func(client imageWorkflowClient) ([]handler.ImageResult, error) {
 		if editor, ok := client.(interface {
 			EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
 		}); ok {
 			return editor.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, previousResponseID)
 		}
 		return client.EditImageByUpload(ctx, prompt, model, images, mask, size, quality)
-	})
+	}
+	results, err := call(c.primary)
+	if err == nil {
+		c.lastFallbackReason = ""
+		c.captureRoute(c.primary)
+		return results, nil
+	}
+	if errors.Is(err, context.Canceled) || isImageModelRefusalError(err) {
+		return nil, err
+	}
+	if (isResponsesPreviousResponseContextError(err) || isTransientImageStreamError(err)) && !isImageRateLimitError(err) {
+		return nil, markResponsesPreviousResponseContextError(err)
+	}
+	c.lastFallbackReason = err.Error()
+	fallbackResults, fallbackErr := call(c.fallback)
+	if fallbackErr == nil {
+		c.captureRoute(c.fallback)
+		return fallbackResults, nil
+	}
+	return nil, fmt.Errorf("%s failed: %v; %s fallback failed: %w", c.primaryName(), err, c.fallbackName(), fallbackErr)
 }
 
 func (c *fallbackResponsesClient) InpaintImageByMask(ctx context.Context, prompt string, model string, originalFileID string, originalGenID string, conversationID string, parentMessageID string, mask []byte, size string, quality string) ([]handler.ImageResult, error) {

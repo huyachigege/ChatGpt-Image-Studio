@@ -497,6 +497,8 @@ func TestOnlyHTTP401And429SwitchImageAccount(t *testing.T) {
 		errors.New("responses returned 429: too many requests"),
 		errors.New("http 401"),
 		errors.New("status 429"),
+		errors.New("5h limit reached"),
+		errors.New("检测到 Codex 5h 限流，仅保留 legacy 链路"),
 	}
 	for _, err := range switchErrors {
 		if !shouldRetryImageRequestWithNextAccount(err) {
@@ -745,11 +747,14 @@ func TestStudioRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited) returned error: %v", err)
 	}
-	if limitedAccount.Status != "限流" {
-		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "限流")
+	if limitedAccount.Status != "正常" {
+		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "正常")
 	}
-	if limitedAccount.Quota != 0 {
-		t.Fatalf("limited account quota = %d, want 0", limitedAccount.Quota)
+	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
+		t.Fatalf("limited account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
+	}
+	if accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
+		t.Fatalf("limited account routes = %v, want responses removed", limitedAccount.ImageRoutes)
 	}
 }
 
@@ -812,11 +817,14 @@ func TestStudioResponsesRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited paid) returned error: %v", err)
 	}
-	if limitedAccount.Status != "限流" {
-		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "限流")
+	if limitedAccount.Status != "正常" {
+		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "正常")
 	}
-	if limitedAccount.Quota != 0 {
-		t.Fatalf("limited paid account quota = %d, want 0", limitedAccount.Quota)
+	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
+		t.Fatalf("limited paid account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
+	}
+	if accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
+		t.Fatalf("limited paid account routes = %v, want responses removed", limitedAccount.ImageRoutes)
 	}
 }
 

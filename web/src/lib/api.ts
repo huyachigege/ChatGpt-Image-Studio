@@ -141,6 +141,13 @@ export type Account = {
   quota: number;
   email?: string | null;
   user_id?: string | null;
+  codex_quota_known?: boolean;
+  codex_7d_used_percent?: number | null;
+  codex_7d_reset_after_seconds?: number | null;
+  codex_7d_window_minutes?: number | null;
+  codex_5h_used_percent?: number | null;
+  codex_5h_reset_after_seconds?: number | null;
+  codex_5h_window_minutes?: number | null;
   limits_progress?: Array<{
     feature_name?: string;
     remaining?: number;
@@ -271,6 +278,13 @@ export type AccountQuotaResponse = {
   quota: number;
   image_gen_remaining?: number | null;
   image_gen_reset_after?: string | null;
+  codex_quota_known?: boolean;
+  codex_7d_used_percent?: number | null;
+  codex_7d_reset_after_seconds?: number | null;
+  codex_7d_window_minutes?: number | null;
+  codex_5h_used_percent?: number | null;
+  codex_5h_reset_after_seconds?: number | null;
+  codex_5h_window_minutes?: number | null;
   refresh_requested: boolean;
   refreshed: boolean;
   refresh_error?: string;

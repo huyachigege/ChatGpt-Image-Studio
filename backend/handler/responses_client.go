@@ -503,13 +503,13 @@ func resolveChatGPTAccountID(accessToken string, authData map[string]any) string
 		return accountID
 	}
 	if authPayload, ok := authData["https://api.openai.com/auth"].(map[string]any); ok {
-		if accountID := firstString(authPayload, "chatgpt_account_id"); accountID != "" {
+		if accountID := firstString(authPayload, "account_id", "chatgpt_account_id"); accountID != "" {
 			return accountID
 		}
 	}
 	if tokenPayload := decodeAccessTokenPayload(accessToken); len(tokenPayload) > 0 {
 		if authPayload, ok := tokenPayload["https://api.openai.com/auth"].(map[string]any); ok {
-			if accountID := firstString(authPayload, "chatgpt_account_id"); accountID != "" {
+			if accountID := firstString(authPayload, "account_id", "chatgpt_account_id"); accountID != "" {
 				return accountID
 			}
 		}

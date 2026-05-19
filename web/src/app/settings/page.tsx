@@ -12,6 +12,7 @@ import {
   UserRound,
   RefreshCw,
   Save,
+  Search,
   Settings2,
   Stethoscope,
 } from "lucide-react";
@@ -19,6 +20,13 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   adjustUserQuota,
   createInvite,
@@ -53,6 +61,16 @@ import { ServicePathsSection } from "./components/service-paths-section";
 
 const MANAGEMENT_PAGE_SIZE = 10;
 
+const userSortOptions = [
+  { label: "默认排序", value: "default" },
+  { label: "最近使用从近到远", value: "last_used_desc" },
+  { label: "最近使用从远到近", value: "last_used_asc" },
+  { label: "可用额度从高到低", value: "quota_desc" },
+  { label: "可用额度从低到高", value: "quota_asc" },
+] as const;
+
+type UserSortMode = (typeof userSortOptions)[number]["value"];
+
 function joinDisplayPath(root: string, relativePath: string) {
   const normalizedRoot = String(root || "")
     .trim()
@@ -85,6 +103,16 @@ function formatManagementTime(value?: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(date);
+}
+
+function getUserLastUsedTime(item: AppUserItem) {
+  if (!item.lastUsedAt?.trim()) return 0;
+  const value = new Date(item.lastUsedAt).getTime();
+  return Number.isNaN(value) ? 0 : value;
+}
+
+function getUserAvailableQuota(item: AppUserItem) {
+  return (item.quota?.freeRemaining ?? 0) + (item.quota?.paidRemaining ?? 0);
 }
 
 function defaultConfigPayload(): ConfigPayload {
@@ -274,6 +302,9 @@ export default function SettingsPage() {
   const [users, setUsers] = useState<AppUserItem[]>([]);
   const [invitePage, setInvitePage] = useState(1);
   const [userPage, setUserPage] = useState(1);
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [userQuery, setUserQuery] = useState("");
+  const [userSortMode, setUserSortMode] = useState<UserSortMode>("default");
   const [latestInviteCode, setLatestInviteCode] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -320,15 +351,47 @@ export default function SettingsPage() {
       String(config.sync.managementKey || "").trim() ? "已配置" : "未配置",
     [config.sync.managementKey],
   );
-  const invitePageCount = Math.max(1, Math.ceil(invites.length / MANAGEMENT_PAGE_SIZE));
-  const userPageCount = Math.max(1, Math.ceil(users.length / MANAGEMENT_PAGE_SIZE));
+  const filteredInvites = useMemo(() => {
+    const keyword = inviteQuery.trim().toLowerCase();
+    if (!keyword) return invites;
+    return invites.filter((item) =>
+      [item.code, item.usedByUsername, item.usedByDisplayName, item.usedByUserId]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword)),
+    );
+  }, [inviteQuery, invites]);
+  const filteredUsers = useMemo(() => {
+    const keyword = userQuery.trim().toLowerCase();
+    const matched = keyword
+      ? users.filter((item) =>
+          [item.username, item.name, item.id, item.role]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(keyword)),
+        )
+      : [...users];
+    if (userSortMode === "last_used_desc") {
+      return matched.sort((left, right) => getUserLastUsedTime(right) - getUserLastUsedTime(left));
+    }
+    if (userSortMode === "last_used_asc") {
+      return matched.sort((left, right) => getUserLastUsedTime(left) - getUserLastUsedTime(right));
+    }
+    if (userSortMode === "quota_desc") {
+      return matched.sort((left, right) => getUserAvailableQuota(right) - getUserAvailableQuota(left));
+    }
+    if (userSortMode === "quota_asc") {
+      return matched.sort((left, right) => getUserAvailableQuota(left) - getUserAvailableQuota(right));
+    }
+    return matched;
+  }, [userQuery, userSortMode, users]);
+  const invitePageCount = Math.max(1, Math.ceil(filteredInvites.length / MANAGEMENT_PAGE_SIZE));
+  const userPageCount = Math.max(1, Math.ceil(filteredUsers.length / MANAGEMENT_PAGE_SIZE));
   const pagedInvites = useMemo(
-    () => invites.slice((invitePage - 1) * MANAGEMENT_PAGE_SIZE, invitePage * MANAGEMENT_PAGE_SIZE),
-    [invitePage, invites],
+    () => filteredInvites.slice((invitePage - 1) * MANAGEMENT_PAGE_SIZE, invitePage * MANAGEMENT_PAGE_SIZE),
+    [invitePage, filteredInvites],
   );
   const pagedUsers = useMemo(
-    () => users.slice((userPage - 1) * MANAGEMENT_PAGE_SIZE, userPage * MANAGEMENT_PAGE_SIZE),
-    [userPage, users],
+    () => filteredUsers.slice((userPage - 1) * MANAGEMENT_PAGE_SIZE, userPage * MANAGEMENT_PAGE_SIZE),
+    [userPage, filteredUsers],
   );
   const storageMigrationNotice = useMemo(() => {
     if (!savedConfig) {
@@ -736,6 +799,19 @@ export default function SettingsPage() {
               </div>
             </div>
 
+            <div className="relative mt-4 max-w-md">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400" />
+              <Input
+                value={inviteQuery}
+                onChange={(event) => {
+                  setInviteQuery(event.target.value);
+                  setInvitePage(1);
+                }}
+                placeholder="搜索邀请码 / 绑定用户"
+                className="h-10 rounded-2xl border-stone-200 bg-white pl-10 text-sm shadow-none"
+              />
+            </div>
+
             {latestInviteCode ? (
               <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
                 <div className="text-xs text-emerald-700 dark:text-emerald-300">最新生成的邀请码</div>
@@ -756,8 +832,8 @@ export default function SettingsPage() {
                 <span>绑定用户</span>
               </div>
               <div className="divide-y divide-stone-200 dark:divide-[var(--studio-border)]">
-                {invites.length === 0 ? (
-                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingInvites ? "正在读取邀请码..." : "还没有邀请码，先生成一个。"}</div>
+                {filteredInvites.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingInvites ? "正在读取邀请码..." : inviteQuery.trim() ? "没有匹配的邀请码。" : "还没有邀请码，先生成一个。"}</div>
                 ) : (
                   pagedInvites.map((item) => (
                     <div key={item.code} className="grid grid-cols-[1.2fr_1fr_1fr] gap-3 px-4 py-4 text-sm">
@@ -776,7 +852,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
-              <span>共 {invites.length} 条，第 {invitePage}/{invitePageCount} 页</span>
+              <span>共 {filteredInvites.length} 条，第 {invitePage}/{invitePageCount} 页</span>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setInvitePage((page) => Math.max(1, page - 1))} disabled={invitePage <= 1}>上一页</Button>
                 <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setInvitePage((page) => Math.min(invitePageCount, page + 1))} disabled={invitePage >= invitePageCount}>下一页</Button>
@@ -807,6 +883,39 @@ export default function SettingsPage() {
               </Button>
             </div>
 
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full max-w-md">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-stone-400" />
+                <Input
+                  value={userQuery}
+                  onChange={(event) => {
+                    setUserQuery(event.target.value);
+                    setUserPage(1);
+                  }}
+                  placeholder="搜索用户名 / 昵称 / ID / 角色"
+                  className="h-10 rounded-2xl border-stone-200 bg-white pl-10 text-sm shadow-none"
+                />
+              </div>
+              <Select
+                value={userSortMode}
+                onValueChange={(value) => {
+                  setUserSortMode(value as UserSortMode);
+                  setUserPage(1);
+                }}
+              >
+                <SelectTrigger className="h-10 w-full rounded-2xl border-stone-200 bg-white text-sm shadow-none lg:w-56">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {userSortOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="mt-4 overflow-hidden rounded-2xl border border-stone-200 dark:border-[var(--studio-border)]">
               <div className="grid grid-cols-[1fr_0.6fr_0.6fr_0.9fr_1.2fr_1.4fr] gap-3 bg-stone-50 px-4 py-3 text-xs font-medium text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">
                 <span>用户</span>
@@ -817,8 +926,8 @@ export default function SettingsPage() {
                 <span>操作</span>
               </div>
               <div className="divide-y divide-stone-200 dark:divide-[var(--studio-border)]">
-                {users.length === 0 ? (
-                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingUsers ? "正在读取用户..." : "还没有普通用户。"}</div>
+                {filteredUsers.length === 0 ? (
+                  <div className="px-4 py-6 text-sm text-stone-500 dark:text-[var(--studio-text-muted)]">{isLoadingUsers ? "正在读取用户..." : userQuery.trim() ? "没有匹配的用户。" : "还没有普通用户。"}</div>
                 ) : (
                   pagedUsers.map((item) => (
                     <div key={item.id} className="grid grid-cols-[1fr_0.6fr_0.6fr_0.9fr_1.2fr_1.4fr] items-center gap-3 px-4 py-4 text-sm">
@@ -880,7 +989,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
-              <span>共 {users.length} 个用户，第 {userPage}/{userPageCount} 页</span>
+              <span>共 {filteredUsers.length} 个用户，第 {userPage}/{userPageCount} 页</span>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setUserPage((page) => Math.max(1, page - 1))} disabled={userPage <= 1}>上一页</Button>
                 <Button type="button" variant="outline" className="h-8 rounded-full border-stone-200 bg-white px-3 text-xs shadow-none" onClick={() => setUserPage((page) => Math.min(userPageCount, page + 1))} disabled={userPage >= userPageCount}>下一页</Button>

@@ -88,7 +88,6 @@ type accountRefreshRunResult struct {
 }
 
 const cpaFixedImageModel = "gpt-image-2"
-const maxBulkAccountRefreshWorkers = 4
 const userSessionTTL = 30 * 24 * time.Hour
 
 type authIdentity struct {
@@ -838,16 +837,23 @@ func (s *Server) handleAccountQuota(w http.ResponseWriter, r *http.Request) {
 
 	imageGenRemaining, imageGenResetAfter := extractAccountQuota(account.LimitsProgress, "image_gen")
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id":                    account.ID,
-		"email":                 account.Email,
-		"status":                account.Status,
-		"type":                  account.Type,
-		"quota":                 account.Quota,
-		"image_gen_remaining":   imageGenRemaining,
-		"image_gen_reset_after": imageGenResetAfter,
-		"refresh_requested":     refreshRequested,
-		"refreshed":             refreshed,
-		"refresh_error":         refreshError,
+		"id":                           account.ID,
+		"email":                        account.Email,
+		"status":                       account.Status,
+		"type":                         account.Type,
+		"quota":                        account.Quota,
+		"image_gen_remaining":          imageGenRemaining,
+		"image_gen_reset_after":        imageGenResetAfter,
+		"codex_quota_known":            account.CodexQuotaKnown,
+		"codex_7d_used_percent":        account.Codex7dUsedPercent,
+		"codex_7d_reset_after_seconds": account.Codex7dResetAfterSeconds,
+		"codex_7d_window_minutes":      account.Codex7dWindowMinutes,
+		"codex_5h_used_percent":        account.Codex5hUsedPercent,
+		"codex_5h_reset_after_seconds": account.Codex5hResetAfterSeconds,
+		"codex_5h_window_minutes":      account.Codex5hWindowMinutes,
+		"refresh_requested":            refreshRequested,
+		"refreshed":                    refreshed,
+		"refresh_error":                refreshError,
 	})
 }
 
@@ -1073,11 +1079,21 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 	}
 
 	store := s.getStore()
-	refreshCtx, cancel := context.WithCancel(context.Background())
+	refreshTimeout := s.accountRefreshTimeout(len(tokens))
+	refreshCtx, cancel := context.WithTimeout(context.Background(), refreshTimeout)
 	s.setAccountRefreshCancel(cancel)
 	go func(tokens []string) {
+		defer cancel()
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				run.OK = false
+				run.Error = fmt.Sprintf("刷新任务异常中断: %v", recovered)
+				run.Processed = len(tokens)
+			}
+			s.finishAccountRefreshRun(run)
+		}()
+
 		refreshed, refreshErrors, refreshErr := store.RefreshAccountsWithOptions(refreshCtx, tokens, accounts.RefreshOptions{
-			MaxWorkers: maxBulkAccountRefreshWorkers,
 			Progress: func(progress accounts.RefreshProgress) {
 				run.Refreshed = progress.Refreshed
 				run.Failed = progress.Failed
@@ -1091,6 +1107,9 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 			run.OK = false
 			run.CancelRequested = true
 			run.Error = "刷新任务已停止"
+		} else if errors.Is(refreshErr, context.DeadlineExceeded) {
+			run.OK = false
+			run.Error = fmt.Sprintf("刷新任务超时（%s）", refreshTimeout)
 		} else if refreshErr != nil {
 			run.OK = false
 			run.Error = refreshErr.Error()
@@ -1101,10 +1120,19 @@ func (s *Server) handleRefreshAllAccounts(w http.ResponseWriter, r *http.Request
 		run.Refreshed = refreshed
 		run.Failed = len(refreshErrors)
 		run.Processed = len(tokens)
-		s.finishAccountRefreshRun(run)
 	}(append([]string(nil), tokens...))
 
 	writeJSON(w, http.StatusOK, map[string]any{"progress": run})
+}
+
+func (s *Server) accountRefreshTimeout(tokenCount int) time.Duration {
+	workers := max(1, s.cfg.Accounts.RefreshWorkers)
+	if tokenCount < workers {
+		workers = max(1, tokenCount)
+	}
+	batches := (max(1, tokenCount) + workers - 1) / workers
+	perBatch := time.Duration(max(10, s.cfg.ChatGPT.RequestTimeout)) * time.Second
+	return time.Duration(batches)*perBatch + 30*time.Second
 }
 
 func (s *Server) handleStopAccountRefresh(w http.ResponseWriter, r *http.Request) {
@@ -1724,6 +1752,10 @@ func (s *Server) runImageRequest(ctx context.Context, authFile *accounts.LocalAu
 }
 
 func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, releaseLease func(), routingDecision accounts.ImageAccountRoutingDecision, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, metadata imageRequestMetadata, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request, useAdmission bool) ([]map[string]any, bool, error) {
+	return s.runImageRequestWithAdmissionRoute(ctx, authFile, account, releaseLease, routingDecision, operation, responseFormat, preferredAccount, requestedModel, responsesEligible, metadata, run, r, useAdmission, "")
+}
+
+func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile *accounts.LocalAuth, account accounts.PublicAccount, releaseLease func(), routingDecision accounts.ImageAccountRoutingDecision, operation, responseFormat string, preferredAccount bool, requestedModel string, responsesEligible bool, metadata imageRequestMetadata, run func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error), r *http.Request, useAdmission bool, forcedRoute string) ([]map[string]any, bool, error) {
 	store := s.getStore()
 	if releaseLease != nil {
 		defer releaseLease()
@@ -1745,9 +1777,11 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			return nil, true, refreshErr
 		}
 		if len(refreshErrors) > 0 && isInvalidRefreshError(refreshErrors[0].Error) {
-			store.MarkImageTokenAbnormal(authFile.AccessToken)
+			if _, deleteErr := store.DeleteAccounts([]string{authFile.AccessToken}); deleteErr != nil {
+				return nil, false, deleteErr
+			}
 			if preferredAccount {
-				return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
+				return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，已从账号池删除")
 			}
 			return nil, true, errors.New(refreshErrors[0].Error)
 		}
@@ -1866,15 +1900,74 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		direction = "cpa"
 	} else {
 		route = s.configuredImageRouteForAccount(account)
+		forcedRoute = strings.ToLower(strings.TrimSpace(forcedRoute))
+		if forcedRoute != "" {
+			route = forcedRoute
+		}
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
-		if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
-			client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
+		if forcedRoute == "" {
+			if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
+				client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
+				if setter, ok := client.(interface{ SetSessionID(string) }); ok {
+					scope := responsesSessionScopeFromContext(ctx)
+					setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
+				}
+			} else {
+				client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
+			}
+		}
+		switch forcedRoute {
+		case "external_responses":
+			externalConfig := s.cfg.ExternalResponsesConfig()
+			if !s.externalResponsesConfigured() {
+				err := newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置 base_url、api_key 与 model")
+				entry := imageRequestLogEntry{
+					StartedAt:            startedAt.Format(time.RFC3339Nano),
+					FinishedAt:           time.Now().Format(time.RFC3339Nano),
+					Endpoint:             r.URL.Path,
+					Operation:            operation,
+					ImageMode:            mode,
+					Direction:            "external",
+					Route:                route,
+					AccountType:          account.Type,
+					AccountEmail:         account.Email,
+					AccountFile:          authFile.Name,
+					RequestedModel:       requestedModel,
+					Preferred:            preferredAccount,
+					Success:              false,
+					Error:                err.Error(),
+					LeaseAcquired:        releaseLease != nil,
+					QueueWaitMS:          admissionInfo.QueueWaitMS,
+					InflightCountAtStart: admissionInfo.InflightCountAtStart,
+				}
+				if requestErr, ok := err.(*requestError); ok {
+					entry.ErrorCode = requestErr.code
+				}
+				s.applyExternalResponsesLogAccount(route, &entry)
+				applyImageRoutingLogFields(routingDecision, &entry)
+				metadata.applyTo(&entry)
+				s.logImageRequestWithContext(ctx, entry)
+				return nil, false, err
+			}
+			if s.externalResponsesClientFactory != nil {
+				client = s.externalResponsesClientFactory(externalConfig)
+			} else {
+				client = newExternalResponsesClient(externalConfig)
+			}
+			upstreamModel = externalConfig.Model
+			direction = "external"
+		case "responses":
+			if s.responsesClientFactory != nil {
+				client = s.responsesClientFactory(authFile.AccessToken, s.cfg.ChatGPTProxyURL(), authFile.Data, s.imageRequestConfig())
+			} else {
+				client = handler.NewResponsesClientWithProxyAndConfig(authFile.AccessToken, s.cfg.ChatGPTProxyURL(), authFile.Data, s.imageRequestConfig())
+			}
 			if setter, ok := client.(interface{ SetSessionID(string) }); ok {
 				scope := responsesSessionScopeFromContext(ctx)
 				setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
 			}
-		} else {
+		case "legacy":
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
 	}
@@ -1974,10 +2067,9 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
-		if isImageHTTPStatusError(err, 429) {
+		if isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
 			if !isExternalResponsesRoute(route) {
-				store.RemoveImageRouteCapability(authFile.AccessToken, route)
-				store.MarkImageAccountLimited(authFile.AccessToken)
+				store.RemoveImageRouteCapability(authFile.AccessToken, "responses")
 				return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，正在切换下一个账号")
 			}
 			return nil, false, err
@@ -1989,8 +2081,10 @@ func (s *Server) runImageRequestWithAdmission(ctx context.Context, authFile *acc
 			if isExternalResponsesRoute(route) {
 				return nil, false, err
 			}
-			store.MarkImageTokenAbnormal(authFile.AccessToken)
-			return nil, true, newRequestError("source_account_unavailable", "当前账号不可用，正在切换下一个账号")
+			if _, deleteErr := store.DeleteAccounts([]string{authFile.AccessToken}); deleteErr != nil {
+				return nil, false, deleteErr
+			}
+			return nil, true, newRequestError("source_account_unavailable", "当前账号 401 不可用，已从账号池删除并切换下一个账号")
 		}
 		if preferredAccount && isConversationContextError(err) {
 			return nil, false, newRequestError("source_context_missing", "原始图片对应会话已失效，请使用普通编辑重试")
@@ -2574,7 +2668,20 @@ func isImageAccountSwitchError(err error) bool {
 			return false
 		}
 	}
-	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429)
+	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err)
+}
+
+func isImageFiveHourLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	for _, token := range []string{"5h", "5 h", "5-hour", "5 hour", "five hour"} {
+		if strings.Contains(message, token) && (strings.Contains(message, "limit") || strings.Contains(message, "限流")) {
+			return true
+		}
+	}
+	return strings.Contains(message, "codex") && strings.Contains(message, "限流")
 }
 
 func isImageModelRefusalError(err error) bool {
@@ -2692,6 +2799,13 @@ func isConversationContextError(err error) bool {
 		strings.Contains(message, "conversation_not_found")
 }
 
+func markResponsesPreviousResponseContextError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("previous_response_id context unavailable: %w", err)
+}
+
 func isResponsesPreviousResponseContextError(err error) bool {
 	if err == nil {
 		return false
@@ -2720,8 +2834,7 @@ func isInvalidRefreshError(message string) bool {
 func isImageAccountUsable(account accounts.PublicAccount, allowDisabled bool) bool {
 	return (allowDisabled || account.Status != "禁用") &&
 		account.Status != "异常" &&
-		account.Status != "限流" &&
-		account.Quota > 0
+		accounts.AccountSupportsImageRoute(account, "legacy")
 }
 
 func (s *Server) allowDisabledStudioImageAccounts() bool {

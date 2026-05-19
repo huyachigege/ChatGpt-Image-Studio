@@ -851,10 +851,16 @@ func sortRoutingCandidates(candidates []imageRoutingCandidate, sortMode string) 
 				return left < right
 			}
 		case "quota":
-			leftQuota := currentImageRemaining(candidates[i].account)
-			rightQuota := currentImageRemaining(candidates[j].account)
-			if leftQuota != rightQuota {
-				return leftQuota > rightQuota
+			leftHas5h, left5h, left7d := codexConversationAvailability(candidates[i].account)
+			rightHas5h, right5h, right7d := codexConversationAvailability(candidates[j].account)
+			if leftHas5h != rightHas5h {
+				return leftHas5h
+			}
+			if left5h != right5h {
+				return left5h > right5h
+			}
+			if left7d != right7d {
+				return left7d > right7d
 			}
 		default:
 			leftImportedAt, leftOK := parseFlexibleTime(candidates[i].account.ImportedAt)
@@ -915,9 +921,30 @@ func (s *Store) imageReserveCountLocked(authName string, account PublicAccount, 
 }
 
 func currentImageRemaining(account PublicAccount) int {
-	remaining, _, ok := extractImageQuotaSnapshot(account.LimitsProgress, account.RestoreAt, account.Quota)
-	if !ok {
-		return max(0, account.Quota)
+	_, fiveHourAvailable, weekAvailable := codexConversationAvailability(account)
+	if fiveHourAvailable > 0 {
+		return fiveHourAvailable
 	}
-	return max(0, remaining)
+	return weekAvailable
+}
+
+func codexConversationAvailability(account PublicAccount) (bool, int, int) {
+	fiveHourAvailable := percentAvailable(account.Codex5hUsedPercent)
+	weekAvailable := percentAvailable(account.Codex7dUsedPercent)
+	hasAvailableFiveHour := account.Codex5hWindowMinutes != nil && fiveHourAvailable > 0
+	return hasAvailableFiveHour, fiveHourAvailable, weekAvailable
+}
+
+func percentAvailable(usedPercent *float64) int {
+	if usedPercent == nil {
+		return 0
+	}
+	available := int(math.Round(100 - *usedPercent))
+	if available < 0 {
+		return 0
+	}
+	if available > 100 {
+		return 100
+	}
+	return available
 }

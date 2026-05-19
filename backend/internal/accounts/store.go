@@ -63,6 +63,13 @@ type RuntimeState struct {
 	LastRefreshedAt            string           `json:"last_refreshed_at,omitempty"`
 	ImageQuotaDailyBase        int              `json:"image_quota_daily_base,omitempty"`
 	ImageQuotaDailyBaseResetAt string           `json:"image_quota_daily_base_reset_at,omitempty"`
+	CodexQuotaKnown            bool             `json:"codex_quota_known,omitempty"`
+	Codex7dUsedPercent         *float64         `json:"codex_7d_used_percent,omitempty"`
+	Codex7dResetAfterSeconds   *int             `json:"codex_7d_reset_after_seconds,omitempty"`
+	Codex7dWindowMinutes       *int             `json:"codex_7d_window_minutes,omitempty"`
+	Codex5hUsedPercent         *float64         `json:"codex_5h_used_percent,omitempty"`
+	Codex5hResetAfterSeconds   *int             `json:"codex_5h_reset_after_seconds,omitempty"`
+	Codex5hWindowMinutes       *int             `json:"codex_5h_window_minutes,omitempty"`
 	ImageRoutes                []string         `json:"image_routes"`
 }
 
@@ -112,32 +119,39 @@ type SyncRunResult struct {
 }
 
 type PublicAccount struct {
-	ID               string           `json:"id"`
-	FileName         string           `json:"fileName"`
-	AccessToken      string           `json:"access_token"`
-	SourceKind       string           `json:"sourceKind"`
-	Type             string           `json:"type"`
-	Status           string           `json:"status"`
-	Quota            int              `json:"quota"`
-	Email            string           `json:"email,omitempty"`
-	UserID           string           `json:"user_id,omitempty"`
-	LimitsProgress   []map[string]any `json:"limits_progress"`
-	DefaultModelSlug string           `json:"default_model_slug,omitempty"`
-	RestoreAt        string           `json:"restoreAt,omitempty"`
-	Success          int              `json:"success"`
-	Fail             int              `json:"fail"`
-	LastUsedAt       string           `json:"lastUsedAt,omitempty"`
-	LastRefreshedAt  string           `json:"lastRefreshedAt,omitempty"`
-	Provider         string           `json:"provider"`
-	Disabled         bool             `json:"disabled"`
-	Note             string           `json:"note,omitempty"`
-	Priority         int              `json:"priority"`
-	SyncStatus       string           `json:"syncStatus,omitempty"`
-	SyncOrigin       string           `json:"syncOrigin,omitempty"`
-	LastSyncedAt     string           `json:"lastSyncedAt,omitempty"`
-	RemoteDisabled   *bool            `json:"remoteDisabled,omitempty"`
-	ImportedAt       string           `json:"importedAt,omitempty"`
-	ImageRoutes      []string         `json:"imageRoutes"`
+	ID                       string           `json:"id"`
+	FileName                 string           `json:"fileName"`
+	AccessToken              string           `json:"access_token"`
+	SourceKind               string           `json:"sourceKind"`
+	Type                     string           `json:"type"`
+	Status                   string           `json:"status"`
+	Quota                    int              `json:"quota"`
+	Email                    string           `json:"email,omitempty"`
+	UserID                   string           `json:"user_id,omitempty"`
+	LimitsProgress           []map[string]any `json:"limits_progress"`
+	DefaultModelSlug         string           `json:"default_model_slug,omitempty"`
+	RestoreAt                string           `json:"restoreAt,omitempty"`
+	Success                  int              `json:"success"`
+	Fail                     int              `json:"fail"`
+	LastUsedAt               string           `json:"lastUsedAt,omitempty"`
+	LastRefreshedAt          string           `json:"lastRefreshedAt,omitempty"`
+	Provider                 string           `json:"provider"`
+	Disabled                 bool             `json:"disabled"`
+	Note                     string           `json:"note,omitempty"`
+	Priority                 int              `json:"priority"`
+	SyncStatus               string           `json:"syncStatus,omitempty"`
+	SyncOrigin               string           `json:"syncOrigin,omitempty"`
+	LastSyncedAt             string           `json:"lastSyncedAt,omitempty"`
+	RemoteDisabled           *bool            `json:"remoteDisabled,omitempty"`
+	ImportedAt               string           `json:"importedAt,omitempty"`
+	CodexQuotaKnown          bool             `json:"codex_quota_known,omitempty"`
+	Codex7dUsedPercent       *float64         `json:"codex_7d_used_percent,omitempty"`
+	Codex7dResetAfterSeconds *int             `json:"codex_7d_reset_after_seconds,omitempty"`
+	Codex7dWindowMinutes     *int             `json:"codex_7d_window_minutes,omitempty"`
+	Codex5hUsedPercent       *float64         `json:"codex_5h_used_percent,omitempty"`
+	Codex5hResetAfterSeconds *int             `json:"codex_5h_reset_after_seconds,omitempty"`
+	Codex5hWindowMinutes     *int             `json:"codex_5h_window_minutes,omitempty"`
+	ImageRoutes              []string         `json:"imageRoutes"`
 }
 
 type AccountUpdate struct {
@@ -182,6 +196,20 @@ func defaultImageRouteCapabilities(accountType string) []string {
 	default:
 		return []string{"legacy"}
 	}
+}
+
+func codexImageRouteCapabilities(has5hWindow bool, used5hPercent *float64, has7dWindow bool, used7dPercent *float64) []string {
+	if !has7dWindow {
+		return nil
+	}
+	if used7dPercent != nil && *used7dPercent >= 100 {
+		return []string{}
+	}
+	routes := []string{"legacy"}
+	if has5hWindow && (used5hPercent == nil || *used5hPercent < 100) {
+		routes = append(routes, "responses")
+	}
+	return routes
 }
 
 func AccountSupportsImageRoute(account PublicAccount, route string) bool {
@@ -821,16 +849,24 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 			}
 			if result.err != nil {
 				message := result.err.Error()
-				if strings.Contains(message, "/backend-api/me failed: HTTP 401") {
+				if strings.Contains(message, "HTTP 401") {
 					s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-						state.Status = "异常"
+						state.Status = "禁用"
 						state.Quota = 0
 						state.QuotaKnown = true
 						state.ImageRoutes = []string{}
 						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
 						return state
 					})
-					message = "检测到封号"
+					message = "检测到认证失效，已禁用账号"
+				} else if strings.Contains(message, "HTTP 429") {
+					s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+						state.Status = "正常"
+						state.ImageRoutes = []string{"legacy"}
+						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
+						return state
+					})
+					message = "检测到 Codex 5h 限流，仅保留 legacy 链路"
 				}
 				errors = append(errors, RefreshError{AccessToken: result.token, Error: message})
 				processed++
@@ -858,9 +894,19 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 				state.LimitsProgress = cloneSlice(result.info.LimitsProgress)
 				state.DefaultModelSlug = firstNonEmpty(result.info.DefaultModelSlug, state.DefaultModelSlug)
 				state.RestoreAt = firstNonEmpty(result.info.RestoreAt, state.RestoreAt)
+				state.CodexQuotaKnown = result.info.CodexQuotaKnown
+				state.Codex7dUsedPercent = result.info.Codex7dUsedPercent
+				state.Codex7dResetAfterSeconds = result.info.Codex7dResetAfterSeconds
+				state.Codex7dWindowMinutes = result.info.Codex7dWindowMinutes
+				state.Codex5hUsedPercent = result.info.Codex5hUsedPercent
+				state.Codex5hResetAfterSeconds = result.info.Codex5hResetAfterSeconds
+				state.Codex5hWindowMinutes = result.info.Codex5hWindowMinutes
 				state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
-				if result.info.Quota > 0 && !imageRouteStatusUnavailable(state.Status) {
-					state.ImageRoutes = defaultImageRouteCapabilities(state.Type)
+				if !imageRouteStatusUnavailable(state.Status) {
+					state.ImageRoutes = codexImageRouteCapabilities(result.info.Codex5hWindowMinutes != nil, result.info.Codex5hUsedPercent, result.info.Codex7dWindowMinutes != nil, result.info.Codex7dUsedPercent)
+					if state.ImageRoutes == nil {
+						state.ImageRoutes = []string{}
+					}
 				} else {
 					state.ImageRoutes = []string{}
 				}
@@ -1464,11 +1510,10 @@ func (s *Store) MarkImageAccountLimited(accessToken string) {
 	if err != nil {
 		return
 	}
-	s.disableImageAuth(auth, "限流", func(state RuntimeState) RuntimeState {
-		state.Quota = 0
+	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+		state.Status = "正常"
 		state.QuotaKnown = true
-		state.ImageRoutes = []string{}
-		state.LimitsProgress = setLimitRemaining(state.LimitsProgress, "image_gen", 0)
+		state.ImageRoutes = []string{"legacy"}
 		return state
 	})
 }
@@ -1496,6 +1541,10 @@ func (s *Store) RemoveImageRouteCapability(accessToken string, route string) int
 			next = append(next, candidate)
 		}
 		state.ImageRoutes = next
+		if normalizedRoute == "responses" {
+			used := 100.0
+			state.Codex5hUsedPercent = &used
+		}
 		remaining = len(next)
 		s.clearImageRouteBindingsLocked(accessToken, normalizedRoute)
 		return state
@@ -2029,37 +2078,47 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 	if state.ImageRoutes == nil {
 		imageRoutes = defaultImageRouteCapabilities(accountType)
 	}
-	if auth.Disabled || imageRouteStatusUnavailable(status) || quota <= 0 {
+	if codexRoutes := codexImageRouteCapabilities(state.Codex5hWindowMinutes != nil, state.Codex5hUsedPercent, state.Codex7dWindowMinutes != nil, state.Codex7dUsedPercent); codexRoutes != nil {
+		imageRoutes = codexRoutes
+	}
+	if auth.Disabled || status == "禁用" || status == "异常" || len(imageRoutes) == 0 {
 		imageRoutes = []string{}
 	}
 
 	return PublicAccount{
-		ID:               shortID(auth.AccessToken),
-		FileName:         auth.Name,
-		AccessToken:      auth.AccessToken,
-		SourceKind:       normalizeAccountSourceKind(auth.SourceKind),
-		Type:             accountType,
-		Status:           status,
-		Quota:            max(0, quota),
-		Email:            firstNonEmpty(state.Email, auth.Email),
-		UserID:           firstNonEmpty(state.UserID, auth.UserID),
-		LimitsProgress:   limitsProgress,
-		DefaultModelSlug: state.DefaultModelSlug,
-		RestoreAt:        state.RestoreAt,
-		Success:          state.Success,
-		Fail:             state.Fail,
-		LastUsedAt:       state.LastUsedAt,
-		LastRefreshedAt:  state.LastRefreshedAt,
-		Provider:         auth.Provider,
-		Disabled:         auth.Disabled,
-		Note:             auth.Note,
-		Priority:         auth.Priority,
-		SyncStatus:       syncStatus,
-		SyncOrigin:       syncState.Origin,
-		LastSyncedAt:     syncState.LastSyncedAt,
-		RemoteDisabled:   remoteDisabled,
-		ImportedAt:       formatAccountImportedAt(auth.ImportedAt),
-		ImageRoutes:      imageRoutes,
+		ID:                       shortID(auth.AccessToken),
+		FileName:                 auth.Name,
+		AccessToken:              auth.AccessToken,
+		SourceKind:               normalizeAccountSourceKind(auth.SourceKind),
+		Type:                     accountType,
+		Status:                   status,
+		Quota:                    max(0, quota),
+		Email:                    firstNonEmpty(state.Email, auth.Email),
+		UserID:                   firstNonEmpty(state.UserID, auth.UserID),
+		LimitsProgress:           limitsProgress,
+		DefaultModelSlug:         state.DefaultModelSlug,
+		RestoreAt:                state.RestoreAt,
+		Success:                  state.Success,
+		Fail:                     state.Fail,
+		LastUsedAt:               state.LastUsedAt,
+		LastRefreshedAt:          state.LastRefreshedAt,
+		Provider:                 auth.Provider,
+		Disabled:                 auth.Disabled,
+		Note:                     auth.Note,
+		Priority:                 auth.Priority,
+		SyncStatus:               syncStatus,
+		SyncOrigin:               syncState.Origin,
+		LastSyncedAt:             syncState.LastSyncedAt,
+		RemoteDisabled:           remoteDisabled,
+		ImportedAt:               formatAccountImportedAt(auth.ImportedAt),
+		CodexQuotaKnown:          state.CodexQuotaKnown,
+		Codex7dUsedPercent:       state.Codex7dUsedPercent,
+		Codex7dResetAfterSeconds: state.Codex7dResetAfterSeconds,
+		Codex7dWindowMinutes:     state.Codex7dWindowMinutes,
+		Codex5hUsedPercent:       state.Codex5hUsedPercent,
+		Codex5hResetAfterSeconds: state.Codex5hResetAfterSeconds,
+		Codex5hWindowMinutes:     state.Codex5hWindowMinutes,
+		ImageRoutes:              imageRoutes,
 	}
 }
 

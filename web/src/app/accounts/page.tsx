@@ -179,6 +179,13 @@ function formatQuota(value: number) {
   return String(Math.max(0, value));
 }
 
+function formatCodexPercent(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "—";
+  }
+  return `${Math.max(0, Math.min(100, value)).toFixed(1).replace(/\.0$/, "")}%`;
+}
+
 function formatRestoreAt(value?: string | null) {
   if (!value) {
     return { absolute: "—", absoluteShort: "—", relative: "" };
@@ -204,9 +211,29 @@ function formatRestoreAt(value?: string | null) {
   return { absolute, absoluteShort, relative };
 }
 
+function percentAvailable(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(100 - value)));
+}
+
+function getAccountConversationAvailability(account: Account) {
+  const fiveHourAvailable = percentAvailable(account.codex_5h_used_percent);
+  const weekAvailable = percentAvailable(account.codex_7d_used_percent);
+  return {
+    hasAvailableFiveHour: account.codex_5h_window_minutes != null && fiveHourAvailable > 0,
+    fiveHourAvailable,
+    weekAvailable,
+  };
+}
+
 function formatQuotaSummary(accounts: Account[]) {
   return formatCompact(
-    accounts.reduce((sum, account) => sum + Math.max(0, account.quota), 0),
+    accounts.reduce((sum, account) => {
+      const availability = getAccountConversationAvailability(account);
+      return sum + Math.max(availability.fiveHourAvailable, availability.weekAvailable);
+    }, 0),
   );
 }
 
@@ -258,46 +285,12 @@ function buildImportSummary(data: AccountImportResponse) {
   return `导入 ${imported} 个，刷新 ${refreshed} 个，重复 ${duplicates} 个，失败 ${failed} 个`;
 }
 
-function extractImageGenLimit(account: Account) {
-  const imageGen = account.limits_progress?.find(
-    (item) => item.feature_name === "image_gen",
-  );
-  return {
-    remaining:
-      typeof imageGen?.remaining === "number" ? imageGen.remaining : null,
-    resetAfter: imageGen?.reset_after || account.restoreAt || null,
-  };
-}
-
 function getAccountRemainingQuota(account: Account) {
-  return extractImageGenLimit(account).remaining ?? account.quota;
-}
-
-function mergeImageGenLimit(
-  limitsProgress: Account["limits_progress"],
-  remaining: number | null | undefined,
-  resetAfter: string | null | undefined,
-) {
-  const next = Array.isArray(limitsProgress) ? [...limitsProgress] : [];
-  const currentIndex = next.findIndex(
-    (item) => item.feature_name === "image_gen",
-  );
-  const nextItem = {
-    feature_name: "image_gen",
-    remaining: typeof remaining === "number" ? remaining : undefined,
-    reset_after: resetAfter || undefined,
-  };
-
-  if (currentIndex >= 0) {
-    next[currentIndex] = {
-      ...next[currentIndex],
-      ...nextItem,
-    };
-    return next;
+  const availability = getAccountConversationAvailability(account);
+  if (availability.fiveHourAvailable > 0) {
+    return availability.fiveHourAvailable;
   }
-
-  next.push(nextItem);
-  return next;
+  return availability.weekAvailable;
 }
 
 function applyQuotaResultToAccount(
@@ -309,12 +302,13 @@ function applyQuotaResultToAccount(
     status: quota.status,
     type: quota.type,
     quota: quota.quota,
-    restoreAt: quota.image_gen_reset_after || account.restoreAt,
-    limits_progress: mergeImageGenLimit(
-      account.limits_progress,
-      quota.image_gen_remaining,
-      quota.image_gen_reset_after,
-    ),
+    codex_quota_known: quota.codex_quota_known,
+    codex_7d_used_percent: quota.codex_7d_used_percent,
+    codex_7d_reset_after_seconds: quota.codex_7d_reset_after_seconds,
+    codex_7d_window_minutes: quota.codex_7d_window_minutes,
+    codex_5h_used_percent: quota.codex_5h_used_percent,
+    codex_5h_reset_after_seconds: quota.codex_5h_reset_after_seconds,
+    codex_5h_window_minutes: quota.codex_5h_window_minutes,
   };
 }
 
@@ -565,6 +559,11 @@ export default function AccountsPage() {
     }
 
     return [...filtered].sort((left, right) => {
+      const leftAvailability = getAccountConversationAvailability(left);
+      const rightAvailability = getAccountConversationAvailability(right);
+      if (sortMode === "quota_desc" && leftAvailability.hasAvailableFiveHour !== rightAvailability.hasAvailableFiveHour) {
+        return leftAvailability.hasAvailableFiveHour ? -1 : 1;
+      }
       const diff = getAccountRemainingQuota(right) - getAccountRemainingQuota(left);
       if (diff !== 0) {
         return sortMode === "quota_desc" ? diff : -diff;
@@ -916,14 +915,10 @@ export default function AccountsPage() {
         toast.error(data.refresh_error);
         return;
       }
-      const remainingText =
-        typeof data.image_gen_remaining === "number"
-          ? `${data.image_gen_remaining}`
-          : "—";
-      toast.success(`图片额度已刷新，剩余 ${remainingText}`);
+      toast.success(`对话额度已刷新，5h ${formatCodexPercent(data.codex_5h_used_percent)} · 7d ${formatCodexPercent(data.codex_7d_used_percent)}`);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "刷新图片额度失败";
+        error instanceof Error ? error.message : "刷新对话额度失败";
       toast.error(message);
     } finally {
       setQuotaRefreshingId(null);
@@ -1812,13 +1807,10 @@ export default function AccountsPage() {
                     const syncState =
                       syncSource === "cpa" ? account.syncStatus : null;
                     const liveQuota = accountQuotaMap[account.id];
-                    const imageGenLimit = extractImageGenLimit(account);
-                    const imageGenRemaining =
-                      liveQuota?.image_gen_remaining ?? imageGenLimit.remaining;
-                    const imageGenRestore = formatRestoreAt(
-                      liveQuota?.image_gen_reset_after ||
-                        imageGenLimit.resetAfter,
-                    );
+                    const codex5hUsedPercent =
+                      liveQuota?.codex_5h_used_percent ?? account.codex_5h_used_percent;
+                    const codex7dUsedPercent =
+                      liveQuota?.codex_7d_used_percent ?? account.codex_7d_used_percent;
                     const isQuotaRefreshing = quotaRefreshingId === account.id;
 
                     return (
@@ -1888,7 +1880,7 @@ export default function AccountsPage() {
                               void handleRefreshAccountQuota(account)
                             }
                             disabled={isQuotaRefreshing || refreshAllRunning}
-                            aria-label="刷新图片额度"
+                            aria-label="刷新对话额度"
                           >
                             <RefreshCw
                               className={cn(
@@ -1955,30 +1947,13 @@ export default function AccountsPage() {
                         <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-stone-500">
                           <div className="rounded-xl bg-white px-3 py-2.5">
                             <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
-                              图片额度
+                              对话额度
                             </div>
                             <div className="mt-1 text-sm font-semibold text-stone-700">
-                              {imageGenRemaining == null
-                                ? "—"
-                                : formatQuota(imageGenRemaining)}
+                              5h {formatCodexPercent(codex5hUsedPercent)}
                             </div>
                             <div className="mt-1 text-[11px] text-stone-400">
-                              本地额度 {formatQuota(account.quota)}
-                            </div>
-                          </div>
-                          <div className="rounded-xl bg-white px-3 py-2.5">
-                            <div className="text-[11px] uppercase tracking-[0.14em] text-stone-400">
-                              图片重置
-                            </div>
-                            <div className="mt-1 text-sm font-semibold text-stone-700">
-                              {imageGenRestore.relative ||
-                                imageGenRestore.absoluteShort}
-                            </div>
-                            <div
-                              className="mt-1 break-all font-mono text-[11px] text-stone-400"
-                              title={imageGenRestore.absolute}
-                            >
-                              {imageGenRestore.absoluteShort}
+                              7d {formatCodexPercent(codex7dUsedPercent)}
                             </div>
                           </div>
                           <div className="rounded-xl bg-white px-3 py-2.5">
@@ -2091,10 +2066,7 @@ export default function AccountsPage() {
                       同步
                     </th>
                     <th className="w-32 px-4 py-3 text-center whitespace-nowrap">
-                      图片额度
-                    </th>
-                    <th className="w-44 px-4 py-3 text-center whitespace-nowrap">
-                      图片重置
+                      对话额度
                     </th>
                     <th className="w-18 px-4 py-3 text-center whitespace-nowrap">
                       成功
@@ -2114,13 +2086,10 @@ export default function AccountsPage() {
                     const syncState =
                       syncSource === "cpa" ? account.syncStatus : null;
                     const liveQuota = accountQuotaMap[account.id];
-                    const imageGenLimit = extractImageGenLimit(account);
-                    const imageGenRemaining =
-                      liveQuota?.image_gen_remaining ?? imageGenLimit.remaining;
-                    const imageGenRestore = formatRestoreAt(
-                      liveQuota?.image_gen_reset_after ||
-                        imageGenLimit.resetAfter,
-                    );
+                    const codex5hUsedPercent =
+                      liveQuota?.codex_5h_used_percent ?? account.codex_5h_used_percent;
+                    const codex7dUsedPercent =
+                      liveQuota?.codex_7d_used_percent ?? account.codex_7d_used_percent;
                     const isQuotaRefreshing = quotaRefreshingId === account.id;
 
                     return (
@@ -2230,9 +2199,7 @@ export default function AccountsPage() {
                           <div className="flex flex-col items-center gap-2">
                             <div className="flex items-center gap-2">
                               <Badge variant="info" className="rounded-md">
-                                {imageGenRemaining == null
-                                  ? "—"
-                                  : formatQuota(imageGenRemaining)}
+                                5h {formatCodexPercent(codex5hUsedPercent)}
                               </Badge>
                               <button
                                 type="button"
@@ -2253,36 +2220,9 @@ export default function AccountsPage() {
                               </button>
                             </div>
                             <div className="text-[11px] text-stone-400">
-                              本地额度 {formatQuota(account.quota)}
+                              7d {formatCodexPercent(codex7dUsedPercent)}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-center text-xs text-stone-500 whitespace-nowrap">
-                          {imageGenRestore.relative ? (
-                            <div
-                              className="flex items-center justify-center gap-2"
-                              title={
-                                imageGenRestore.absolute !== "—"
-                                  ? imageGenRestore.absolute
-                                  : undefined
-                              }
-                            >
-                              <span className="font-medium text-stone-700">
-                                {imageGenRestore.relative}
-                              </span>
-                              <span className="text-stone-300">·</span>
-                              <span className="font-mono tabular-nums text-stone-400">
-                                {imageGenRestore.absoluteShort}
-                              </span>
-                            </div>
-                          ) : (
-                            <div
-                              className="truncate font-mono tabular-nums text-stone-400"
-                              title={imageGenRestore.absolute}
-                            >
-                              {imageGenRestore.absoluteShort}
-                            </div>
-                          )}
                         </td>
                         <td className="px-4 py-3 text-center text-stone-500 whitespace-nowrap">
                           {account.success}
@@ -2353,7 +2293,7 @@ export default function AccountsPage() {
                       </tr>
                       {imageTestResult[account.id] ? (
                         <tr className="border-b border-stone-100 bg-stone-50">
-                          <td colSpan={10} className="px-4 py-3">
+                          <td colSpan={9} className="px-4 py-3">
                             <div className="text-xs">
                               <div className="flex items-center gap-3">
                                 <span className={imageTestResult[account.id].ok ? "font-semibold text-emerald-600" : "font-semibold text-rose-600"}>

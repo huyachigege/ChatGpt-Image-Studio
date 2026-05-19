@@ -16,12 +16,14 @@ import (
 )
 
 type fallbackStubClient struct {
-	generateCalls int
-	generateErr   error
-	resultURL     string
-	route         string
-	name          string
-	callOrder     *[]string
+	generateCalls         int
+	generatePreviousCalls int
+	generateErr           error
+	generatePreviousErr   error
+	resultURL             string
+	route                 string
+	name                  string
+	callOrder             *[]string
 }
 
 func (c *fallbackStubClient) DownloadBytes(url string) ([]byte, error) { return []byte(url), nil }
@@ -45,6 +47,17 @@ func (c *fallbackStubClient) GenerateImage(ctx context.Context, prompt, model st
 		return nil, c.generateErr
 	}
 	return []handler.ImageResult{{URL: firstNonEmpty(c.resultURL, "stub://image")}}, nil
+}
+func (c *fallbackStubClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
+	_ = previousResponseID
+	c.generatePreviousCalls++
+	if c.callOrder != nil && c.name != "" {
+		*c.callOrder = append(*c.callOrder, c.name+"-previous")
+	}
+	if c.generatePreviousErr != nil {
+		return nil, c.generatePreviousErr
+	}
+	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
 }
 func (c *fallbackStubClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
 	return c.GenerateImage(ctx, prompt, model, 1, size, quality, "")
@@ -186,6 +199,49 @@ func TestFallbackResponsesClientFallsBackToSecondClient(t *testing.T) {
 	}
 	if got := client.LastFallbackReason(); !strings.Contains(got, "official down") {
 		t.Fatalf("LastFallbackReason = %q, want official error", got)
+	}
+}
+
+func TestFallbackResponsesClientDoesNotFallbackPreviousResponseToExternal(t *testing.T) {
+	primary := &fallbackStubClient{generatePreviousErr: fmt.Errorf("An error occurred while processing your request. Please include the request ID abc in your message."), route: "responses"}
+	fallback := &fallbackStubClient{route: "external_responses"}
+	client := newNamedFallbackResponsesClient(primary, fallback, "official responses", "external responses")
+
+	_, err := client.GenerateImageWithPreviousResponse(context.Background(), "draw", "model", 1, "", "", "", "resp_old")
+	if err == nil || !isResponsesPreviousResponseContextError(err) {
+		t.Fatalf("GenerateImageWithPreviousResponse() error = %v, want previous response context error", err)
+	}
+	if primary.generatePreviousCalls != 1 {
+		t.Fatalf("primary previous calls = %d, want 1", primary.generatePreviousCalls)
+	}
+	if fallback.generatePreviousCalls != 0 || fallback.generateCalls != 0 {
+		t.Fatalf("fallback calls previous=%d generate=%d, want 0/0", fallback.generatePreviousCalls, fallback.generateCalls)
+	}
+	if strings.Contains(err.Error(), "external responses fallback failed") {
+		t.Fatalf("error = %q, should not include external fallback failure", err.Error())
+	}
+}
+
+func TestFallbackResponsesClientFallsBackPreviousResponseRateLimitToExternal(t *testing.T) {
+	primary := &fallbackStubClient{generatePreviousErr: fmt.Errorf("5h limit reached"), route: "responses"}
+	external := &fallbackStubClient{resultURL: "stub://external", route: "external_responses"}
+	client := newNamedFallbackResponsesClient(primary, external, "official responses", "external responses")
+
+	images, err := client.GenerateImageWithPreviousResponse(context.Background(), "draw", "model", 1, "", "", "", "resp_old")
+	if err != nil {
+		t.Fatalf("GenerateImageWithPreviousResponse() returned error: %v", err)
+	}
+	if primary.generatePreviousCalls != 1 || external.generatePreviousCalls != 1 {
+		t.Fatalf("previous calls primary=%d external=%d, want 1/1", primary.generatePreviousCalls, external.generatePreviousCalls)
+	}
+	if len(images) != 1 || images[0].URL != "stub://external" {
+		t.Fatalf("images = %#v, want external result", images)
+	}
+	if got := client.LastRoute(); got != "external_responses" {
+		t.Fatalf("LastRoute = %q, want external_responses", got)
+	}
+	if got := client.LastFallbackReason(); !strings.Contains(got, "5h limit") {
+		t.Fatalf("LastFallbackReason = %q, want 5h limit", got)
 	}
 }
 

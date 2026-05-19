@@ -18,6 +18,10 @@ export type ImagePolicyAccountLike = {
   quota: number;
   status: string;
   restoreAt?: string | null;
+  codex_7d_used_percent?: number | null;
+  codex_7d_window_minutes?: number | null;
+  codex_5h_used_percent?: number | null;
+  codex_5h_window_minutes?: number | null;
   limits_progress?: Array<{
     feature_name?: string;
     remaining?: number;
@@ -151,16 +155,33 @@ function parseDateValue(value?: string | null) {
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
 }
 
-function currentImageRemaining(account: ImagePolicyAccountLike) {
-  const imageGen = account.limits_progress?.find((item) => item.feature_name === "image_gen");
-  if (typeof imageGen?.remaining === "number") {
-    return Math.max(0, imageGen.remaining);
+function percentAvailable(value?: number | null) {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return 0;
   }
-  return Math.max(0, account.quota);
+  return Math.max(0, Math.min(100, Math.round(100 - value)));
+}
+
+function codexAvailability(account: ImagePolicyAccountLike) {
+  const fiveHourAvailable = percentAvailable(account.codex_5h_used_percent);
+  const weekAvailable = percentAvailable(account.codex_7d_used_percent);
+  return {
+    hasAvailableFiveHour: account.codex_5h_window_minutes != null && fiveHourAvailable > 0,
+    fiveHourAvailable,
+    weekAvailable,
+  };
+}
+
+function currentImageRemaining(account: ImagePolicyAccountLike) {
+  const availability = codexAvailability(account);
+  return availability.fiveHourAvailable > 0
+    ? availability.fiveHourAvailable
+    : availability.weekAvailable;
 }
 
 function isAvailableAccount(account: ImagePolicyAccountLike) {
-  return account.status === "正常" && currentImageRemaining(account) > 0;
+  const availability = codexAvailability(account);
+  return account.status === "正常" && (availability.fiveHourAvailable > 0 || availability.weekAvailable > 0);
 }
 
 export function sortAccountsForImagePolicy(
@@ -169,9 +190,18 @@ export function sortAccountsForImagePolicy(
 ) {
   return [...accounts].sort((left, right) => {
     if (sortMode === "quota") {
-      const quotaDelta = currentImageRemaining(right) - currentImageRemaining(left);
-      if (quotaDelta !== 0) {
-        return quotaDelta;
+      const leftAvailability = codexAvailability(left);
+      const rightAvailability = codexAvailability(right);
+      if (leftAvailability.hasAvailableFiveHour !== rightAvailability.hasAvailableFiveHour) {
+        return leftAvailability.hasAvailableFiveHour ? -1 : 1;
+      }
+      const fiveHourDelta = rightAvailability.fiveHourAvailable - leftAvailability.fiveHourAvailable;
+      if (fiveHourDelta !== 0) {
+        return fiveHourDelta;
+      }
+      const weekDelta = rightAvailability.weekAvailable - leftAvailability.weekAvailable;
+      if (weekDelta !== 0) {
+        return weekDelta;
       }
     }
 

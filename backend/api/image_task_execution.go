@@ -39,6 +39,76 @@ func (e *imageTaskDeferredError) Unwrap() error {
 	return e.cause
 }
 
+type imageAttemptErrorClass int
+
+const (
+	imageAttemptFatal imageAttemptErrorClass = iota
+	imageAttemptRetrySameOnce
+	imageAttemptRetryableDisableResponses
+	imageAttemptRetryable
+)
+
+func classifyImageAttemptError(err error) imageAttemptErrorClass {
+	if err == nil || isImageModelRefusalError(err) || isResponsesPreviousResponseContextError(err) {
+		return imageAttemptFatal
+	}
+	if code := requestErrorCode(err); code != "" {
+		switch code {
+		case "source_account_rate_limited":
+			return imageAttemptRetryableDisableResponses
+		case "source_account_unavailable", "image_account_route_unavailable":
+			return imageAttemptRetryable
+		default:
+			return imageAttemptFatal
+		}
+	}
+	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
+		return imageAttemptRetryableDisableResponses
+	}
+	if isImageHTTPStatusError(err, 502) || isImageHTTPStatusError(err, 503) {
+		return imageAttemptRetrySameOnce
+	}
+	if isImageRateLimitError(err) || isTransientImageStreamError(err) || isInvalidImageTokenError(err) {
+		return imageAttemptRetryable
+	}
+	return imageAttemptFatal
+}
+
+func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) bool {
+	if task == nil {
+		return nil
+	}
+	if task.Requirement.NeedPaid {
+		return func(account accounts.PublicAccount) bool {
+			return isPaidImageAccountType(account.Type)
+		}
+	}
+	if strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "free") {
+		return func(account accounts.PublicAccount) bool {
+			return !isPaidImageAccountType(account.Type)
+		}
+	}
+	return nil
+}
+
+func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[string]struct{}, route string) (*imageTaskLease, error) {
+	store := s.getStore()
+	allowDisabled := s.allowDisabledStudioImageAccounts()
+	allowAccount := imageTaskAttemptAllowAccount(task)
+	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
+		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, route)
+		if err != nil {
+			return nil, err
+		}
+		return &imageTaskLease{auth: auth, account: account, decision: decision, release: release}, nil
+	}
+	auth, account, release, err := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.UserID, task.ConversationID, route)
+	if err != nil {
+		return nil, err
+	}
+	return &imageTaskLease{auth: auth, account: account, release: release}, nil
+}
+
 func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIndex int, lease *imageTaskLease) ([]imagehistory.Image, error) {
 	if lease == nil || lease.auth == nil {
 		return nil, fmt.Errorf("task lease is required")
@@ -74,9 +144,8 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	holdLease := func() {}
 
 	var (
-		items     []map[string]any
-		retryable bool
-		err       error
+		items []map[string]any
+		err   error
 	)
 
 	switch {
@@ -91,7 +160,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
 		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
-		items, retryable, err = s.runImageRequestWithAdmission(
+		items, _, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
 			lease.account,
@@ -151,7 +220,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, err
 		}
 		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask) || (len(mask) == 0 && handler.SupportsResponsesReferenceImages(imageFiles))
-		items, retryable, err = s.runImageRequestWithAdmission(
+		items, _, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
 			lease.account,
@@ -193,7 +262,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return prompt
 		}
 		sameSourceAccount := task.ContextReference != nil && strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
-		previousResponseContextMissing := false
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
 			if task.ContextReference != nil {
@@ -206,7 +274,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 							if err == nil || !isResponsesPreviousResponseContextError(err) {
 								return results, err
 							}
-							previousResponseContextMissing = true
 						}
 					}
 				}
@@ -229,50 +296,136 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
 		}
-		items, retryable, err = s.runImageRequestWithAdmission(
-			taskCtx,
-			lease.auth,
-			lease.account,
-			holdLease,
-			lease.decision,
-			"generate",
-			task.ResponseFormat,
-			false,
-			requestedModel,
-			true,
-			metadata,
-			runGenerate,
-			fakeReq,
-			false,
-		)
-		if err != nil && previousResponseContextMissing && (!retryable || isTransientImageStreamError(err)) && sameSourceAccount && task.ContextReference != nil && task.ContextReference.ResponseID != "" && handler.SupportsResponsesReferenceImages(referenceImageFiles) {
-			items, retryable, err = s.runImageRequestWithAdmission(
-				taskCtx,
-				lease.auth,
-				lease.account,
-				nil,
-				lease.decision,
-				"generate",
-				task.ResponseFormat,
-				false,
-				requestedModel,
-				false,
-				metadata,
-				func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-					prompt := buildPrompt(client)
-					if task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
-						if generator, ok := client.(interface {
-							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
-						}); ok {
-							return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
-						}
-					}
-					return client.GenerateImage(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
-				},
-				fakeReq,
-				false,
-			)
+		store := s.getStore()
+		excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
+		if excluded == nil {
+			excluded = map[string]struct{}{}
 		}
+		rememberAttempt := func(attemptLease *imageTaskLease) {
+			if attemptLease != nil && attemptLease.auth != nil && strings.TrimSpace(attemptLease.auth.AccessToken) != "" {
+				excluded[attemptLease.auth.AccessToken] = struct{}{}
+			}
+		}
+		tryRoute := func(attemptLease *imageTaskLease, route string) ([]map[string]any, imageAttemptErrorClass, error) {
+			if attemptLease == nil || attemptLease.auth == nil {
+				return nil, imageAttemptFatal, fmt.Errorf("task lease is required")
+			}
+			if route == "responses" && !accounts.AccountSupportsImageRoute(attemptLease.account, "responses") {
+				return nil, imageAttemptRetryable, newRequestError("image_account_route_unavailable", "当前账号不支持 responses 链路")
+			}
+			runOnce := func() ([]map[string]any, bool, error) {
+				return s.runImageRequestWithAdmissionRoute(
+					taskCtx,
+					attemptLease.auth,
+					attemptLease.account,
+					holdLease,
+					attemptLease.decision,
+					"generate",
+					task.ResponseFormat,
+					false,
+					requestedModel,
+					route == "responses",
+					metadata,
+					runGenerate,
+					fakeReq,
+					false,
+					route,
+				)
+			}
+			attemptItems, _, attemptErr := runOnce()
+			attemptClass := classifyImageAttemptError(attemptErr)
+			if attemptErr == nil || attemptClass != imageAttemptRetrySameOnce {
+				if attemptClass == imageAttemptRetryableDisableResponses && attemptLease.auth != nil {
+					store.RemoveImageRouteCapability(attemptLease.auth.AccessToken, "responses")
+				}
+				return attemptItems, attemptClass, attemptErr
+			}
+			attemptItems, _, attemptErr = runOnce()
+			attemptClass = classifyImageAttemptError(attemptErr)
+			if attemptClass == imageAttemptRetrySameOnce {
+				attemptClass = imageAttemptRetryable
+			}
+			if attemptClass == imageAttemptRetryableDisableResponses && attemptLease.auth != nil {
+				store.RemoveImageRouteCapability(attemptLease.auth.AccessToken, "responses")
+			}
+			return attemptItems, attemptClass, attemptErr
+		}
+		acquireNext := func(route string) (*imageTaskLease, error) {
+			return s.acquireImageTaskAttemptLease(task, excluded, route)
+		}
+		tryNextResponses := func() ([]map[string]any, imageAttemptErrorClass, error) {
+			nextLease, acquireErr := acquireNext("responses")
+			if acquireErr != nil {
+				return nil, imageAttemptRetryable, acquireErr
+			}
+			if nextLease.release != nil {
+				defer nextLease.release()
+			}
+			attemptItems, attemptClass, attemptErr := tryRoute(nextLease, "responses")
+			if attemptErr != nil {
+				rememberAttempt(nextLease)
+			}
+			return attemptItems, attemptClass, attemptErr
+		}
+		tryNextLegacy := func() ([]map[string]any, imageAttemptErrorClass, error) {
+			nextLease, acquireErr := acquireNext("legacy")
+			if acquireErr != nil {
+				return nil, imageAttemptRetryable, acquireErr
+			}
+			if nextLease.release != nil {
+				defer nextLease.release()
+			}
+			attemptItems, attemptClass, attemptErr := tryRoute(nextLease, "legacy")
+			if attemptErr != nil {
+				rememberAttempt(nextLease)
+			}
+			return attemptItems, attemptClass, attemptErr
+		}
+
+		var attemptClass imageAttemptErrorClass
+		startRoute := "legacy"
+		if task.Requirement.NeedPaid || accounts.AccountSupportsImageRoute(lease.account, "responses") {
+			startRoute = "responses"
+		}
+		items, attemptClass, err = tryRoute(lease, startRoute)
+		if err != nil {
+			rememberAttempt(lease)
+		}
+		if err != nil && attemptClass != imageAttemptFatal && startRoute == "legacy" {
+			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+				items, attemptClass, err = tryNextLegacy()
+			}
+		} else if err != nil && attemptClass != imageAttemptFatal {
+			if task.Requirement.NeedPaid {
+				if s.externalResponsesConfigured() {
+					items, attemptClass, err = tryRoute(lease, "external_responses")
+				} else {
+					for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal; i++ {
+						items, attemptClass, err = tryNextResponses()
+					}
+				}
+			} else if s.externalResponsesConfigured() {
+				items, attemptClass, err = tryRoute(lease, "external_responses")
+				if err != nil && attemptClass != imageAttemptFatal {
+					items, attemptClass, err = tryRoute(lease, "legacy")
+				}
+			} else {
+				items, attemptClass, err = tryNextResponses()
+				if err != nil && attemptClass != imageAttemptFatal {
+					items, attemptClass, err = tryRoute(lease, "legacy")
+				}
+			}
+		}
+		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && !s.externalResponsesConfigured() && !accounts.AccountSupportsImageRoute(lease.account, "responses") {
+			items, attemptClass, err = tryRoute(lease, "legacy")
+		}
+		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+			items, attemptClass, err = tryRoute(lease, "legacy")
+			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+				items, attemptClass, err = tryNextLegacy()
+			}
+		}
+		_ = attemptClass
 	}
 
 	if err != nil {

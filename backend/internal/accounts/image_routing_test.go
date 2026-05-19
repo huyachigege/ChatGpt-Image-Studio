@@ -86,6 +86,8 @@ func TestAcquireImageAuthLeaseWithPolicyUsesImportedAtGrouping(t *testing.T) {
 				},
 			},
 		})
+		used7d := 50.0
+		window7d := 10080
 		store.states[name] = RuntimeState{
 			Type:                       "Free",
 			Status:                     testStatusNormal,
@@ -94,6 +96,9 @@ func TestAcquireImageAuthLeaseWithPolicyUsesImportedAtGrouping(t *testing.T) {
 			LimitsProgress:             []map[string]any{{"feature_name": "image_gen", "remaining": 5, "reset_after": baseTime.Add(24 * time.Hour).Format(time.RFC3339)}},
 			ImageQuotaDailyBase:        5,
 			ImageQuotaDailyBaseResetAt: baseTime.Add(24 * time.Hour).Format(time.RFC3339),
+			CodexQuotaKnown:            true,
+			Codex7dUsedPercent:         &used7d,
+			Codex7dWindowMinutes:       &window7d,
 		}
 		if priority > 1 {
 			auth, err := store.findAuthByName(name)

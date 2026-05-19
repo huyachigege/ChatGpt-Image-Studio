@@ -46,6 +46,7 @@ type compatFactoryRecorder struct {
 	mu             sync.Mutex
 	officialCalls  int
 	responsesCalls int
+	externalCalls  int
 	cpaCalls       int
 	lastFactory    string
 	lastModel      string
@@ -861,8 +862,9 @@ type compatClientBehavior struct {
 }
 
 type compatTestServerOptions struct {
-	accounts []compatSeedAccount
-	behavior compatClientBehavior
+	accounts                 []compatSeedAccount
+	behavior                 compatClientBehavior
+	externalResponsesEnabled bool
 }
 
 func newImageModeCompatTestServer(t *testing.T, scenario imageModeCompatScenario) (*Server, *compatFactoryRecorder) {
@@ -891,6 +893,12 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 	cfg.CPA.APIKey = "test-cpa-key"
 	cfg.CPA.RequestTimeout = 60
 	cfg.CPA.RouteStrategy = scenario.cpaRouteStrategy
+	if options.externalResponsesEnabled {
+		cfg.ExternalResponses.Enabled = true
+		cfg.ExternalResponses.BaseURL = "https://external.example"
+		cfg.ExternalResponses.APIKey = "external-key"
+		cfg.ExternalResponses.Model = "external-model"
+	}
 
 	if err := seedImageModeCompatAccounts(cfg, scenario.accountType, options.accounts); err != nil {
 		t.Fatalf("seed compat account: %v", err)
@@ -941,6 +949,17 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 			inpaintErr:      options.behavior.responsesInpaintErrors[accessToken],
 			generateStarted: options.behavior.generateStarted,
 			generateRelease: options.behavior.generateRelease,
+		}
+	}
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
+		recorder.mu.Lock()
+		recorder.externalCalls++
+		recorder.mu.Unlock()
+		return &compatStubWorkflowClient{
+			factory:  "external_responses",
+			token:    "external_responses",
+			recorder: recorder,
 		}
 	}
 	server.cpaClientFactory = func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient {
@@ -1008,12 +1027,15 @@ func seedImageModeCompatAccounts(cfg *config.Config, accountType string, account
 		if quota <= 0 {
 			quota = 5
 		}
-		stateAccounts[fileName] = map[string]any{
-			"type":        firstNonEmpty(account.accountType, accountType, "Free"),
-			"status":      firstNonEmpty(account.status, "正常"),
-			"quota":       quota,
-			"quota_known": true,
-			"priority":    account.priority,
+		stateItem := map[string]any{
+			"type":                    firstNonEmpty(account.accountType, accountType, "Free"),
+			"status":                  firstNonEmpty(account.status, "正常"),
+			"quota":                   quota,
+			"quota_known":             true,
+			"priority":                account.priority,
+			"codex_quota_known":       true,
+			"codex_7d_used_percent":   50,
+			"codex_7d_window_minutes": 10080,
 			"limits_progress": []map[string]any{
 				{
 					"feature_name": "image_gen",
@@ -1022,6 +1044,11 @@ func seedImageModeCompatAccounts(cfg *config.Config, accountType string, account
 				},
 			},
 		}
+		if firstNonEmpty(account.accountType, accountType, "Free") != "Free" {
+			stateItem["codex_5h_used_percent"] = 50
+			stateItem["codex_5h_window_minutes"] = 300
+		}
+		stateAccounts[fileName] = stateItem
 	}
 
 	statePayload := map[string]any{

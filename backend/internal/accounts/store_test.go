@@ -446,6 +446,43 @@ func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *test
 	}
 }
 
+func TestMarkImageAccountLimitedKeepsLegacyRoute(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := writeJSONFile(filepath.Join(authDir, "plus.json"), map[string]any{"access_token": "token-plus"}); err != nil {
+		t.Fatalf("write auth: %v", err)
+	}
+	store := &Store{
+		authDir:   authDir,
+		stateFile: filepath.Join(rootDir, "state.json"),
+		states: map[string]RuntimeState{
+			"plus.json": {
+				Type:        "Plus",
+				Status:      "正常",
+				Quota:       5,
+				QuotaKnown:  true,
+				ImageRoutes: []string{"legacy", "responses"},
+			},
+		},
+	}
+
+	store.MarkImageAccountLimited("token-plus")
+	account := store.buildPublicAccount(LocalAuth{Name: "plus.json", AccessToken: "token-plus"}, SyncState{}, nil)
+
+	if !AccountSupportsImageRoute(account, "legacy") {
+		t.Fatalf("ImageRoutes = %v, want legacy retained", account.ImageRoutes)
+	}
+	if AccountSupportsImageRoute(account, "responses") {
+		t.Fatalf("ImageRoutes = %v, want responses removed", account.ImageRoutes)
+	}
+	if account.Status != "正常" {
+		t.Fatalf("Status = %q, want 正常", account.Status)
+	}
+}
+
 func TestBuildPublicAccountDoesNotInferResponsesRouteFromHighQuota(t *testing.T) {
 	store := &Store{
 		states: map[string]RuntimeState{
