@@ -74,6 +74,29 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 	return imageAttemptFatal
 }
 
+func shouldImmediateExternalResponsesFallback(attemptClass imageAttemptErrorClass) bool {
+	return attemptClass != imageAttemptFatal
+}
+
+func (s *Server) rebindImageTaskConversationAccount(task *imageTask, failedAccessToken string, route string) {
+	if s == nil || task == nil {
+		return
+	}
+	failedAccessToken = strings.TrimSpace(failedAccessToken)
+	route = accounts.NormalizeImageRouteCapability(route)
+	if failedAccessToken == "" || route == "" {
+		return
+	}
+	excluded := map[string]struct{}{failedAccessToken: {}}
+	nextLease, err := s.acquireImageTaskAttemptLease(task, excluded, route)
+	if err != nil || nextLease == nil {
+		return
+	}
+	if nextLease.release != nil {
+		nextLease.release()
+	}
+}
+
 func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) bool {
 	if task == nil {
 		return nil
@@ -213,7 +236,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			fakeReq,
 			false,
 		)
-		if err != nil && !isImageModelRefusalError(err) && s.externalResponsesConfigured() {
+		attemptClass := classifyImageAttemptError(err)
+		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
+			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -266,7 +291,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			fakeReq,
 			false,
 		)
-		if err != nil && !isImageModelRefusalError(err) && s.externalResponsesConfigured() {
+		attemptClass := classifyImageAttemptError(err)
+		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
+			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -374,10 +401,19 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			attemptItems, _, attemptErr := runOnce()
 			attemptClass := classifyImageAttemptError(attemptErr)
-			if attemptErr == nil || attemptClass != imageAttemptRetrySameOnce {
-				if attemptClass == imageAttemptRetryableDisableResponses && attemptLease.auth != nil {
-					store.RemoveImageRouteCapability(attemptLease.auth.AccessToken, "responses")
+			if attemptErr == nil {
+				return attemptItems, attemptClass, attemptErr
+			}
+			if attemptClass == imageAttemptRetryableDisableResponses && attemptLease.auth != nil {
+				store.RemoveImageRouteCapability(attemptLease.auth.AccessToken, "responses")
+			}
+			if route == "responses" {
+				if attemptClass == imageAttemptRetrySameOnce {
+					attemptClass = imageAttemptRetryable
 				}
+				return attemptItems, attemptClass, attemptErr
+			}
+			if attemptClass != imageAttemptRetrySameOnce {
 				return attemptItems, attemptClass, attemptErr
 			}
 			attemptItems, _, attemptErr = runOnce()
@@ -438,6 +474,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		} else if err != nil && attemptClass != imageAttemptFatal {
 			if task.Requirement.NeedPaid {
 				if s.externalResponsesConfigured() {
+					s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 					items, attemptClass, err = tryRoute(lease, "external_responses")
 				} else {
 					for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal; i++ {
@@ -445,6 +482,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					}
 				}
 			} else if s.externalResponsesConfigured() {
+				s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 				items, attemptClass, err = tryRoute(lease, "external_responses")
 				if err != nil && attemptClass != imageAttemptFatal {
 					items, attemptClass, err = tryRoute(lease, "legacy")

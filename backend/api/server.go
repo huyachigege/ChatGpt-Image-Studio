@@ -2067,10 +2067,17 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
-		if isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
+		if isImageHTTPStatusError(err, 429) {
+			if !isExternalResponsesRoute(route) {
+				store.DisableImageAccountByToken(authFile.AccessToken, "限流")
+				return nil, true, newRequestError("source_account_rate_limited", "当前账号 429 已限流，已禁用并切换下一个账号")
+			}
+			return nil, false, err
+		}
+		if isImageFiveHourLimitError(err) {
 			if !isExternalResponsesRoute(route) {
 				store.RemoveImageRouteCapability(authFile.AccessToken, "responses")
-				return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，正在切换下一个账号")
+				return nil, true, newRequestError("source_account_rate_limited", "当前账号已触发 Codex 5h 限流，已切走 responses 并切换下一个账号")
 			}
 			return nil, false, err
 		}

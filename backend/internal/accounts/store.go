@@ -850,23 +850,20 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 			if result.err != nil {
 				message := result.err.Error()
 				if strings.Contains(message, "HTTP 401") {
-					s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-						state.Status = "禁用"
+					if _, deleteErr := s.DeleteAccounts([]string{result.token}); deleteErr != nil {
+						message = firstNonEmpty(deleteErr.Error(), message)
+					} else {
+						message = "检测到认证失效，已删除账号"
+					}
+				} else if strings.Contains(message, "HTTP 429") {
+					s.disableImageAuth(auth, "限流", func(state RuntimeState) RuntimeState {
 						state.Quota = 0
 						state.QuotaKnown = true
 						state.ImageRoutes = []string{}
 						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
 						return state
 					})
-					message = "检测到认证失效，已禁用账号"
-				} else if strings.Contains(message, "HTTP 429") {
-					s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
-						state.Status = "正常"
-						state.ImageRoutes = []string{"legacy"}
-						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
-						return state
-					})
-					message = "检测到 Codex 5h 限流，仅保留 legacy 链路"
+					message = "检测到 429 限流，已禁用账号"
 				}
 				errors = append(errors, RefreshError{AccessToken: result.token, Error: message})
 				processed++
@@ -1514,6 +1511,19 @@ func (s *Store) MarkImageAccountLimited(accessToken string) {
 		state.Status = "正常"
 		state.QuotaKnown = true
 		state.ImageRoutes = []string{"legacy"}
+		return state
+	})
+}
+
+func (s *Store) DisableImageAccountByToken(accessToken string, status string) {
+	auth, err := s.findAuthByToken(accessToken)
+	if err != nil {
+		return
+	}
+	s.disableImageAuth(auth, firstNonEmpty(strings.TrimSpace(status), "限流"), func(state RuntimeState) RuntimeState {
+		state.Quota = 0
+		state.QuotaKnown = true
+		state.ImageRoutes = []string{}
 		return state
 	})
 }
