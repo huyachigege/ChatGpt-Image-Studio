@@ -160,6 +160,43 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
 		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask)
+		selectionEditRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+			applySystemHint(client)
+			prompt := effectivePrompt
+			if instructions != "" {
+				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+					prompt = instructions + "\n\n" + prompt
+				}
+			}
+			if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
+				if editor, ok := client.(interface {
+					EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
+				}); ok {
+					results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
+					if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+						return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+					}
+					return results, err
+				}
+				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+			}
+			results, err := client.InpaintImageByMask(
+				taskCtx,
+				prompt,
+				upstreamModel,
+				task.SourceReference.OriginalFileID,
+				task.SourceReference.OriginalGenID,
+				task.SourceReference.ConversationID,
+				task.SourceReference.ParentMessageID,
+				mask,
+				task.Size,
+				task.Quality,
+			)
+			if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+			}
+			return results, err
+		}
 		items, _, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
@@ -172,46 +209,29 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			requestedModel,
 			responsesEligible,
 			metadata,
-			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				applySystemHint(client)
-				prompt := effectivePrompt
-				if instructions != "" {
-					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-						prompt = instructions + "\n\n" + prompt
-					}
-				}
-				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
-					if editor, ok := client.(interface {
-						EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
-					}); ok {
-						results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
-						if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
-							return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-						}
-						return results, err
-					}
-					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-				}
-				results, err := client.InpaintImageByMask(
-					taskCtx,
-					prompt,
-					upstreamModel,
-					task.SourceReference.OriginalFileID,
-					task.SourceReference.OriginalGenID,
-					task.SourceReference.ConversationID,
-					task.SourceReference.ParentMessageID,
-					mask,
-					task.Size,
-					task.Quality,
-				)
-				if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
-					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-				}
-				return results, err
-			},
+			selectionEditRun,
 			fakeReq,
 			false,
 		)
+		if err != nil && !isImageModelRefusalError(err) && s.externalResponsesConfigured() {
+			items, _, err = s.runImageRequestWithAdmissionRoute(
+				taskCtx,
+				lease.auth,
+				lease.account,
+				func() {},
+				lease.decision,
+				"selection-edit",
+				task.ResponseFormat,
+				true,
+				requestedModel,
+				true,
+				metadata,
+				selectionEditRun,
+				fakeReq,
+				false,
+				"external_responses",
+			)
+		}
 	case task.Mode == "edit" || len(task.SourceImages) > 0:
 		var mask []byte
 		var imageFiles [][]byte
@@ -220,6 +240,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, err
 		}
 		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask) || (len(mask) == 0 && handler.SupportsResponsesReferenceImages(imageFiles))
+		editRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+			applySystemHint(client)
+			prompt := effectivePrompt
+			if instructions != "" {
+				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
+					prompt = instructions + "\n\n" + prompt
+				}
+			}
+			return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+		}
 		items, _, err = s.runImageRequestWithAdmission(
 			taskCtx,
 			lease.auth,
@@ -232,19 +262,29 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			requestedModel,
 			responsesEligible,
 			metadata,
-			func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
-				applySystemHint(client)
-				prompt := effectivePrompt
-				if instructions != "" {
-					if _, ok := client.(interface{ SetInstructions(string) }); !ok {
-						prompt = instructions + "\n\n" + prompt
-					}
-				}
-				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-			},
+			editRun,
 			fakeReq,
 			false,
 		)
+		if err != nil && !isImageModelRefusalError(err) && s.externalResponsesConfigured() {
+			items, _, err = s.runImageRequestWithAdmissionRoute(
+				taskCtx,
+				lease.auth,
+				lease.account,
+				func() {},
+				lease.decision,
+				"edit",
+				task.ResponseFormat,
+				false,
+				requestedModel,
+				true,
+				metadata,
+				editRun,
+				fakeReq,
+				false,
+				"external_responses",
+			)
+		}
 	default:
 		var referenceImageFiles [][]byte
 		referenceImageFiles, err = s.resolveTaskReferenceImageInputs(task)

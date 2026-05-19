@@ -1277,8 +1277,15 @@ export async function consumeImageTaskStream(
     }
   };
 
+  const STREAM_READ_TIMEOUT_MS = 30_000;
+
   while (true) {
-    const { value, done } = await reader.read();
+    const readPromise = reader.read();
+    const timeoutPromise = new Promise<{ value: undefined; done: true }>((_, reject) => {
+      const id = setTimeout(() => reject(new Error("stream read timeout")), STREAM_READ_TIMEOUT_MS);
+      readPromise.then(() => clearTimeout(id), () => clearTimeout(id));
+    });
+    const { value, done } = await Promise.race([readPromise, timeoutPromise]);
     if (done) {
       flushEvent();
       return;

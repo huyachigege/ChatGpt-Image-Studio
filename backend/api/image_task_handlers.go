@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"chatgpt2api/internal/users"
 )
@@ -130,10 +131,20 @@ func (s *Server) handleImageTaskStream(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+
 	for {
 		select {
 		case <-r.Context().Done():
 			return
+		case <-heartbeat.C:
+			if _, writeErr := w.Write([]byte(": heartbeat\n\n")); writeErr != nil {
+				return
+			}
+			if flusher, ok := w.(http.Flusher); ok {
+				flusher.Flush()
+			}
 		case event, ok := <-ch:
 			if !ok {
 				return
