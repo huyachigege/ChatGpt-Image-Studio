@@ -7,7 +7,7 @@ import {
   clearImageConversations,
   deleteImageConversation,
   getCachedImageConversationsSnapshot,
-  listImageConversations,
+  listMergedImageConversations,
   type ImageConversation,
 } from "@/store/image-conversations";
 
@@ -110,7 +110,7 @@ export function useImageHistory({
         ) {
           setIsLoadingHistory(true);
         }
-        const items = await listImageConversations();
+        const items = await listMergedImageConversations();
         const nextItems = normalize ? await normalizeHistory(items) : items;
         if (!mountedRef.current) {
           return;
@@ -194,7 +194,7 @@ export function useImageHistory({
       } catch (error) {
         const message = error instanceof Error ? error.message : "删除会话失败";
         toast.error(message);
-        const items = await listImageConversations();
+        const items = await listMergedImageConversations();
         if (!mountedRef.current) {
           return;
         }

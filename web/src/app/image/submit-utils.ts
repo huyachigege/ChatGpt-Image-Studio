@@ -139,14 +139,59 @@ export function formatImageErrorMessage(message: string) {
 
   const normalized = trimmed.toLowerCase();
   if (
+    normalized.includes("safety system") ||
+    normalized.includes("safety_violations") ||
+    normalized.includes("content_policy") ||
+    normalized.includes("content policy") ||
+    normalized.includes("model_refused") ||
+    normalized.includes("image generation refused") ||
+    (normalized.includes("no images generated") && normalized.includes("model may have refused"))
+  ) {
+    return "失败类型：安全拒绝\n模型安全系统拒绝了这次请求，通常需要调整提示词或源图内容后再试。";
+  }
+
+  if (
+    normalized.includes("今日 free 图片额度不足") ||
+    normalized.includes("今日 paid 图片额度不足") ||
+    normalized.includes("user_free_quota_exhausted") ||
+    normalized.includes("user_paid_quota_exhausted")
+  ) {
+    return `失败类型：用户额度不足\n${trimmed}`;
+  }
+
+  if (
+    normalized.includes("原始图片") ||
+    normalized.includes("source_context") ||
+    normalized.includes("source account") ||
+    normalized.includes("source_account")
+  ) {
+    return `失败类型：源图上下文问题\n${trimmed}`;
+  }
+
+  if (
+    normalized.includes("401") ||
+    normalized.includes("unauthorized") ||
+    normalized.includes("当前账号 401") ||
+    normalized.includes("账号当前不可用") ||
+    normalized.includes("no_available_image_accounts") ||
+    normalized.includes("没有可用的图片账号") ||
+    normalized.includes("paid_resolution_requires_paid_account") ||
+    normalized.includes("仅支持 plus / pro / team")
+  ) {
+    return `失败类型：账号不可用或账号池不足\n${trimmed}`;
+  }
+
+  if (
     normalized.includes("429") ||
     normalized.includes("too many requests") ||
     normalized.includes("usage limit") ||
     normalized.includes("rate limit") ||
     normalized.includes("rate_limit") ||
-    normalized.includes("quota exceeded")
+    normalized.includes("quota exceeded") ||
+    normalized.includes("5h 限流") ||
+    normalized.includes("周额度")
   ) {
-    return "当前图片账号已达到上游用量限制，系统会优先换其他账号重试；如果所有可用账号都限流，请稍后再试。";
+    return "失败类型：上游限流/账号额度耗尽\n当前图片账号已达到上游用量限制，系统会优先换其他账号重试；如果所有可用账号都限流，请稍后再试。";
   }
 
   if (normalized.includes("an error occurred while processing your request")) {

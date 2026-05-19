@@ -387,6 +387,11 @@ func TestAcquireImageAuthLeaseForUserPrefersAccountNotUsedByOtherUser(t *testing
 	if authAAgain.AccessToken != "token-first" {
 		t.Fatalf("user-a again token = %q, want token-first", authAAgain.AccessToken)
 	}
+
+	_, _, _, err = store.AcquireImageAuthLeaseForUserFilteredWithDisabledOption(nil, nil, false, "user-c")
+	if !errors.Is(err, ErrNoAvailableImageAuth) {
+		t.Fatalf("AcquireImageAuthLeaseForUserFilteredWithDisabledOption(user-c) error = %v, want ErrNoAvailableImageAuth", err)
+	}
 }
 
 func TestAcquireImageAuthLeaseForUserConversationBindsSiblingImageRoutes(t *testing.T) {

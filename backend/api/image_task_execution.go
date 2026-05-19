@@ -242,7 +242,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		)
 		attemptClass := classifyImageAttemptError(err)
 		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
-			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -326,7 +325,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		)
 		attemptClass := classifyImageAttemptError(err)
 		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
-			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -523,7 +521,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			if !s.externalResponsesConfigured() {
 				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
 			}
-			s.rebindImageTaskConversationAccount(task, lease.auth.AccessToken, "responses")
 			attemptItems, attemptClass, attemptErr := tryRoute(lease, "external_responses")
 			if attemptErr != nil {
 				rememberAttempt(lease)

@@ -509,6 +509,9 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if s.isImageLeasedLocked(candidate.auth.AccessToken) && !s.canShareImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute) {
 				continue
 			}
+			if s.imageAccountUsedByOtherUserLocked(candidate.auth.AccessToken, userID, "") {
+				continue
+			}
 			refreshNeeded := NeedsImageQuotaRefreshWithTTL(candidate.account, now, s.cfg.ImageQuotaRefreshTTL())
 			if candidate.auth.Disabled && !allowDisabled {
 				continue

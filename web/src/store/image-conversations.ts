@@ -596,6 +596,47 @@ export async function migrateImageConversationStorage(options: {
   return { migrated: nextItems.length };
 }
 
+function countConversationImages(conversation: ImageConversation) {
+  return (conversation.turns || []).reduce(
+    (total, turn) => total + (turn.images || []).length + (turn.sourceImages || []).length,
+    (conversation.images || []).length + (conversation.sourceImages || []).length,
+  );
+}
+
+function preferRicherConversation(
+  current: ImageConversation,
+  next: ImageConversation,
+) {
+  const currentScore = (current.turns || []).length * 10 + countConversationImages(current);
+  const nextScore = (next.turns || []).length * 10 + countConversationImages(next);
+  if (nextScore > currentScore) {
+    return next;
+  }
+  if (nextScore < currentScore) {
+    return current;
+  }
+  return next.createdAt > current.createdAt ? next : current;
+}
+
+function mergeImageConversations(items: ImageConversation[]) {
+  const byId = new Map<string, ImageConversation>();
+  for (const item of items.map(normalizeConversation)) {
+    const existing = byId.get(item.id);
+    byId.set(item.id, existing ? preferRicherConversation(existing, item) : item);
+  }
+  return sortConversations([...byId.values()]);
+}
+
+export async function listMergedImageConversations(): Promise<ImageConversation[]> {
+  const [localItems, serverPayload] = await Promise.all([
+    exportLocalImageConversationsSnapshot().catch(() => []),
+    httpRequest<{ items: ImageConversation[] }>("/api/image/conversations").catch(
+      () => ({ items: [] }),
+    ),
+  ]);
+  return mergeImageConversations([...localItems, ...(serverPayload.items || [])]);
+}
+
 export async function listImageConversations(): Promise<ImageConversation[]> {
   if ((await getImageConversationStorageMode()) === "server") {
     return listServerImageConversations();

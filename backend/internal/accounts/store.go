@@ -1154,6 +1154,9 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 		if s.isImageLeasedLocked(auth.AccessToken) && !s.canShareImageLeaseLocked(auth.AccessToken, userID, preferredRoute) {
 			continue
 		}
+		if s.imageAccountUsedByOtherUserLocked(auth.AccessToken, userID, "") {
+			continue
+		}
 		if allow != nil && !allow(account) {
 			continue
 		}
@@ -1315,29 +1318,51 @@ func (s *Store) imageUserBoundTokenLocked(userID, route string) string {
 		return ""
 	}
 	normalizedRoute := NormalizeImageRouteCapability(route)
+	fallbackToken := ""
 	for key, boundUser := range s.imageAccountUsers {
 		if strings.TrimSpace(boundUser) != user {
 			continue
 		}
-		if normalizedRoute != "" && !strings.HasSuffix(key, "\x00"+normalizedRoute) {
+		parts := strings.SplitN(key, "\x00", 2)
+		if len(parts) != 2 {
 			continue
 		}
-		parts := strings.SplitN(key, "\x00", 2)
-		if len(parts) == 2 {
-			return strings.TrimSpace(parts[0])
+		token := strings.TrimSpace(parts[0])
+		if token == "" {
+			continue
+		}
+		if fallbackToken == "" {
+			fallbackToken = token
+		}
+		if normalizedRoute != "" && strings.HasSuffix(key, "\x00"+normalizedRoute) {
+			return token
 		}
 	}
-	return ""
+	return fallbackToken
 }
 
 func (s *Store) imageAccountUsedByOtherUserLocked(accessToken, userID, route string) bool {
-	key := imageAccountUserKey(accessToken, route)
+	token := strings.TrimSpace(accessToken)
 	user := strings.TrimSpace(userID)
-	if key == "" || user == "" || s.imageAccountUsers == nil {
+	if token == "" || user == "" || s.imageAccountUsers == nil {
 		return false
 	}
-	lastUser := strings.TrimSpace(s.imageAccountUsers[key])
-	return lastUser != "" && lastUser != user
+	if route != "" {
+		key := imageAccountUserKey(token, route)
+		lastUser := strings.TrimSpace(s.imageAccountUsers[key])
+		return lastUser != "" && lastUser != user
+	}
+	prefix := token + "\x00"
+	for key, lastUser := range s.imageAccountUsers {
+		if key != token && !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		boundUser := strings.TrimSpace(lastUser)
+		if boundUser != "" && boundUser != user {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Store) rememberImageAccountUserLocked(accessToken, userID, route string) {
