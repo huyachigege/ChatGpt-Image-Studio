@@ -606,20 +606,10 @@ func buildImageTaskInstructions(task *imageTask) string {
 	if task == nil {
 		return ""
 	}
-	parts := []string{
-		strings.TrimSpace(task.CommonSystemHint),
-		strings.TrimSpace(task.PrivateSystemHint),
+	if task.PrivatePhotoMode {
+		return strings.TrimSpace(firstNonEmpty(task.PrivateSystemHint, task.SystemHint))
 	}
-	if parts[1] == "" {
-		parts[1] = strings.TrimSpace(task.SystemHint)
-	}
-	out := make([]string, 0, len(parts))
-	for _, part := range parts {
-		if part != "" {
-			out = append(out, part)
-		}
-	}
-	return strings.Join(out, "\n\n")
+	return strings.TrimSpace(task.CommonSystemHint)
 }
 
 func isSelectionEditContextFallbackError(err error) bool {
