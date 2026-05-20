@@ -2,6 +2,44 @@ package api
 
 import "testing"
 
+func TestPreferredRouteForFreeGenerateUsesLegacyAfterDeferredRetry(t *testing.T) {
+	manager := &imageTaskManager{server: &Server{}}
+	task := &imageTask{
+		Mode: "generate",
+		Units: []imageTaskUnit{{DeferredCount: 1}},
+	}
+
+	if got := manager.preferredRouteForTask(task, 0); got != "legacy" {
+		t.Fatalf("preferredRouteForTask() = %q, want legacy", got)
+	}
+}
+
+func TestPreferredRouteForFreeReferenceGenerateKeepsResponsesBeforeDeferredRetry(t *testing.T) {
+	manager := &imageTaskManager{server: &Server{}}
+	task := &imageTask{
+		Mode:            "generate",
+		ReferenceImages: []imageTaskSourceImage{{ID: "reference-1"}},
+		Units:           []imageTaskUnit{{}},
+	}
+
+	if got := manager.preferredRouteForTask(task, 0); got != "responses" {
+		t.Fatalf("preferredRouteForTask() = %q, want responses", got)
+	}
+}
+
+func TestPreferredRouteForPaidGenerateKeepsResponsesAfterDeferredRetry(t *testing.T) {
+	manager := &imageTaskManager{server: &Server{}}
+	task := &imageTask{
+		Mode:        "generate",
+		Requirement: imageTaskRequirement{NeedPaid: true},
+		Units:       []imageTaskUnit{{DeferredCount: 1}},
+	}
+
+	if got := manager.preferredRouteForTask(task, 0); got != "responses" {
+		t.Fatalf("preferredRouteForTask() = %q, want responses", got)
+	}
+}
+
 func TestBuildImageTaskInstructionsUsesCommonHintInNormalMode(t *testing.T) {
 	got := buildImageTaskInstructions(&imageTask{
 		CommonSystemHint:  " common hint ",

@@ -1,8 +1,13 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"image"
+	"image/color"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"net/http"
 	"strings"
@@ -270,6 +275,88 @@ func testPNGBytes() []byte {
 	}
 }
 
+func testLargePNGBytes(t *testing.T, width, height int) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.Set(x, y, color.RGBA{R: uint8(x % 255), G: uint8(y % 255), B: uint8((x + y) % 255), A: 255})
+		}
+	}
+	var buffer bytes.Buffer
+	if err := png.Encode(&buffer, img); err != nil {
+		t.Fatalf("encode png: %v", err)
+	}
+	return buffer.Bytes()
+}
+
+func TestPrepareResponsesReferenceImagesAllowsNineImages(t *testing.T) {
+	images := make([][]byte, 9)
+	for i := range images {
+		images[i] = testPNGBytes()
+	}
+
+	prepared, err := PrepareResponsesReferenceImages(images)
+	if err != nil {
+		t.Fatalf("PrepareResponsesReferenceImages() returned error: %v", err)
+	}
+	if len(prepared) != 9 {
+		t.Fatalf("prepared len = %d, want 9", len(prepared))
+	}
+	for index, item := range prepared {
+		if _, err := jpeg.Decode(bytes.NewReader(item)); err != nil {
+			t.Fatalf("prepared[%d] is not jpeg: %v", index, err)
+		}
+	}
+}
+
+func TestPrepareResponsesReferenceImagesRejectsTenImages(t *testing.T) {
+	images := make([][]byte, 10)
+	for i := range images {
+		images[i] = testPNGBytes()
+	}
+
+	if _, err := PrepareResponsesReferenceImages(images); err == nil {
+		t.Fatal("PrepareResponsesReferenceImages() returned nil error, want error")
+	}
+}
+
+func TestPrepareResponsesReferenceImagesUsesOriginalThumbSideForFourImages(t *testing.T) {
+	imageBytes := testLargePNGBytes(t, 1200, 800)
+	images := [][]byte{imageBytes, imageBytes, imageBytes, imageBytes}
+
+	prepared, err := PrepareResponsesReferenceImages(images)
+	if err != nil {
+		t.Fatalf("PrepareResponsesReferenceImages() returned error: %v", err)
+	}
+	img, err := jpeg.Decode(bytes.NewReader(prepared[0]))
+	if err != nil {
+		t.Fatalf("decode jpeg: %v", err)
+	}
+	bounds := img.Bounds()
+	if got := max(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceThumbSide {
+		t.Fatalf("thumbnail max side = %d, want %d", got, maxResponsesReferenceThumbSide)
+	}
+}
+
+func TestPrepareResponsesReferenceImagesUsesCompactThumbSideForFiveImages(t *testing.T) {
+	imageBytes := testLargePNGBytes(t, 1200, 800)
+	images := [][]byte{imageBytes, imageBytes, imageBytes, imageBytes, imageBytes}
+
+	prepared, err := PrepareResponsesReferenceImages(images)
+	if err != nil {
+		t.Fatalf("PrepareResponsesReferenceImages() returned error: %v", err)
+	}
+	img, err := jpeg.Decode(bytes.NewReader(prepared[0]))
+	if err != nil {
+		t.Fatalf("decode jpeg: %v", err)
+	}
+	bounds := img.Bounds()
+	if got := max(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceCompactThumbSide {
+		t.Fatalf("thumbnail max side = %d, want %d", got, maxResponsesReferenceCompactThumbSide)
+	}
+}
+
 func TestBuildResponsesImageGenerationToolIncludesSupportedSize(t *testing.T) {
 	tool, err := buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{
 		RequestedModel: "gpt-image-2",
@@ -283,8 +370,8 @@ func TestBuildResponsesImageGenerationToolIncludesSupportedSize(t *testing.T) {
 		t.Fatalf("buildResponsesImageGenerationTool() returned error: %v", err)
 	}
 
-	if _, ok := tool["model"]; ok {
-		t.Fatalf("tool model = %v, want omitted for gpt-image-2", tool["model"])
+	if got := tool["model"]; got != "gpt-image-2" {
+		t.Fatalf("tool model = %v, want %q", got, "gpt-image-2")
 	}
 	if got := tool["action"]; got != "edit" {
 		t.Fatalf("tool action = %v, want %q", got, "edit")

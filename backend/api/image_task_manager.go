@@ -712,7 +712,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	allowDisabled := m.server.allowDisabledStudioImageAccounts()
 
 	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
-	preferredRoute := m.preferredRouteForTask(task)
+	preferredRoute := m.preferredRouteForTask(task, unitIndex)
 	if task.Requirement.SourceAccountID != "" {
 		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, preferredRoute)
 		if err == nil {
@@ -819,9 +819,15 @@ func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicA
 	return imageTaskAttemptAllowAccount(task)
 }
 
-func (m *imageTaskManager) preferredRouteForTask(task *imageTask) string {
+func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ...int) string {
 	if task == nil || m == nil || m.server == nil {
 		return "legacy"
+	}
+	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(unitIndexes) > 0 {
+		unitIndex := unitIndexes[0]
+		if unitIndex >= 0 && unitIndex < len(task.Units) && task.Units[unitIndex].DeferredCount > 0 {
+			return "legacy"
+		}
 	}
 	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 || task.ContextReference != nil {
 		return "responses"

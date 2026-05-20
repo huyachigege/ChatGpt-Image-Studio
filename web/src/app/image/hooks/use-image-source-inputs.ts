@@ -24,6 +24,8 @@ type UseImageSourceInputsOptions = {
   makeId: () => string;
 };
 
+const MAX_REFERENCE_IMAGES = 9;
+
 async function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -71,8 +73,18 @@ export function useImageSourceInputs({
     if (normalizedFiles.length === 0) {
       return;
     }
+    const acceptedFiles = role === "mask"
+      ? normalizedFiles.slice(0, 1)
+      : normalizedFiles.slice(0, Math.max(0, MAX_REFERENCE_IMAGES - sourceImages.filter((item) => item.role === "image").length));
+    if (acceptedFiles.length === 0) {
+      toast.warning("最多支持 9 张参考图");
+      return;
+    }
+    if (role === "image" && acceptedFiles.length < normalizedFiles.length) {
+      toast.warning("最多支持 9 张参考图");
+    }
     const nextItems = await Promise.all(
-      normalizedFiles.map(async (file) => ({
+      acceptedFiles.map(async (file) => ({
         id: makeId(),
         role,
         name: file.name,
@@ -85,7 +97,7 @@ export function useImageSourceInputs({
       }
       return [...prev.filter((item) => item.role !== "mask"), ...prev.filter((item) => item.role === "mask"), ...nextItems];
     });
-  }, [makeId]);
+  }, [makeId, sourceImages]);
 
   const handlePromptPaste = useCallback((event: ReactClipboardEvent<Element>) => {
     const clipboardImages = Array.from(event.clipboardData.items)
