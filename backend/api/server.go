@@ -1501,11 +1501,7 @@ func (s *Server) newResponsesWorkflowClientForAccount(accessToken string, authDa
 	}
 	externalConfig := s.cfg.ExternalResponsesConfig()
 	if !externalConfig.Enabled || externalConfig.BaseURL == "" || externalConfig.APIKey == "" || externalConfig.Model == "" {
-		if isPaidImageAccountType(account.Type) {
-			return official
-		}
-		legacy := s.newOfficialWorkflowClient(accessToken, authData)
-		return newNamedFallbackResponsesClient(official, legacy, "responses", "legacy")
+		return official
 	}
 	var external imageWorkflowClient
 	if s.externalResponsesClientFactory != nil {
@@ -1516,12 +1512,7 @@ func (s *Server) newResponsesWorkflowClientForAccount(accessToken string, authDa
 	if external == nil {
 		return official
 	}
-	responses := newNamedFallbackResponsesClient(official, external, "official responses", "external responses")
-	if isPaidImageAccountType(account.Type) {
-		return responses
-	}
-	legacy := s.newOfficialWorkflowClient(accessToken, authData)
-	return newNamedFallbackResponsesClient(responses, legacy, "responses", "legacy")
+	return newNamedFallbackResponsesClient(official, external, "official responses", "external responses")
 }
 
 func (s *Server) newCPAWorkflowClient() cpaRouteAwareImageWorkflowClient {

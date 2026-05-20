@@ -823,7 +823,7 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ..
 	if task == nil || m == nil || m.server == nil {
 		return "legacy"
 	}
-	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(unitIndexes) > 0 {
+	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 && len(unitIndexes) > 0 {
 		unitIndex := unitIndexes[0]
 		if unitIndex >= 0 && unitIndex < len(task.Units) && task.Units[unitIndex].DeferredCount > 0 {
 			return "legacy"

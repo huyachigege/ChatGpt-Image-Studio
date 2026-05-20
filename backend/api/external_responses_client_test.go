@@ -315,7 +315,7 @@ func TestNewResponsesWorkflowClientPaidFallsBackOfficialToExternalResponses(t *t
 	}
 }
 
-func TestNewResponsesWorkflowClientFreeFallsBackOfficialExternalLegacy(t *testing.T) {
+func TestNewResponsesWorkflowClientFreeDoesNotFallbackToLegacyInsideResponsesRoute(t *testing.T) {
 	cfg := config.New(t.TempDir())
 	if err := cfg.Load(); err != nil {
 		t.Fatalf("Load() returned error: %v", err)
@@ -345,15 +345,12 @@ func TestNewResponsesWorkflowClientFreeFallsBackOfficialExternalLegacy(t *testin
 	}
 
 	client := server.newResponsesWorkflowClientForAccount("token", nil, accounts.PublicAccount{Type: "Free"})
-	images, err := client.GenerateImage(context.Background(), "draw", "model", 1, "", "", "")
-	if err != nil {
-		t.Fatalf("GenerateImage() returned error: %v", err)
+	_, err := client.GenerateImage(context.Background(), "draw", "model", 1, "", "", "")
+	if err == nil {
+		t.Fatal("GenerateImage() returned nil error, want external error")
 	}
-	if strings.Join(callOrder, ",") != "official,external,legacy" {
-		t.Fatalf("call order = %v, want official/external/legacy", callOrder)
-	}
-	if len(images) != 1 || images[0].URL != "stub://legacy" {
-		t.Fatalf("images = %#v, want legacy result", images)
+	if strings.Join(callOrder, ",") != "official,external" {
+		t.Fatalf("call order = %v, want official/external only", callOrder)
 	}
 }
 
