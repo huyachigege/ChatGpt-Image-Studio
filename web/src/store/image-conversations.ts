@@ -76,6 +76,9 @@ export type ImageConversationTurn = {
   finishedAt?: string;
   cancelRequested?: boolean;
   diagnostic?: ImageRejectionDiagnostic;
+  diagnosticStatus?: "running" | "succeeded" | "failed";
+  diagnosticError?: string;
+  diagnosticUpdatedAt?: string;
 };
 
 export type ImageConversation = {

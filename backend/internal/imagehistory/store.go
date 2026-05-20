@@ -51,21 +51,24 @@ type Image struct {
 }
 
 type Turn struct {
-	ID           string          `json:"id"`
-	Title        string          `json:"title"`
-	Mode         string          `json:"mode"`
-	Prompt       string          `json:"prompt"`
-	Model        string          `json:"model"`
-	Count        int             `json:"count"`
-	Size         string          `json:"size,omitempty"`
-	Quality      string          `json:"quality,omitempty"`
-	Scale        string          `json:"scale,omitempty"`
-	SourceImages []SourceImage   `json:"sourceImages,omitempty"`
-	Images       []Image         `json:"images"`
-	CreatedAt    string          `json:"createdAt"`
-	Status       string          `json:"status"`
-	Error        string          `json:"error,omitempty"`
-	Diagnostic   json.RawMessage `json:"diagnostic,omitempty"`
+	ID                  string          `json:"id"`
+	Title               string          `json:"title"`
+	Mode                string          `json:"mode"`
+	Prompt              string          `json:"prompt"`
+	Model               string          `json:"model"`
+	Count               int             `json:"count"`
+	Size                string          `json:"size,omitempty"`
+	Quality             string          `json:"quality,omitempty"`
+	Scale               string          `json:"scale,omitempty"`
+	SourceImages        []SourceImage   `json:"sourceImages,omitempty"`
+	Images              []Image         `json:"images"`
+	CreatedAt           string          `json:"createdAt"`
+	Status              string          `json:"status"`
+	Error               string          `json:"error,omitempty"`
+	Diagnostic          json.RawMessage `json:"diagnostic,omitempty"`
+	DiagnosticStatus    string          `json:"diagnosticStatus,omitempty"`
+	DiagnosticError     string          `json:"diagnosticError,omitempty"`
+	DiagnosticUpdatedAt string          `json:"diagnosticUpdatedAt,omitempty"`
 }
 
 type Conversation struct {

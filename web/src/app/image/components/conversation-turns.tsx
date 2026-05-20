@@ -249,10 +249,16 @@ export const ConversationTurns = memo(function ConversationTurns({
               ? "取消排队"
               : "准备中";
         const diagnosingTurn = diagnosingTurnIds.includes(turn.id);
+        const diagnosticRunning =
+          diagnosingTurn || turn.diagnosticStatus === "running";
         const diagnosticRetryingTurn = diagnosticRetryingTurnIds.includes(turn.id);
         const diagnosticReference = turn.diagnostic?.referenceImages?.find(
           (item) => item.dataUrl || item.url,
         );
+        const showDiagnosticPanel =
+          diagnosticRunning ||
+          turn.diagnosticStatus === "failed" ||
+          Boolean(turn.diagnostic);
 
         return (
           <div key={turn.id} className="space-y-4">
@@ -463,35 +469,68 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 image.error || "处理失败",
                               )}
                             </div>
-                            {turn.diagnostic ? (
+                            {showDiagnosticPanel ? (
                               <div className="space-y-3 border-t border-stone-100 bg-amber-50/60 px-4 py-3 text-left text-xs leading-6 text-stone-700">
-                                <div>
-                                  <div className="font-semibold text-stone-900">诊断建议</div>
-                                  <div>{turn.diagnostic.reason}</div>
+                                <div className="flex items-center justify-between gap-3">
+                                  <div className="font-semibold text-stone-900">拒绝诊断</div>
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-white/80 px-2.5 py-1 text-[11px] font-medium text-amber-700">
+                                    {diagnosticRunning ? (
+                                      <LoaderCircle className="size-3 animate-spin" />
+                                    ) : null}
+                                    {diagnosticRunning
+                                      ? "诊断中"
+                                      : turn.diagnosticStatus === "failed"
+                                      ? "诊断失败"
+                                      : "已诊断"}
+                                  </span>
                                 </div>
-                                <div>
-                                  <div className="font-semibold text-stone-900">新提示词</div>
-                                  <div className="line-clamp-4 whitespace-pre-wrap rounded-2xl bg-white/80 p-3 text-stone-700">
-                                    {turn.diagnostic.revisedPrompt}
-                                  </div>
-                                </div>
-                                {diagnosticReference ? (
-                                  <div>
-                                    <div className="font-semibold text-stone-900">新参考图</div>
-                                    <Image
-                                      src={diagnosticReference.dataUrl || diagnosticReference.url || ""}
-                                      alt="Diagnostic reference"
-                                      width={180}
-                                      height={120}
-                                      unoptimized
-                                      className="mt-1 h-24 w-full rounded-2xl bg-white object-contain"
-                                    />
+                                {diagnosticRunning ? (
+                                  <div className="rounded-2xl bg-white/80 px-3 py-2 text-amber-700">
+                                    {diagnosingTurn
+                                      ? "正在分析拒绝原因，并尝试生成更安全的新提示词/参考图；完成后会直接显示在这张卡片上。"
+                                      : "上次诊断未完成或页面已刷新，可以点击下方「重新诊断」。"}
                                   </div>
                                 ) : null}
-                                {turn.diagnostic.omitOriginalReferences ? (
-                                  <div className="rounded-2xl bg-white/80 px-3 py-2 text-amber-700">
-                                    已判断原参考图可能触发拒绝，引用重试时不会携带失败参考图。
+                                {turn.diagnosticStatus === "failed" ? (
+                                  <div className="rounded-2xl bg-white/80 px-3 py-2 text-rose-600">
+                                    {turn.diagnosticError || "诊断失败，请稍后重试。"}
                                   </div>
+                                ) : null}
+                                {turn.diagnostic ? (
+                                  <>
+                                    <div>
+                                      <div className="font-semibold text-stone-900">诊断建议</div>
+                                      <div>{turn.diagnostic.reason}</div>
+                                    </div>
+                                    <div>
+                                      <div className="font-semibold text-stone-900">新提示词</div>
+                                      <div className="line-clamp-4 whitespace-pre-wrap rounded-2xl bg-white/80 p-3 text-stone-700">
+                                        {turn.diagnostic.revisedPrompt}
+                                      </div>
+                                    </div>
+                                    {diagnosticReference ? (
+                                      <div>
+                                        <div className="font-semibold text-stone-900">新参考图</div>
+                                        <Image
+                                          src={diagnosticReference.dataUrl || diagnosticReference.url || ""}
+                                          alt="Diagnostic reference"
+                                          width={180}
+                                          height={120}
+                                          unoptimized
+                                          className="mt-1 h-24 w-full rounded-2xl bg-white object-contain"
+                                        />
+                                      </div>
+                                    ) : null}
+                                    {turn.diagnostic.omitOriginalReferences ? (
+                                      <div className="rounded-2xl bg-white/80 px-3 py-2 text-amber-700">
+                                        已判断原参考图可能触发拒绝，引用重试时不会携带失败参考图。
+                                      </div>
+                                    ) : null}
+                                    <div className="rounded-2xl bg-white/80 px-3 py-2 text-stone-600">
+                                      使用方式：确认新提示词后点下方「引用重试」，系统会用诊断后的提示词和参考图重新提交。
+                                      {turn.diagnosticUpdatedAt ? ` · ${formatConversationTime(turn.diagnosticUpdatedAt)}` : ""}
+                                    </div>
+                                  </>
                                 ) : null}
                               </div>
                             ) : null}
@@ -516,8 +555,12 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 title={diagnosingTurn ? "诊断中" : "诊断拒绝原因"}
                                 aria-label="诊断拒绝原因"
                               >
-                                <Sparkles className="size-3.5" />
-                                {diagnosingTurn ? "诊断中" : "诊断"}
+                                {diagnosingTurn ? (
+                                  <LoaderCircle className="size-3.5 animate-spin" />
+                                ) : (
+                                  <Sparkles className="size-3.5" />
+                                )}
+                                {diagnosingTurn ? "诊断中" : turn.diagnostic ? "重新诊断" : "诊断"}
                               </button>
                               {turn.diagnostic ? (
                                 <button

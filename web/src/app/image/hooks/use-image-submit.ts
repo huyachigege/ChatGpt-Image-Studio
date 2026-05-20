@@ -528,6 +528,20 @@ export function useImageSubmit({
         toast.error("该记录缺少提示词，无法诊断");
         return;
       }
+      const startedAt = new Date().toISOString();
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? buildConversationBase(conversationId, turn)),
+        turns: (current?.turns ?? [turn]).map((item) =>
+          item.id === turn.id
+            ? {
+                ...item,
+                diagnosticStatus: "running" as const,
+                diagnosticError: undefined,
+                diagnosticUpdatedAt: startedAt,
+              }
+            : item,
+        ),
+      }));
       try {
         const diagnostic = await diagnoseImageRejection({
           prompt,
@@ -544,13 +558,30 @@ export function useImageSubmit({
               ? {
                   ...item,
                   diagnostic,
+                  diagnosticStatus: "succeeded" as const,
+                  diagnosticError: undefined,
+                  diagnosticUpdatedAt: new Date().toISOString(),
                 }
               : item,
           ),
         }));
-        toast.success("诊断完成，可以引用重试");
+        toast.success("诊断完成，结果已保存到卡片");
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "诊断失败");
+        const message = error instanceof Error ? error.message : "诊断失败";
+        await updateConversation(conversationId, (current) => ({
+          ...(current ?? buildConversationBase(conversationId, turn)),
+          turns: (current?.turns ?? [turn]).map((item) =>
+            item.id === turn.id
+              ? {
+                  ...item,
+                  diagnosticStatus: "failed" as const,
+                  diagnosticError: message,
+                  diagnosticUpdatedAt: new Date().toISOString(),
+                }
+              : item,
+          ),
+        }));
+        toast.error(message);
       }
     },
     [updateConversation],
