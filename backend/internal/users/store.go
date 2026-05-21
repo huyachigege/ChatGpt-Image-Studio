@@ -137,6 +137,8 @@ func (s *Store) Init(ctx context.Context) error {
 			quota_date TEXT NOT NULL,
 			free_used INTEGER NOT NULL DEFAULT 0,
 			paid_used INTEGER NOT NULL DEFAULT 0,
+			free_limit INTEGER NOT NULL DEFAULT 0,
+			paid_limit INTEGER NOT NULL DEFAULT 0,
 			updated_at TEXT NOT NULL,
 			PRIMARY KEY(user_id, quota_date)
 		)`,
@@ -155,6 +157,12 @@ func (s *Store) Init(ctx context.Context) error {
 		return err
 	}
 	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_users ADD COLUMN disabled_at TEXT NOT NULL DEFAULT ''`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_user_daily_image_quotas ADD COLUMN free_limit INTEGER NOT NULL DEFAULT 0`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE app_user_daily_image_quotas ADD COLUMN paid_limit INTEGER NOT NULL DEFAULT 0`); err != nil && !strings.Contains(strings.ToLower(err.Error()), "duplicate column") {
 		return err
 	}
 	if err := s.ensureUsernames(ctx); err != nil {
@@ -556,13 +564,38 @@ func (s *Store) GetDailyImageQuota(ctx context.Context, userID string) (DailyIma
 	if userID == "" || userID == "admin" {
 		return status, nil
 	}
-	var freeUsed, paidUsed int
-	err := s.db.QueryRowContext(ctx, `SELECT free_used, paid_used FROM app_user_daily_image_quotas WHERE user_id = ? AND quota_date = ?`, userID, status.DateKey).Scan(&freeUsed, &paidUsed)
+	var freeUsed, paidUsed, freeLimit, paidLimit int
+	err := s.db.QueryRowContext(ctx, `SELECT free_used, paid_used, free_limit, paid_limit FROM app_user_daily_image_quotas WHERE user_id = ? AND quota_date = ?`, userID, status.DateKey).Scan(&freeUsed, &paidUsed, &freeLimit, &paidLimit)
 	if errors.Is(err, sql.ErrNoRows) {
-		return status, nil
+		status, err = s.initialDailyImageQuota(ctx, userID, status.DateKey)
+		if err != nil {
+			return status, err
+		}
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		_, err = s.db.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, free_limit, paid_limit, updated_at) VALUES (?, ?, 0, 0, ?, ?, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, status.DateKey, status.FreeLimit, status.PaidLimit, now)
+		return status, err
 	}
 	if err != nil {
 		return status, err
+	}
+	needsLimitBackfill := false
+	if freeLimit > 0 {
+		status.FreeLimit = freeLimit
+	} else {
+		freeLimit = status.FreeLimit
+		needsLimitBackfill = true
+	}
+	if paidLimit > 0 {
+		status.PaidLimit = paidLimit
+	} else {
+		paidLimit = status.PaidLimit
+		needsLimitBackfill = true
+	}
+	if needsLimitBackfill {
+		now := time.Now().UTC().Format(time.RFC3339Nano)
+		if _, err := s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_limit = ?, paid_limit = ?, updated_at = ? WHERE user_id = ? AND quota_date = ?`, freeLimit, paidLimit, now, userID, status.DateKey); err != nil {
+			return status, err
+		}
 	}
 	status.FreeUsed = freeUsed
 	status.PaidUsed = paidUsed
@@ -571,11 +604,37 @@ func (s *Store) GetDailyImageQuota(ctx context.Context, userID string) (DailyIma
 	return status, nil
 }
 
+func (s *Store) initialDailyImageQuota(ctx context.Context, userID, dateKey string) (DailyImageQuota, error) {
+	status := s.dailyImageQuotaStatus(dateKey)
+	var freeLimit, paidLimit int
+	err := s.db.QueryRowContext(ctx, `SELECT free_limit - free_used, paid_limit - paid_used FROM app_user_daily_image_quotas WHERE user_id = ? AND quota_date < ? ORDER BY quota_date DESC LIMIT 1`, userID, dateKey).Scan(&freeLimit, &paidLimit)
+	if errors.Is(err, sql.ErrNoRows) {
+		return status, nil
+	}
+	if err != nil {
+		return status, err
+	}
+	if freeLimit > status.FreeLimit {
+		status.FreeLimit = freeLimit
+		status.FreeRemaining = freeLimit
+	}
+	if paidLimit > status.PaidLimit {
+		status.PaidLimit = paidLimit
+		status.PaidRemaining = paidLimit
+	}
+	return status, nil
+}
+
 func (s *Store) ConsumeDailyImageQuota(ctx context.Context, userID, quotaKind string) (DailyImageQuota, error) {
 	status := s.dailyImageQuotaStatus(currentQuotaDateKey())
 	userID = strings.TrimSpace(userID)
 	if userID == "" || userID == "admin" {
 		return status, nil
+	}
+	var err error
+	status, err = s.GetDailyImageQuota(ctx, userID)
+	if err != nil {
+		return status, err
 	}
 	quotaKind = strings.ToLower(strings.TrimSpace(quotaKind))
 	now := time.Now().UTC().Format(time.RFC3339Nano)
@@ -589,7 +648,7 @@ func (s *Store) ConsumeDailyImageQuota(ctx context.Context, userID, quotaKind st
 			_ = tx.Rollback()
 		}
 	}()
-	if _, err = tx.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, updated_at) VALUES (?, ?, 0, 0, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, status.DateKey, now); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, free_limit, paid_limit, updated_at) VALUES (?, ?, 0, 0, ?, ?, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, status.DateKey, status.FreeLimit, status.PaidLimit, now); err != nil {
 		return status, err
 	}
 	var result sql.Result
@@ -620,42 +679,13 @@ func (s *Store) ConsumeDailyImageQuota(ctx context.Context, userID, quotaKind st
 }
 
 func (s *Store) GetDailyImageQuotaBatch(ctx context.Context, userIDs []string) (map[string]DailyImageQuota, error) {
-	dateKey := currentQuotaDateKey()
 	result := make(map[string]DailyImageQuota, len(userIDs))
 	for _, uid := range userIDs {
-		result[uid] = s.dailyImageQuotaStatus(dateKey)
-	}
-	if len(userIDs) == 0 {
-		return result, nil
-	}
-	placeholders := make([]string, len(userIDs))
-	args := make([]any, 0, len(userIDs)+1)
-	for i, uid := range userIDs {
-		placeholders[i] = "?"
-		args = append(args, uid)
-	}
-	args = append(args, dateKey)
-	query := `SELECT user_id, free_used, paid_used FROM app_user_daily_image_quotas WHERE user_id IN (` + strings.Join(placeholders, ",") + `) AND quota_date = ?`
-	rows, err := s.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return result, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var uid string
-		var freeUsed, paidUsed int
-		if err := rows.Scan(&uid, &freeUsed, &paidUsed); err != nil {
+		quota, err := s.GetDailyImageQuota(ctx, uid)
+		if err != nil {
 			return result, err
 		}
-		status := s.dailyImageQuotaStatus(dateKey)
-		status.FreeUsed = freeUsed
-		status.FreeRemaining = maxInt(0, status.FreeLimit-freeUsed)
-		status.PaidUsed = paidUsed
-		status.PaidRemaining = maxInt(0, status.PaidLimit-paidUsed)
-		result[uid] = status
-	}
-	if err := rows.Err(); err != nil {
-		return result, err
+		result[uid] = quota
 	}
 	return result, nil
 }
@@ -668,17 +698,16 @@ func (s *Store) AdjustDailyImageQuota(ctx context.Context, userID, quotaKind str
 	if delta <= 0 {
 		return DailyImageQuota{}, fmt.Errorf("delta must be positive")
 	}
-	dateKey := currentQuotaDateKey()
-	now := time.Now().UTC().Format(time.RFC3339Nano)
-	if _, err := s.db.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, updated_at) VALUES (?, ?, 0, 0, ?) ON CONFLICT(user_id, quota_date) DO NOTHING`, userID, dateKey, now); err != nil {
+	status, err := s.GetDailyImageQuota(ctx, userID)
+	if err != nil {
 		return DailyImageQuota{}, err
 	}
-	var err error
+	now := time.Now().UTC().Format(time.RFC3339Nano)
 	switch strings.ToLower(strings.TrimSpace(quotaKind)) {
 	case "paid":
-		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_used = MAX(0, paid_used - ?), updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, dateKey)
+		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_limit = paid_limit + ?, updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, status.DateKey)
 	case "free", "":
-		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_used = MAX(0, free_used - ?), updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, dateKey)
+		_, err = s.db.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_limit = free_limit + ?, updated_at = ? WHERE user_id = ? AND quota_date = ?`, delta, now, userID, status.DateKey)
 	default:
 		return DailyImageQuota{}, fmt.Errorf("invalid quota kind")
 	}
@@ -712,7 +741,12 @@ func (s *Store) AdjustAllUsersDailyImageQuota(ctx context.Context, quotaKind str
 			_ = tx.Rollback()
 		}
 	}()
-	if _, err := tx.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, updated_at) SELECT id, ?, 0, 0, ? FROM app_users WHERE role <> ? ON CONFLICT(user_id, quota_date) DO NOTHING`, dateKey, now, RoleAdmin); err != nil {
+	if _, err := tx.ExecContext(ctx, `INSERT INTO app_user_daily_image_quotas (user_id, quota_date, free_used, paid_used, free_limit, paid_limit, updated_at)
+		SELECT u.id, ?, 0, 0,
+			MAX(?, COALESCE((SELECT q.free_limit - q.free_used FROM app_user_daily_image_quotas q WHERE q.user_id = u.id AND q.quota_date < ? ORDER BY q.quota_date DESC LIMIT 1), 0)),
+			MAX(?, COALESCE((SELECT q.paid_limit - q.paid_used FROM app_user_daily_image_quotas q WHERE q.user_id = u.id AND q.quota_date < ? ORDER BY q.quota_date DESC LIMIT 1), 0)),
+			?
+		FROM app_users u WHERE u.role <> ? ON CONFLICT(user_id, quota_date) DO NOTHING`, dateKey, freeLimit, dateKey, paidLimit, dateKey, now, RoleAdmin); err != nil {
 		return 0, err
 	}
 	var result sql.Result
@@ -722,15 +756,15 @@ func (s *Store) AdjustAllUsersDailyImageQuota(ctx context.Context, quotaKind str
 	}
 	if delta > 0 {
 		if quotaKind == "paid" {
-			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_used = MAX(0, paid_used - ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
+			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_limit = paid_limit + ?, updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
 		} else {
-			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_used = MAX(0, free_used - ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
+			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_limit = free_limit + ?, updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
 		}
 	} else {
 		if quotaKind == "paid" {
-			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_used = MIN(?, paid_used + ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, paidLimit, amount, now, dateKey, RoleAdmin)
+			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET paid_limit = MAX(paid_used, paid_limit - ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
 		} else {
-			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_used = MIN(?, free_used + ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, freeLimit, amount, now, dateKey, RoleAdmin)
+			result, err = tx.ExecContext(ctx, `UPDATE app_user_daily_image_quotas SET free_limit = MAX(free_used, free_limit - ?), updated_at = ? WHERE quota_date = ? AND user_id IN (SELECT id FROM app_users WHERE role <> ?)`, amount, now, dateKey, RoleAdmin)
 		}
 	}
 	if err != nil {

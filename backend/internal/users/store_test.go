@@ -74,8 +74,8 @@ func TestAdjustAllUsersDailyImageQuota(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDailyImageQuotaBatch: %v", err)
 	}
-	if quotas["user-a"].FreeRemaining != 5 || quotas["user-b"].FreeRemaining != 5 {
-		t.Fatalf("free remaining after +2 = user-a:%d user-b:%d, want 5/5", quotas["user-a"].FreeRemaining, quotas["user-b"].FreeRemaining)
+	if quotas["user-a"].FreeRemaining != 6 || quotas["user-b"].FreeRemaining != 7 {
+		t.Fatalf("free remaining after +2 = user-a:%d user-b:%d, want 6/7", quotas["user-a"].FreeRemaining, quotas["user-b"].FreeRemaining)
 	}
 
 	affected, err = store.AdjustAllUsersDailyImageQuota(ctx, "free", -3)
@@ -89,10 +89,39 @@ func TestAdjustAllUsersDailyImageQuota(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDailyImageQuotaBatch after -3: %v", err)
 	}
-	if quotas["user-a"].FreeRemaining != 2 || quotas["user-b"].FreeRemaining != 2 {
-		t.Fatalf("free remaining after -3 = user-a:%d user-b:%d, want 2/2", quotas["user-a"].FreeRemaining, quotas["user-b"].FreeRemaining)
+	if quotas["user-a"].FreeRemaining != 3 || quotas["user-b"].FreeRemaining != 4 {
+		t.Fatalf("free remaining after -3 = user-a:%d user-b:%d, want 3/4", quotas["user-a"].FreeRemaining, quotas["user-b"].FreeRemaining)
 	}
 	if quotas["admin-user"].FreeRemaining != 5 {
 		t.Fatalf("admin remaining = %d, want unchanged 5", quotas["admin-user"].FreeRemaining)
+	}
+}
+
+func TestDailyImageQuotaResetUsesConfiguredLimitAsFloor(t *testing.T) {
+	store := newTestStore(t, 100, 30)
+	ctx := context.Background()
+	insertTestUser(t, store, "user-a", RoleUser)
+
+	for i := 0; i < 20; i++ {
+		if _, err := store.ConsumeDailyImageQuota(ctx, "user-a", "free"); err != nil {
+			t.Fatalf("ConsumeDailyImageQuota free #%d: %v", i+1, err)
+		}
+	}
+	store.cfg.Accounts.DailyFreeImageLimit = 120
+	store.cfg.Accounts.DailyPaidImageLimit = 20
+	_, err := store.db.Exec(`UPDATE app_user_daily_image_quotas SET quota_date = ? WHERE user_id = ?`, "2000-01-01", "user-a")
+	if err != nil {
+		t.Fatalf("move quota to previous day: %v", err)
+	}
+
+	quota, err := store.GetDailyImageQuota(ctx, "user-a")
+	if err != nil {
+		t.Fatalf("GetDailyImageQuota: %v", err)
+	}
+	if quota.FreeRemaining != 120 || quota.FreeLimit != 120 {
+		t.Fatalf("free quota after reset = %d/%d, want 120/120", quota.FreeRemaining, quota.FreeLimit)
+	}
+	if quota.PaidRemaining != 30 || quota.PaidLimit != 30 {
+		t.Fatalf("paid quota after reset = %d/%d, want 30/30", quota.PaidRemaining, quota.PaidLimit)
 	}
 }
