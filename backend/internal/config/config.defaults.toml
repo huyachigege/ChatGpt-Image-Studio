@@ -57,6 +57,8 @@ default_quota = 5
 prefer_remote_refresh = true
 refresh_workers = 6
 image_quota_refresh_ttl_seconds = 120
+daily_free_image_limit = 120
+daily_paid_image_limit = 30
 
 [storage]
 backend = "current"

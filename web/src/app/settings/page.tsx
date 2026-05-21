@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  adjustAllUsersQuota,
   adjustUserQuota,
   createInvite,
   deleteAnnouncement,
@@ -156,6 +157,8 @@ function defaultConfigPayload(): ConfigPayload {
       preferRemoteRefresh: true,
       refreshWorkers: 6,
       imageQuotaRefreshTTLSeconds: 120,
+      dailyFreeImageLimit: 120,
+      dailyPaidImageLimit: 30,
     },
     storage: {
       backend: "current",
@@ -254,6 +257,8 @@ function normalizeConfigPayload(
   accounts.defaultQuota = accounts.defaultQuota || defaults.accounts.defaultQuota;
   accounts.refreshWorkers = accounts.refreshWorkers || defaults.accounts.refreshWorkers;
   accounts.imageQuotaRefreshTTLSeconds = accounts.imageQuotaRefreshTTLSeconds || defaults.accounts.imageQuotaRefreshTTLSeconds;
+  accounts.dailyFreeImageLimit = accounts.dailyFreeImageLimit || defaults.accounts.dailyFreeImageLimit;
+  accounts.dailyPaidImageLimit = accounts.dailyPaidImageLimit || defaults.accounts.dailyPaidImageLimit;
 
   const storage = {
     ...defaults.storage,
@@ -312,6 +317,9 @@ export default function SettingsPage() {
   const [isCreatingInvite, setIsCreatingInvite] = useState(false);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [mutatingUserID, setMutatingUserID] = useState("");
+  const [bulkQuotaKind, setBulkQuotaKind] = useState<"free" | "paid">("free");
+  const [bulkQuotaDelta, setBulkQuotaDelta] = useState("10");
+  const [isAdjustingAllUsersQuota, setIsAdjustingAllUsersQuota] = useState(false);
 
   const isStudioMode = config.chatgpt.imageMode === "studio";
   const isCPAMode = config.chatgpt.imageMode === "cpa";
@@ -564,6 +572,29 @@ export default function SettingsPage() {
     }
   };
 
+  const handleAdjustAllUsersQuota = async () => {
+    const delta = parseInt(bulkQuotaDelta.trim(), 10);
+    if (!delta) {
+      toast.error("请输入非 0 整数");
+      return;
+    }
+    const action = delta > 0 ? "增加" : "减少";
+    const label = bulkQuotaKind === "paid" ? "Paid" : "Free";
+    if (!window.confirm(`确认给所有普通用户今日 ${label} 剩余额度统一${action} ${Math.abs(delta)}？\n此操作只影响今天，不改变每日重置额度。`)) {
+      return;
+    }
+    setIsAdjustingAllUsersQuota(true);
+    try {
+      const result = await adjustAllUsersQuota(bulkQuotaKind, delta);
+      toast.success(`已统一调整 ${result.affected} 个用户的今日 ${label} 额度`);
+      await loadUsers();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "统一调整额度失败");
+    } finally {
+      setIsAdjustingAllUsersQuota(false);
+    }
+  };
+
   const loadConfig = async () => {
     setIsLoading(true);
     try {
@@ -766,6 +797,40 @@ export default function SettingsPage() {
           <AnnouncementSection />
 
           <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-stone-950 dark:text-[var(--studio-text-strong)]">
+                <Settings2 className="size-4" />
+                <h2 className="text-lg font-semibold tracking-tight">用户每日额度</h2>
+              </div>
+              <p className="text-sm leading-6 text-stone-500 dark:text-[var(--studio-text-muted)]">
+                这里设置每天自然重置后的默认总额度；今日临时补偿或扣减请在用户管理里统一调整。
+              </p>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <label className="space-y-2 text-sm">
+                <span className="text-xs font-medium text-stone-500 dark:text-[var(--studio-text-muted)]">每日 Free 重置额度</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.accounts.dailyFreeImageLimit}
+                  onChange={(event) => setSection("accounts", { ...config.accounts, dailyFreeImageLimit: Number(event.target.value) })}
+                  className="h-11 rounded-2xl border-stone-200 bg-white text-sm shadow-none"
+                />
+              </label>
+              <label className="space-y-2 text-sm">
+                <span className="text-xs font-medium text-stone-500 dark:text-[var(--studio-text-muted)]">每日 Paid 重置额度</span>
+                <Input
+                  type="number"
+                  min={1}
+                  value={config.accounts.dailyPaidImageLimit}
+                  onChange={(event) => setSection("accounts", { ...config.accounts, dailyPaidImageLimit: Number(event.target.value) })}
+                  className="h-11 rounded-2xl border-stone-200 bg-white text-sm shadow-none"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-stone-200 bg-white/80 p-5 shadow-sm dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-soft)]">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-stone-950 dark:text-[var(--studio-text-strong)]">
@@ -881,6 +946,43 @@ export default function SettingsPage() {
                 {isLoadingUsers ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 刷新用户
               </Button>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)]">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium text-stone-900 dark:text-[var(--studio-text-strong)]">统一调整今日额度</div>
+                  <p className="text-xs leading-5 text-stone-500 dark:text-[var(--studio-text-muted)]">
+                    正数增加今日剩余额度，负数减少今日剩余额度；不影响每天重置后的默认额度。
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Select value={bulkQuotaKind} onValueChange={(value) => setBulkQuotaKind(value as "free" | "paid")}>
+                    <SelectTrigger className="h-10 w-full rounded-2xl border-stone-200 bg-white text-sm shadow-none sm:w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Free</SelectItem>
+                      <SelectItem value="paid">Paid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={bulkQuotaDelta}
+                    onChange={(event) => setBulkQuotaDelta(event.target.value)}
+                    placeholder="例如 10 或 -5"
+                    className="h-10 rounded-2xl border-stone-200 bg-white text-sm shadow-none sm:w-36"
+                  />
+                  <Button
+                    type="button"
+                    className="h-10 rounded-full bg-stone-950 px-4 text-[13px] text-white hover:bg-stone-800"
+                    onClick={() => void handleAdjustAllUsersQuota()}
+                    disabled={isAdjustingAllUsersQuota || isLoadingUsers}
+                  >
+                    {isAdjustingAllUsersQuota ? <LoaderCircle className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                    应用到所有用户
+                  </Button>
+                </div>
+              </div>
             </div>
 
             <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

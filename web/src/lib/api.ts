@@ -363,6 +363,8 @@ export type ConfigPayload = {
     preferRemoteRefresh: boolean;
     refreshWorkers: number;
     imageQuotaRefreshTTLSeconds: number;
+    dailyFreeImageLimit: number;
+    dailyPaidImageLimit: number;
   };
   storage: {
     backend: string;
@@ -828,6 +830,13 @@ export async function deleteUser(id: string) {
 
 export async function adjustUserQuota(id: string, kind: "free" | "paid", delta: number) {
   return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}/quota`, {
+    method: "POST",
+    body: { kind, delta },
+  });
+}
+
+export async function adjustAllUsersQuota(kind: "free" | "paid", delta: number) {
+  return httpRequest<{ ok: boolean; affected: number; quota: "free" | "paid"; delta: number }>("/api/users/quota/adjust-all", {
     method: "POST",
     body: { kind, delta },
   });

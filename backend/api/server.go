@@ -494,6 +494,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleListInvites)))
 	mux.Handle("POST /api/invites", s.requireAdminAuth(http.HandlerFunc(s.handleCreateInvite)))
 	mux.Handle("GET /api/users", s.requireAdminAuth(http.HandlerFunc(s.handleListUsers)))
+	mux.Handle("POST /api/users/quota/adjust-all", s.requireAdminAuth(http.HandlerFunc(s.handleAdjustAllUsersQuota)))
 	mux.Handle("PATCH /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleUpdateUser)))
 	mux.Handle("POST /api/users/{id}/quota", s.requireAdminAuth(http.HandlerFunc(s.handleAdjustUserQuota)))
 	mux.Handle("DELETE /api/users/{id}", s.requireAdminAuth(http.HandlerFunc(s.handleDeleteUser)))
@@ -769,6 +770,37 @@ func (s *Server) handleAdjustUserQuota(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "quota": quota})
+}
+
+func (s *Server) handleAdjustAllUsersQuota(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Kind  string `json:"kind"`
+		Delta int    `json:"delta"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if body.Delta == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "delta must not be zero"})
+		return
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer store.Close()
+	affected, err := store.AdjustAllUsersDailyImageQuota(r.Context(), body.Kind, body.Delta)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	quotaKind := strings.ToLower(strings.TrimSpace(body.Kind))
+	if quotaKind == "" {
+		quotaKind = "free"
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "affected": affected, "quota": quotaKind, "delta": body.Delta})
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -2061,8 +2093,8 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		s.logImageRequestWithContext(ctx, entry)
 		if isImageHTTPStatusError(err, 429) {
 			if !isExternalResponsesRoute(route) {
-				store.DisableImageAccountByToken(authFile.AccessToken, "限流")
-				return nil, true, newRequestError("source_account_rate_limited", "当前账号 429 已限流，已禁用并切换下一个账号")
+				store.CooldownImageAccountByToken(authFile.AccessToken, "限流")
+				return nil, true, newRequestError("source_account_rate_limited", "当前账号 429 已限流，已进入冷却并切换下一个账号")
 			}
 			return nil, false, err
 		}
@@ -2078,12 +2110,12 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		}
 		if isInvalidImageTokenError(err) {
 			if isExternalResponsesRoute(route) {
-				return nil, false, err
+				return nil, true, newRequestError("external_responses_unavailable", "图片服务外部通道不可用，正在切换其他可用通道")
 			}
 			if _, deleteErr := store.DeleteAccounts([]string{authFile.AccessToken}); deleteErr != nil {
 				return nil, false, deleteErr
 			}
-			return nil, true, newRequestError("source_account_unavailable", "当前账号 401 不可用，已从账号池删除并切换下一个账号")
+			return nil, true, newRequestError("source_account_unavailable", "图片服务账号不可用，正在切换其他可用账号")
 		}
 		if preferredAccount && isConversationContextError(err) {
 			return nil, false, newRequestError("source_context_missing", "原始图片对应会话已失效，请使用普通编辑重试")
@@ -2643,12 +2675,27 @@ func inferErrorCode(err error) string {
 	return ""
 }
 
+func sanitizeImageUserFacingMessage(err error) string {
+	if err == nil {
+		return "图片服务暂时不可用，请稍后重试"
+	}
+	switch requestErrorCode(err) {
+	case "source_account_unavailable", "external_responses_unavailable":
+		return "图片服务暂时不可用，已尝试切换可用通道，请稍后重试"
+	}
+	if isInvalidImageTokenError(err) || isImageHTTPStatusError(err, 401) {
+		return "图片服务暂时不可用，已尝试切换可用通道，请稍后重试"
+	}
+	return err.Error()
+}
+
 func writeImageRequestError(w http.ResponseWriter, err error) {
+	message := sanitizeImageUserFacingMessage(err)
 	if code := requestErrorCode(err); code != "" {
-		writeAPIError(w, http.StatusBadGateway, code, err.Error())
+		writeAPIError(w, http.StatusBadGateway, code, message)
 		return
 	}
-	writeJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+	writeJSON(w, http.StatusBadGateway, map[string]any{"error": message})
 }
 
 func shouldRetryImageRequestWithNextAccount(err error) bool {
@@ -2661,7 +2708,7 @@ func isImageAccountSwitchError(err error) bool {
 	}
 	if code := requestErrorCode(err); code != "" {
 		switch code {
-		case "source_account_rate_limited", "source_account_unavailable":
+		case "source_account_rate_limited", "source_account_unavailable", "external_responses_unavailable":
 			return true
 		default:
 			return false

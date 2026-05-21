@@ -73,6 +73,8 @@ type AccountsConfig struct {
 	PreferRemoteRefresh         bool `toml:"prefer_remote_refresh"`
 	RefreshWorkers              int  `toml:"refresh_workers"`
 	ImageQuotaRefreshTTLSeconds int  `toml:"image_quota_refresh_ttl_seconds"`
+	DailyFreeImageLimit         int  `toml:"daily_free_image_limit"`
+	DailyPaidImageLimit         int  `toml:"daily_paid_image_limit"`
 }
 
 type StorageConfig struct {
@@ -612,6 +614,12 @@ func (c *Config) validate() error {
 	}
 	if c.Accounts.ImageQuotaRefreshTTLSeconds <= 0 {
 		c.Accounts.ImageQuotaRefreshTTLSeconds = 120
+	}
+	if c.Accounts.DailyFreeImageLimit <= 0 {
+		c.Accounts.DailyFreeImageLimit = 120
+	}
+	if c.Accounts.DailyPaidImageLimit <= 0 {
+		c.Accounts.DailyPaidImageLimit = 30
 	}
 	if c.ChatGPT.ImageAccountRetryTimes < 0 {
 		c.ChatGPT.ImageAccountRetryTimes = 0

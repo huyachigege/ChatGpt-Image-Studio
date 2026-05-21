@@ -51,6 +51,8 @@ type configPayload struct {
 		PreferRemoteRefresh         bool `json:"preferRemoteRefresh"`
 		RefreshWorkers              int  `json:"refreshWorkers"`
 		ImageQuotaRefreshTTLSeconds int  `json:"imageQuotaRefreshTTLSeconds"`
+		DailyFreeImageLimit         int  `json:"dailyFreeImageLimit"`
+		DailyPaidImageLimit         int  `json:"dailyPaidImageLimit"`
 	} `json:"accounts"`
 	Storage struct {
 		Backend                  string `json:"backend"`
@@ -188,6 +190,8 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"prefer_remote_refresh":           payload.Accounts.PreferRemoteRefresh,
 			"refresh_workers":                 payload.Accounts.RefreshWorkers,
 			"image_quota_refresh_ttl_seconds": payload.Accounts.ImageQuotaRefreshTTLSeconds,
+			"daily_free_image_limit":          payload.Accounts.DailyFreeImageLimit,
+			"daily_paid_image_limit":          payload.Accounts.DailyPaidImageLimit,
 		},
 		"storage": {
 			"backend":                    payload.Storage.Backend,
@@ -422,6 +426,8 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.Accounts.PreferRemoteRefresh = cfg.Accounts.PreferRemoteRefresh
 	payload.Accounts.RefreshWorkers = cfg.Accounts.RefreshWorkers
 	payload.Accounts.ImageQuotaRefreshTTLSeconds = cfg.Accounts.ImageQuotaRefreshTTLSeconds
+	payload.Accounts.DailyFreeImageLimit = cfg.Accounts.DailyFreeImageLimit
+	payload.Accounts.DailyPaidImageLimit = cfg.Accounts.DailyPaidImageLimit
 
 	payload.Storage.Backend = cfg.Storage.Backend
 	payload.Storage.ConfigBackend = cfg.Storage.ConfigBackend

@@ -198,6 +198,10 @@ func defaultImageRouteCapabilities(accountType string) []string {
 	}
 }
 
+func hasPositiveInt(value *int) bool {
+	return value != nil && *value > 0
+}
+
 func codexImageRouteCapabilities(has5hWindow bool, used5hPercent *float64, has7dWindow bool, used7dPercent *float64) []string {
 	if !has7dWindow {
 		return nil
@@ -421,6 +425,7 @@ func (s *Store) ListAccounts() ([]PublicAccount, error) {
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.restoreExpiredImageCooldownsLocked(localAuths, time.Now())
 
 	accounts := make([]PublicAccount, 0, len(localAuths))
 	for _, auth := range localAuths {
@@ -856,14 +861,12 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 						message = "检测到认证失效，已删除账号"
 					}
 				} else if strings.Contains(message, "HTTP 429") {
-					s.disableImageAuth(auth, "限流", func(state RuntimeState) RuntimeState {
-						state.Quota = 0
-						state.QuotaKnown = true
-						state.ImageRoutes = []string{}
-						state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
-						return state
-					})
-					message = "检测到 429 限流，已禁用账号"
+					cooldownUntil, ok := s.CooldownImageAccountByToken(result.token, "限流")
+					if ok {
+						message = "检测到 429 限流，已设置冷却至 " + cooldownUntil.UTC().Format(time.RFC3339)
+					} else {
+						message = "检测到 429 限流"
+					}
 				}
 				errors = append(errors, RefreshError{AccessToken: result.token, Error: message})
 				processed++
@@ -900,7 +903,7 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 				state.Codex5hWindowMinutes = result.info.Codex5hWindowMinutes
 				state.LastRefreshedAt = time.Now().UTC().Format(time.RFC3339)
 				if !imageRouteStatusUnavailable(state.Status) {
-					state.ImageRoutes = codexImageRouteCapabilities(result.info.Codex5hWindowMinutes != nil, result.info.Codex5hUsedPercent, result.info.Codex7dWindowMinutes != nil, result.info.Codex7dUsedPercent)
+					state.ImageRoutes = codexImageRouteCapabilities(hasPositiveInt(result.info.Codex5hWindowMinutes), result.info.Codex5hUsedPercent, hasPositiveInt(result.info.Codex7dWindowMinutes), result.info.Codex7dUsedPercent)
 					if state.ImageRoutes == nil {
 						state.ImageRoutes = []string{}
 					}
@@ -1087,6 +1090,7 @@ func (s *Store) acquireImageAuth(excluded map[string]struct{}, allow func(Public
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.restoreExpiredImageCooldownsLocked(localAuths, now)
 
 	accounts := make([]struct {
 		auth    LocalAuth
@@ -1151,6 +1155,7 @@ func (s *Store) acquireImageAuthWithLease(excluded map[string]struct{}, allow fu
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	s.restoreExpiredImageCooldownsLocked(localAuths, now)
 
 	candidates := make([]struct {
 		auth    LocalAuth
@@ -1499,6 +1504,58 @@ func (s *Store) isImageAccountCoolingDownLocked(name string, now time.Time) bool
 	return ok && now.Before(cooldownUntil)
 }
 
+func (s *Store) restoreExpiredImageCooldownsLocked(auths []LocalAuth, now time.Time) {
+	changed := false
+	for _, auth := range auths {
+		if s.restoreExpiredImageCooldownLocked(auth, now) {
+			changed = true
+		}
+	}
+	if changed {
+		_ = s.saveStateLocked()
+	}
+}
+
+func (s *Store) restoreExpiredImageCooldownLocked(auth LocalAuth, now time.Time) bool {
+	state, ok := s.states[strings.TrimSpace(auth.Name)]
+	if !ok || strings.TrimSpace(state.ImageCooldownUntil) == "" {
+		return false
+	}
+	cooldownUntil, ok := parseFlexibleTime(state.ImageCooldownUntil)
+	if !ok || now.Before(cooldownUntil) {
+		return false
+	}
+	state.ImageCooldownUntil = ""
+	state.ImageConsecutiveFailures = 0
+	if state.Status == "限流" {
+		state.Status = "正常"
+	}
+	if sameFlexibleTime(state.RestoreAt, cooldownUntil) {
+		state.RestoreAt = ""
+	}
+	if hasPositiveInt(state.Codex5hWindowMinutes) && state.Codex5hUsedPercent != nil && *state.Codex5hUsedPercent >= 100 {
+		state.Codex5hUsedPercent = nil
+	}
+	if hasPositiveInt(state.Codex7dWindowMinutes) && state.Codex7dUsedPercent != nil && *state.Codex7dUsedPercent >= 100 {
+		state.Codex7dUsedPercent = nil
+	}
+	state.ImageRoutes = imageRouteCapabilitiesForState(state, firstNonEmpty(state.Type, normalizePlanType(guessPlanFromPayload(auth.Data)), "Free"))
+	s.states[strings.TrimSpace(auth.Name)] = state
+	return true
+}
+
+func sameFlexibleTime(value string, target time.Time) bool {
+	parsed, ok := parseFlexibleTime(value)
+	return ok && parsed.Equal(target)
+}
+
+func imageRouteCapabilitiesForState(state RuntimeState, accountType string) []string {
+	if routes := codexImageRouteCapabilities(hasPositiveInt(state.Codex5hWindowMinutes), state.Codex5hUsedPercent, hasPositiveInt(state.Codex7dWindowMinutes), state.Codex7dUsedPercent); routes != nil {
+		return routes
+	}
+	return defaultImageRouteCapabilities(accountType)
+}
+
 func (s *Store) MarkImageTokenAbnormal(accessToken string) {
 	auth, err := s.findAuthByToken(accessToken)
 	if err != nil {
@@ -1536,6 +1593,31 @@ func (s *Store) DisableImageAccountByToken(accessToken string, status string) {
 		state.ImageRoutes = []string{}
 		return state
 	})
+}
+
+func (s *Store) CooldownImageAccountByToken(accessToken string, status string) (time.Time, bool) {
+	auth, err := s.findAuthByToken(accessToken)
+	if err != nil {
+		return time.Time{}, false
+	}
+	now := time.Now()
+	cooldownUntil := now.Add(imageAccountCooldownDuration)
+	s.upsertState(auth.Name, func(state RuntimeState) RuntimeState {
+		if hasPositiveInt(state.Codex5hWindowMinutes) && hasPositiveInt(state.Codex5hResetAfterSeconds) {
+			cooldownUntil = now.Add(time.Duration(*state.Codex5hResetAfterSeconds) * time.Second)
+		} else if hasPositiveInt(state.Codex7dWindowMinutes) && hasPositiveInt(state.Codex7dResetAfterSeconds) {
+			cooldownUntil = now.Add(time.Duration(*state.Codex7dResetAfterSeconds) * time.Second)
+		}
+		cooldownAt := cooldownUntil.UTC().Format(time.RFC3339)
+		state.Status = firstNonEmpty(strings.TrimSpace(status), "限流")
+		state.Quota = 0
+		state.QuotaKnown = true
+		state.ImageRoutes = []string{}
+		state.ImageCooldownUntil = cooldownAt
+		state.RestoreAt = cooldownAt
+		return state
+	})
+	return cooldownUntil, true
 }
 
 func (s *Store) RemoveImageRouteCapability(accessToken string, route string) int {
@@ -2098,7 +2180,7 @@ func (s *Store) buildPublicAccount(auth LocalAuth, syncState SyncState, remoteDi
 	if state.ImageRoutes == nil {
 		imageRoutes = defaultImageRouteCapabilities(accountType)
 	}
-	if codexRoutes := codexImageRouteCapabilities(state.Codex5hWindowMinutes != nil, state.Codex5hUsedPercent, state.Codex7dWindowMinutes != nil, state.Codex7dUsedPercent); codexRoutes != nil {
+	if codexRoutes := codexImageRouteCapabilities(hasPositiveInt(state.Codex5hWindowMinutes), state.Codex5hUsedPercent, hasPositiveInt(state.Codex7dWindowMinutes), state.Codex7dUsedPercent); codexRoutes != nil {
 		imageRoutes = codexRoutes
 	}
 	if auth.Disabled || status == "禁用" || status == "异常" || len(imageRoutes) == 0 {

@@ -46,3 +46,45 @@ func TestDetectCodexAccountTypeFromRateLimitHeadersIgnoresFreeWindow(t *testing.
 		t.Fatalf("expected no override, got %q", got)
 	}
 }
+
+func TestParseCodexRateLimitHeadersKeepsWeeklyWhenSecondaryWindowIsZero(t *testing.T) {
+	headers := http.Header{}
+	headers.Set("x-codex-primary-used-percent", "15")
+	headers.Set("x-codex-primary-reset-after-seconds", "604800")
+	headers.Set("x-codex-primary-window-minutes", "10080")
+	headers.Set("x-codex-secondary-used-percent", "99")
+	headers.Set("x-codex-secondary-reset-after-seconds", "300")
+	headers.Set("x-codex-secondary-window-minutes", "0")
+
+	info := parseCodexRateLimitHeaders(headers)
+	if info.Codex7dWindowMinutes == nil || *info.Codex7dWindowMinutes != 10080 {
+		t.Fatalf("Codex7dWindowMinutes = %v, want 10080", info.Codex7dWindowMinutes)
+	}
+	if info.Codex7dUsedPercent == nil || *info.Codex7dUsedPercent != 15 {
+		t.Fatalf("Codex7dUsedPercent = %v, want 15", info.Codex7dUsedPercent)
+	}
+	if info.Codex5hWindowMinutes != nil || info.Codex5hUsedPercent != nil || info.Codex5hResetAfterSeconds != nil {
+		t.Fatalf("5h window = (%v,%v,%v), want nil", info.Codex5hWindowMinutes, info.Codex5hUsedPercent, info.Codex5hResetAfterSeconds)
+	}
+}
+
+func TestParseCodexRateLimitHeadersClassifiesWindowsByLength(t *testing.T) {
+	headers := http.Header{}
+	headers.Set("x-codex-primary-used-percent", "25")
+	headers.Set("x-codex-primary-reset-after-seconds", "120")
+	headers.Set("x-codex-primary-window-minutes", "300")
+	headers.Set("x-codex-secondary-used-percent", "40")
+	headers.Set("x-codex-secondary-reset-after-seconds", "604800")
+	headers.Set("x-codex-secondary-window-minutes", "10080")
+
+	info := parseCodexRateLimitHeaders(headers)
+	if info.Codex7dWindowMinutes == nil || *info.Codex7dWindowMinutes != 10080 {
+		t.Fatalf("Codex7dWindowMinutes = %v, want 10080", info.Codex7dWindowMinutes)
+	}
+	if info.Codex5hWindowMinutes == nil || *info.Codex5hWindowMinutes != 300 {
+		t.Fatalf("Codex5hWindowMinutes = %v, want 300", info.Codex5hWindowMinutes)
+	}
+	if info.Codex5hResetAfterSeconds == nil || *info.Codex5hResetAfterSeconds != 120 {
+		t.Fatalf("Codex5hResetAfterSeconds = %v, want 120", info.Codex5hResetAfterSeconds)
+	}
+}

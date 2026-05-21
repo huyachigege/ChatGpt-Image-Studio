@@ -54,7 +54,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 	}
 	if code := requestErrorCode(err); code != "" {
 		switch code {
-		case "source_account_rate_limited":
+		case "source_account_rate_limited", "external_responses_unavailable":
 			return imageAttemptRetryableDisableResponses
 		case "source_account_unavailable", "image_account_route_unavailable":
 			return imageAttemptRetryable

@@ -57,6 +57,136 @@ func TestNeedsImageQuotaRefreshByResetTime(t *testing.T) {
 	}
 }
 
+func newCooldownTestStore(t *testing.T) *Store {
+	t.Helper()
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	backend := newFileAccountStorage(authDir, filepath.Join(rootDir, "state.json"), syncDir)
+	if err := backend.Init(); err != nil {
+		t.Fatalf("Init storage: %v", err)
+	}
+	return &Store{
+		authDir:                   authDir,
+		syncStateDir:              syncDir,
+		stateFile:                 filepath.Join(rootDir, "state.json"),
+		backend:                   backend,
+		defaultQuota:              5,
+		providerType:              "codex",
+		states:                    map[string]RuntimeState{},
+		imageLeases:               map[string]int{},
+		imageLeaseOwners:          map[string]imageLeaseOwner{},
+		imageAccountUsers:         map[string]string{},
+		imageConversationAccounts: map[string]string{},
+	}
+}
+
+func seedCooldownAuth(t *testing.T, store *Store, name, token string, state RuntimeState) {
+	t.Helper()
+	if err := store.storage().SaveAuthRaw(name, []byte(`{"type":"codex","access_token":"`+token+`","email":"`+name+`@example.com"}`)); err != nil {
+		t.Fatalf("SaveAuthRaw: %v", err)
+	}
+	store.setState(name, state)
+}
+
+func TestCooldownImageAccountByTokenUsesFiveHourReset(t *testing.T) {
+	store := newCooldownTestStore(t)
+	fiveHWindow := 300
+	fiveHReset := 120
+	weeklyWindow := 10080
+	weeklyReset := 604800
+	seedCooldownAuth(t, store, "paid.json", "token-paid", RuntimeState{
+		Type:                     "Plus",
+		Status:                   "正常",
+		Quota:                    5,
+		QuotaKnown:               true,
+		Codex5hWindowMinutes:     &fiveHWindow,
+		Codex5hResetAfterSeconds: &fiveHReset,
+		Codex7dWindowMinutes:     &weeklyWindow,
+		Codex7dResetAfterSeconds: &weeklyReset,
+		ImageRoutes:              []string{"legacy", "responses"},
+	})
+
+	before := time.Now().UTC()
+	cooldownUntil, ok := store.CooldownImageAccountByToken("token-paid", "限流")
+	if !ok {
+		t.Fatal("CooldownImageAccountByToken ok = false")
+	}
+	if cooldownUntil.Before(before.Add(110*time.Second)) || cooldownUntil.After(before.Add(130*time.Second)) {
+		t.Fatalf("cooldownUntil = %s, want about 120s", cooldownUntil)
+	}
+	state := store.getState("paid.json")
+	if state.Status != "限流" || state.ImageCooldownUntil == "" || state.RestoreAt == "" || len(state.ImageRoutes) != 0 {
+		t.Fatalf("cooldown state = %+v, want limited cooldown with empty routes", state)
+	}
+	auths, err := store.loadAuths()
+	if err != nil || len(auths) != 1 {
+		t.Fatalf("loadAuths = %d,%v", len(auths), err)
+	}
+	if auths[0].Disabled {
+		t.Fatal("cooldown should not disable auth")
+	}
+}
+
+func TestCooldownImageAccountByTokenUsesWeeklyResetForFreeAccount(t *testing.T) {
+	store := newCooldownTestStore(t)
+	weeklyWindow := 10080
+	weeklyReset := 3600
+	seedCooldownAuth(t, store, "free.json", "token-free", RuntimeState{
+		Type:                     "Free",
+		Status:                   "正常",
+		Quota:                    5,
+		QuotaKnown:               true,
+		Codex7dWindowMinutes:     &weeklyWindow,
+		Codex7dResetAfterSeconds: &weeklyReset,
+		ImageRoutes:              []string{"legacy"},
+	})
+
+	before := time.Now().UTC()
+	cooldownUntil, ok := store.CooldownImageAccountByToken("token-free", "限流")
+	if !ok {
+		t.Fatal("CooldownImageAccountByToken ok = false")
+	}
+	if cooldownUntil.Before(before.Add(3500*time.Second)) || cooldownUntil.After(before.Add(3700*time.Second)) {
+		t.Fatalf("cooldownUntil = %s, want about 3600s", cooldownUntil)
+	}
+}
+
+func TestRestoreExpiredImageCooldownRestoresRoutes(t *testing.T) {
+	store := newCooldownTestStore(t)
+	fiveHWindow := 300
+	weeklyWindow := 10080
+	used := 100.0
+	past := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	seedCooldownAuth(t, store, "paid.json", "token-paid", RuntimeState{
+		Type:                 "Plus",
+		Status:               "限流",
+		Quota:                0,
+		QuotaKnown:           true,
+		RestoreAt:            past,
+		ImageCooldownUntil:   past,
+		Codex5hWindowMinutes: &fiveHWindow,
+		Codex5hUsedPercent:   &used,
+		Codex7dWindowMinutes: &weeklyWindow,
+		ImageRoutes:          []string{},
+	})
+
+	accounts, err := store.ListAccounts()
+	if err != nil {
+		t.Fatalf("ListAccounts: %v", err)
+	}
+	if len(accounts) != 1 {
+		t.Fatalf("accounts len = %d, want 1", len(accounts))
+	}
+	account := accounts[0]
+	if account.Status != "正常" || account.RestoreAt != "" {
+		t.Fatalf("account after restore = %+v, want normal without restoreAt", account)
+	}
+	if !AccountSupportsImageRoute(account, "responses") {
+		t.Fatalf("routes = %#v, want responses restored", account.ImageRoutes)
+	}
+}
+
 func TestImportAuthFilesSkipsDuplicateToken(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")

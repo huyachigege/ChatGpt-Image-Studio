@@ -487,7 +487,7 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		if task.Units[unitIndex].DeferredCount > maxImageTaskDeferredAttempts {
 			message := "临时失败重试次数过多，请稍后重试"
 			if deferredErr != nil && strings.TrimSpace(deferredErr.Error()) != "" {
-				message = fmt.Sprintf("%s：%s", message, strings.TrimSpace(deferredErr.Error()))
+				message = fmt.Sprintf("%s：%s", message, strings.TrimSpace(sanitizeImageUserFacingMessage(deferredErr)))
 				if accountLabel := firstNonEmpty(deferredErr.accountEmail, deferredErr.accountFile); accountLabel != "" {
 					message = fmt.Sprintf("%s（账号：%s）", message, accountLabel)
 				}
@@ -514,9 +514,10 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 	} else if err != nil {
 		task.Units[unitIndex].FinishedAt = now
 		task.Units[unitIndex].Status = imageTaskStatusFailed
-		task.Units[unitIndex].Error = err.Error()
+		message := sanitizeImageUserFacingMessage(err)
+		task.Units[unitIndex].Error = message
 		task.Images[unitIndex].Status = "error"
-		task.Images[unitIndex].Error = err.Error()
+		task.Images[unitIndex].Error = message
 	} else if len(images) > 0 {
 		task.Units[unitIndex].FinishedAt = now
 		task.Units[unitIndex].Status = imageTaskStatusSucceeded

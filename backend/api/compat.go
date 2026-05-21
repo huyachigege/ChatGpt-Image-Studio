@@ -539,7 +539,8 @@ func compatTaskPayload(task *imageTaskView) (map[string]any, error) {
 		case imageTaskStatusExpired:
 			return nil, errors.New("image task expired")
 		default:
-			return nil, errors.New(firstNonEmpty(firstFailure, strings.TrimSpace(task.Error), "image generation failed"))
+			message := firstNonEmpty(firstFailure, strings.TrimSpace(task.Error), "image generation failed")
+			return nil, errors.New(sanitizeImageUserFacingMessage(errors.New(message)))
 		}
 	}
 
@@ -861,5 +862,5 @@ func writeCompatImageError(w http.ResponseWriter, err error) {
 		writeAPIError(w, http.StatusBadRequest, inputErr.code, inputErr.message)
 		return
 	}
-	writeAPIError(w, http.StatusBadGateway, requestErrorCode(err), err.Error())
+	writeAPIError(w, http.StatusBadGateway, requestErrorCode(err), sanitizeImageUserFacingMessage(err))
 }

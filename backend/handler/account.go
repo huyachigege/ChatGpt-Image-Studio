@@ -82,7 +82,7 @@ func FetchAccountInfoWithProxy(ctx context.Context, accessToken string, authData
 	if accountType == "" {
 		accountType = "Free"
 	}
-	if codexLimits.Codex5hWindowMinutes != nil && accountType == "Free" {
+	if hasPositiveHeaderInt(codexLimits.Codex5hWindowMinutes) && accountType == "Free" {
 		accountType = "Plus"
 	}
 	status := "正常"
@@ -284,41 +284,90 @@ func fetchCodexRateLimits(ctx context.Context, client *http.Client, accessToken 
 
 func detectCodexAccountTypeFromRateLimitHeaders(headers http.Header) string {
 	info := parseCodexRateLimitHeaders(headers)
-	if info.Codex5hWindowMinutes != nil && *info.Codex5hWindowMinutes > 0 && *info.Codex5hWindowMinutes <= 360 {
+	if hasPositiveHeaderInt(info.Codex5hWindowMinutes) {
 		return "Plus"
 	}
 	return ""
 }
 
+type codexRateLimitWindow struct {
+	usedPercent       *float64
+	resetAfterSeconds *int
+	windowMinutes     *int
+}
+
 func parseCodexRateLimitHeaders(headers http.Header) *CodexRateLimitInfo {
 	info := &CodexRateLimitInfo{}
-	applyCodexRateLimitWindow(info,
-		parseHeaderPercent(headers.Get("x-codex-primary-used-percent")),
-		parseHeaderIntPtr(headers.Get("x-codex-primary-reset-after-seconds")),
-		parseHeaderIntPtr(headers.Get("x-codex-primary-window-minutes")),
-	)
-	applyCodexRateLimitWindow(info,
-		parseHeaderPercent(headers.Get("x-codex-secondary-used-percent")),
-		parseHeaderIntPtr(headers.Get("x-codex-secondary-reset-after-seconds")),
-		parseHeaderIntPtr(headers.Get("x-codex-secondary-window-minutes")),
-	)
+	windows := []codexRateLimitWindow{
+		{
+			usedPercent:       parseHeaderPercent(headers.Get("x-codex-primary-used-percent")),
+			resetAfterSeconds: parseHeaderIntPtr(headers.Get("x-codex-primary-reset-after-seconds")),
+			windowMinutes:     parseHeaderIntPtr(headers.Get("x-codex-primary-window-minutes")),
+		},
+		{
+			usedPercent:       parseHeaderPercent(headers.Get("x-codex-secondary-used-percent")),
+			resetAfterSeconds: parseHeaderIntPtr(headers.Get("x-codex-secondary-reset-after-seconds")),
+			windowMinutes:     parseHeaderIntPtr(headers.Get("x-codex-secondary-window-minutes")),
+		},
+	}
+	applyCodexRateLimitWindows(info, windows)
 	info.CodexQuotaKnown = info.Codex7dUsedPercent != nil || info.Codex7dResetAfterSeconds != nil || info.Codex7dWindowMinutes != nil || info.Codex5hUsedPercent != nil || info.Codex5hResetAfterSeconds != nil || info.Codex5hWindowMinutes != nil
 	return info
 }
 
-func applyCodexRateLimitWindow(info *CodexRateLimitInfo, usedPercent *float64, resetAfterSeconds *int, windowMinutes *int) {
-	if info == nil || windowMinutes == nil {
+func applyCodexRateLimitWindows(info *CodexRateLimitInfo, windows []codexRateLimitWindow) {
+	if info == nil {
 		return
 	}
-	if *windowMinutes > 0 && *windowMinutes <= 360 {
-		info.Codex5hUsedPercent = usedPercent
-		info.Codex5hResetAfterSeconds = resetAfterSeconds
-		info.Codex5hWindowMinutes = windowMinutes
+	valid := make([]codexRateLimitWindow, 0, len(windows))
+	for _, window := range windows {
+		if hasPositiveHeaderInt(window.windowMinutes) {
+			valid = append(valid, window)
+		}
+	}
+	if len(valid) == 0 {
 		return
 	}
-	info.Codex7dUsedPercent = usedPercent
-	info.Codex7dResetAfterSeconds = resetAfterSeconds
-	info.Codex7dWindowMinutes = windowMinutes
+	if len(valid) == 1 {
+		applySingleCodexRateLimitWindow(info, valid[0])
+		return
+	}
+	weeklyIndex := 0
+	if *valid[1].windowMinutes > *valid[0].windowMinutes {
+		weeklyIndex = 1
+	}
+	applyCodexWeeklyWindow(info, valid[weeklyIndex])
+	for index, window := range valid {
+		if index != weeklyIndex {
+			applyCodexFiveHourWindow(info, window)
+			return
+		}
+	}
+}
+
+func applySingleCodexRateLimitWindow(info *CodexRateLimitInfo, window codexRateLimitWindow) {
+	minutes := *window.windowMinutes
+	if minutes == 300 || minutes <= 360 {
+		applyCodexFiveHourWindow(info, window)
+		return
+	}
+	applyCodexWeeklyWindow(info, window)
+}
+
+func applyCodexFiveHourWindow(info *CodexRateLimitInfo, window codexRateLimitWindow) {
+	info.Codex5hUsedPercent = window.usedPercent
+	info.Codex5hResetAfterSeconds = window.resetAfterSeconds
+	info.Codex5hWindowMinutes = window.windowMinutes
+}
+
+func applyCodexWeeklyWindow(info *CodexRateLimitInfo, window codexRateLimitWindow) {
+	info.Codex7dUsedPercent = window.usedPercent
+	info.Codex7dResetAfterSeconds = window.resetAfterSeconds
+	info.Codex7dWindowMinutes = window.windowMinutes
+}
+
+func hasPositiveHeaderInt(value *int) bool {
+	return value != nil && *value > 0
 }
 
 func parseHeaderInt(value string) int {
