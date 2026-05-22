@@ -2091,10 +2091,10 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
-		if isImageHTTPStatusError(err, 429) {
+		if isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) {
 			if !isExternalResponsesRoute(route) {
 				store.CooldownImageAccountByToken(authFile.AccessToken, "限流")
-				return nil, true, newRequestError("source_account_rate_limited", "当前账号 429 已限流，已进入冷却并切换下一个账号")
+				return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，已进入冷却并切换下一个账号")
 			}
 			return nil, false, err
 		}
@@ -2714,7 +2714,7 @@ func isImageAccountSwitchError(err error) bool {
 			return false
 		}
 	}
-	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err)
+	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err)
 }
 
 func isImageFiveHourLimitError(err error) bool {

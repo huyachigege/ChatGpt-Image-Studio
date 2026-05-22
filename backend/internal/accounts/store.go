@@ -860,12 +860,12 @@ func (s *Store) RefreshAccountsWithOptions(ctx context.Context, accessTokens []s
 					} else {
 						message = "检测到认证失效，已删除账号"
 					}
-				} else if strings.Contains(message, "HTTP 429") {
+				} else if strings.Contains(message, "HTTP 403") || strings.Contains(message, "HTTP 429") {
 					cooldownUntil, ok := s.CooldownImageAccountByToken(result.token, "限流")
 					if ok {
-						message = "检测到 429 限流，已设置冷却至 " + cooldownUntil.UTC().Format(time.RFC3339)
+						message = "检测到限流，已设置冷却至 " + cooldownUntil.UTC().Format(time.RFC3339)
 					} else {
-						message = "检测到 429 限流"
+						message = "检测到限流"
 					}
 				}
 				errors = append(errors, RefreshError{AccessToken: result.token, Error: message})

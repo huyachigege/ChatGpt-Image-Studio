@@ -491,11 +491,13 @@ func TestResolveImageAcquireError(t *testing.T) {
 	}
 }
 
-func TestOnlyHTTP401And429SwitchImageAccount(t *testing.T) {
+func TestOnlyHTTP401403And429SwitchImageAccount(t *testing.T) {
 	switchErrors := []error{
 		errors.New("conversation returned 401: unauthorized"),
+		errors.New("pre-upload returned 403: forbidden"),
 		errors.New("responses returned 429: too many requests"),
 		errors.New("http 401"),
+		errors.New("status 403"),
 		errors.New("status 429"),
 		errors.New("5h limit reached"),
 		errors.New("检测到 Codex 5h 限流，仅保留 legacy 链路"),
@@ -748,8 +750,8 @@ func TestStudioRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited) returned error: %v", err)
 	}
-	if limitedAccount.Status != "正常" {
-		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "正常")
+	if limitedAccount.Status != "限流" {
+		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "限流")
 	}
 	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
 		t.Fatalf("limited account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
@@ -788,7 +790,7 @@ func TestStudioResponsesRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 		},
 		behavior: compatClientBehavior{
 			responsesGenerateErrors: map[string]error{
-				"token-limited-paid": errors.New("responses failed: HTTP 429 too many requests"),
+				"token-limited-paid": errors.New("responses failed: HTTP 403 forbidden"),
 			},
 		},
 	})
@@ -818,8 +820,8 @@ func TestStudioResponsesRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited paid) returned error: %v", err)
 	}
-	if limitedAccount.Status != "正常" {
-		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "正常")
+	if limitedAccount.Status != "限流" {
+		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "限流")
 	}
 	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
 		t.Fatalf("limited paid account routes = %v, want legacy retained", limitedAccount.ImageRoutes)

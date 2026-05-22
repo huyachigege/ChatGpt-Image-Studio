@@ -62,7 +62,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 			return imageAttemptFatal
 		}
 	}
-	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
+	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
 		return imageAttemptRetryableDisableResponses
 	}
 	if isImageHTTPStatusError(err, 502) || isImageHTTPStatusError(err, 503) {
