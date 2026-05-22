@@ -149,12 +149,13 @@ type imageRequestLogFilterOptions struct {
 }
 
 type imageRequestLogStore struct {
-	mu             sync.Mutex
-	path           string
-	legacyPath     string
-	db             *sql.DB
-	items          []imageRequestLogEntry
-	promptMetadata map[string]imageGalleryPromptMetadata
+	mu                   sync.Mutex
+	path                 string
+	legacyPath           string
+	db                   *sql.DB
+	items                []imageRequestLogEntry
+	promptMetadata       map[string]imageGalleryPromptMetadata
+	promptMetadataLoaded bool
 }
 
 func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
@@ -203,10 +204,12 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 	if len(s.items) > maxImageRequestLogEntries {
 		s.items = s.items[:maxImageRequestLogEntries]
 	}
-	if s.promptMetadata == nil {
-		s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
+	if s.promptMetadataLoaded {
+		if s.promptMetadata == nil {
+			s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
+		}
+		addImageRequestLogPromptMetadata(s.promptMetadata, entry)
 	}
-	addImageRequestLogPromptMetadata(s.promptMetadata, entry)
 	_ = s.append(entry)
 }
 
@@ -232,7 +235,7 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.promptMetadata == nil {
+	if !s.promptMetadataLoaded {
 		s.rebuildImagePromptMetadataLocked()
 	}
 	for key, metadata := range s.promptMetadata {
@@ -262,6 +265,7 @@ func (s *imageRequestLogStore) rebuildImagePromptMetadataLocked() {
 				addImageRequestLogPromptMetadata(metadataByName, entry)
 			}
 			s.promptMetadata = metadataByName
+			s.promptMetadataLoaded = true
 			return
 		}
 	}
@@ -269,6 +273,7 @@ func (s *imageRequestLogStore) rebuildImagePromptMetadataLocked() {
 		addImageRequestLogPromptMetadata(metadataByName, entry)
 	}
 	s.promptMetadata = metadataByName
+	s.promptMetadataLoaded = true
 }
 
 func addImageRequestLogPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, entry imageRequestLogEntry) {
@@ -538,7 +543,8 @@ func (s *imageRequestLogStore) loadFromDB() {
 		items = append(items, requestLogSummaryToEntry(summary))
 	}
 	s.items = items
-	s.rebuildImagePromptMetadataLocked()
+	s.promptMetadata = nil
+	s.promptMetadataLoaded = false
 }
 
 func (s *imageRequestLogStore) append(entry imageRequestLogEntry) error {
