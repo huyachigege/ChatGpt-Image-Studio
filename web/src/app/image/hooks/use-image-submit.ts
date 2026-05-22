@@ -631,13 +631,16 @@ export function useImageSubmit({
     const conversationId = selectedConversationId ?? makeId();
     const turnId = makeId();
     const expectedCount = mode === "generate" ? parsedCount : 1;
-    const contextReference =
-      mode === "generate" && selectedConversationId && sourceImages.length === 0
-        ? buildLatestImageContextReference(conversationTurns)
-        : undefined;
+    const hasUserUploadedImages = sourceImages.length > 0;
+    const contextReference = selectedConversationId
+      ? buildLatestImageContextReference(conversationTurns)
+      : undefined;
     const conversationContext = buildImageConversationContext(conversationTurns);
-    const referenceImage = buildLatestImageReferenceImage(conversationTurns, buildImageDataUrl);
-    const referenceImages = referenceImage && mode === "generate" && sourceImages.length === 0 ? [referenceImage] : undefined;
+    const referenceImage =
+      !hasUserUploadedImages && selectedConversationId
+        ? buildLatestImageReferenceImage(conversationTurns, buildImageDataUrl)
+        : undefined;
+    const referenceImages = referenceImage ? [referenceImage] : undefined;
     const draftTurn = createConversationTurn({
       turnId,
       title: buildConversationTitle(mode, prompt),

@@ -316,6 +316,9 @@ func (s *Server) finishAccountRefreshRun(run *accountRefreshRunResult) {
 	run.UpdatedAt = run.FinishedAt
 	s.setAccountRefreshCancel(nil)
 	s.setAccountRefreshRun(run)
+	if s.imageTasks != nil {
+		s.imageTasks.triggerSchedule()
+	}
 }
 
 func newAPIClientCacheKey(cfg *config.Config) string {
@@ -1034,6 +1037,9 @@ func (s *Server) handleRefreshAccounts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.imageTasks != nil {
+		s.imageTasks.triggerSchedule()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"items":     items,
 		"refreshed": refreshed,

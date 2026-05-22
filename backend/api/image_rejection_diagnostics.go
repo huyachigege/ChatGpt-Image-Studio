@@ -59,7 +59,16 @@ func (s *Server) handleDiagnoseImageRejection(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	if strings.TrimSpace(result.ReferencePrompt) != "" && externalResponsesConfigReady(cfg) {
+	if result.OmitOriginalReferences && len(images) > 0 && len(result.ReferenceImages) == 0 {
+		pixelatedRefs := s.buildPixelatedReferenceImages(images, req.SourceImages)
+		if len(pixelatedRefs) > 0 {
+			result.ReferenceImages = pixelatedRefs
+			result.OmitOriginalReferences = false
+			result.Notes = append(result.Notes, "已对原参考图加轻微马赛克处理以规避安全检测")
+		}
+	}
+
+	if strings.TrimSpace(result.ReferencePrompt) != "" && len(result.ReferenceImages) == 0 && externalResponsesConfigReady(cfg) {
 		if refs := s.generateDiagnosticReferenceImage(r.Context(), r, cfg, result.ReferencePrompt, req.Size, req.Quality); len(refs) > 0 {
 			result.ReferenceImages = refs
 		}
@@ -90,6 +99,30 @@ func (s *Server) resolveDiagnosticSourceImages(sources []imageTaskSourceImagePay
 		}
 	}
 	return images, nil
+}
+
+func (s *Server) buildPixelatedReferenceImages(images [][]byte, sources []imageTaskSourceImagePayload) []imageRejectionDiagnosticReference {
+	const mosaicBlockSize = 12
+	refs := make([]imageRejectionDiagnosticReference, 0, len(images))
+	for i, data := range images {
+		if len(data) == 0 {
+			continue
+		}
+		dataURL, err := pixelateImageToDataURL(data, mosaicBlockSize)
+		if err != nil {
+			continue
+		}
+		id := fmt.Sprintf("pixelated-reference-%d", i)
+		if i < len(sources) && sources[i].ID != "" {
+			id = sources[i].ID + "-pixelated"
+		}
+		refs = append(refs, imageRejectionDiagnosticReference{
+			ID:      id,
+			Name:    "pixelated-reference.png",
+			DataURL: dataURL,
+		})
+	}
+	return refs
 }
 
 func externalResponsesConfigReady(cfg config.ExternalResponsesConfig) bool {

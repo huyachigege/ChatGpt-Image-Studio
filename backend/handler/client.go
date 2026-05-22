@@ -204,6 +204,37 @@ func (c *ChatGPTClient) GenerateImageWithContext(ctx context.Context, prompt, mo
 	return c.generateImage(ctx, prompt, model, size, quality, background, conversationID, parentMessageID)
 }
 
+func (c *ChatGPTClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]ImageResult, error) {
+	if len(images) == 0 {
+		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	}
+
+	var uploads []*UploadedFile
+	for i, imgData := range images {
+		filename := fmt.Sprintf("reference_%d.png", i)
+		uploaded, err := c.UploadFile(ctx, imgData, filename, detectMIME(imgData))
+		if err != nil {
+			return nil, fmt.Errorf("upload reference image %d: %w", i, err)
+		}
+		uploads = append(uploads, uploaded)
+	}
+
+	fullPrompt := prompt
+	if size != "" && size != "auto" && size != "1024x1024" {
+		fullPrompt = fmt.Sprintf("Generate an image with size %s. %s", size, fullPrompt)
+	}
+	if quality == "hd" || quality == "high" {
+		fullPrompt = fmt.Sprintf("Generate a high-quality, detailed image: %s", fullPrompt)
+	}
+	if background == "transparent" {
+		fullPrompt = fullPrompt + " The image must have a transparent background (PNG with alpha channel)."
+	}
+	fullPrompt += " Use the provided reference images as visual context for style, composition, and continuity."
+
+	body := c.buildMultimodalBody(fullPrompt, model, uploads, nil)
+	return c.doConversation(ctx, body)
+}
+
 func (c *ChatGPTClient) generateImage(ctx context.Context, prompt, model string, size, quality, background, conversationID, parentMessageID string) ([]ImageResult, error) {
 	fullPrompt := prompt
 	if size != "" && size != "auto" && size != "1024x1024" {

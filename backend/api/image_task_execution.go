@@ -106,6 +106,18 @@ func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) 
 	return nil
 }
 
+func imageTaskAttemptAllowAnyAccount(task *imageTask) func(accounts.PublicAccount) bool {
+	if task == nil {
+		return nil
+	}
+	if task.Requirement.NeedPaid {
+		return func(account accounts.PublicAccount) bool {
+			return isPaidImageAccountType(account.Type)
+		}
+	}
+	return nil
+}
+
 func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[string]struct{}, route string) (*imageTaskLease, error) {
 	store := s.getStore()
 	allowDisabled := s.allowDisabledStudioImageAccounts()
@@ -720,6 +732,9 @@ func (s *Server) resolveTaskSourceImageBytes(source imageTaskSourceImage) ([]byt
 	}
 	if index := strings.Index(rawURL, "/v1/files/image/"); index >= 0 {
 		name := rawURL[index+len("/v1/files/image/"):]
+		if qmark := strings.Index(name, "?"); qmark >= 0 {
+			name = name[:qmark]
+		}
 		path := s.resolveImageFilePath(name)
 		if path == "" {
 			return nil, fmt.Errorf("image not found")

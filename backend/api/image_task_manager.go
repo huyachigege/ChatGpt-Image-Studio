@@ -738,6 +738,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	}
 
 	allowAccount := m.allowAccountFn(task)
+	isFreeResolution := strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "free")
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
 		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
 			excluded,
@@ -757,7 +758,16 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 			}, imageTaskBlocker{}, nil
 		}
 		if errors.Is(err, accounts.ErrSelectedImageGroupsExhausted) || errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
-			if preferredRoute == "responses" && m.server.externalResponsesConfigured() {
+			if isFreeResolution && allowAccount != nil {
+				allowAny := imageTaskAttemptAllowAnyAccount(task)
+				auth2, account2, decision2, release2, err2 := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
+					excluded, allowAny, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, preferredRoute,
+				)
+				if err2 == nil {
+					return &imageTaskLease{auth: auth2, account: account2, decision: decision2, release: release2}, imageTaskBlocker{}, nil
+				}
+			}
+			if !isFreeResolution && m.server.externalResponsesConfigured() {
 				return m.externalResponsesLease(), imageTaskBlocker{}, nil
 			}
 			if len(excluded) > 0 {
@@ -785,7 +795,16 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		}, imageTaskBlocker{}, nil
 	}
 	if errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
-		if preferredRoute == "responses" && m.server.externalResponsesConfigured() {
+		if isFreeResolution && allowAccount != nil {
+			allowAny := imageTaskAttemptAllowAnyAccount(task)
+			auth2, account2, release2, err2 := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(
+				excluded, allowAny, allowDisabled, task.UserID, task.ConversationID, preferredRoute,
+			)
+			if err2 == nil {
+				return &imageTaskLease{auth: auth2, account: account2, release: release2}, imageTaskBlocker{}, nil
+			}
+		}
+		if !isFreeResolution && m.server.externalResponsesConfigured() {
 			return m.externalResponsesLease(), imageTaskBlocker{}, nil
 		}
 		if len(excluded) > 0 {
