@@ -7,17 +7,22 @@ import (
 	_ "image/gif"
 	"image/jpeg"
 	_ "image/png"
+	"io"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
+
+	"chatgpt2api/internal/users"
 )
 
 const (
-	defaultImageDir        = "data/tmp/image"
-	imageThumbnailMaxDim   = 720
+	defaultImageDir           = "data/tmp/image"
+	imageThumbnailMaxDim      = 720
 	imageThumbnailJPEGQuality = 88
 )
 
@@ -139,7 +144,7 @@ func (s *Server) handleImageFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	serveImageFile(w, r, path)
+	s.serveImageFile(w, r, path)
 }
 
 func (s *Server) handleImageThumbnail(w http.ResponseWriter, r *http.Request) {
@@ -158,7 +163,7 @@ func (s *Server) handleImageThumbnail(w http.ResponseWriter, r *http.Request) {
 	thumbPath, err := s.ensureImageThumbnail(path)
 	if err != nil {
 		slog.Warn("serve original image because thumbnail generation failed", "file", filepath.Base(path), "error", err)
-		serveImageFile(w, r, path)
+		s.serveImageFile(w, r, path)
 		return
 	}
 
@@ -167,7 +172,7 @@ func (s *Server) handleImageThumbnail(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, thumbPath)
 }
 
-func serveImageFile(w http.ResponseWriter, r *http.Request, path string) {
+func (s *Server) serveImageFile(w http.ResponseWriter, r *http.Request, path string) {
 	ext := strings.ToLower(filepath.Ext(path))
 	contentTypes := map[string]string{
 		".png":  "image/png",
@@ -183,7 +188,126 @@ func serveImageFile(w http.ResponseWriter, r *http.Request, path string) {
 
 	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	w.Header().Set("Content-Type", ct)
-	http.ServeFile(w, r, path)
+	limiter := s.imageDownloadRateLimiter(r)
+	if limiter == nil {
+		http.ServeFile(w, r, path)
+		return
+	}
+	serveRateLimitedFile(w, r, path, limiter)
+}
+
+func (s *Server) imageDownloadRateLimiter(r *http.Request) *rateLimiter {
+	if s == nil || s.cfg == nil {
+		return nil
+	}
+	identity, ok := s.imageIdentityFromRequest(r)
+	if ok && identity.Role == users.RoleAdmin {
+		return nil
+	}
+	kbps := s.cfg.Server.ImageDownloadRateKBPerSecond
+	if kbps <= 0 {
+		return nil
+	}
+	key := "anonymous"
+	if ok && strings.TrimSpace(identity.UserID) != "" {
+		key = "user:" + strings.TrimSpace(identity.UserID)
+	}
+	s.imageDownloadLimitersMu.Lock()
+	defer s.imageDownloadLimitersMu.Unlock()
+	if s.imageDownloadLimiters == nil {
+		s.imageDownloadLimiters = map[string]*rateLimiter{}
+	}
+	bytesPerSecond := int64(kbps) * 1024
+	limiter := s.imageDownloadLimiters[key]
+	if limiter == nil || limiter.rate != bytesPerSecond {
+		limiter = newRateLimiter(bytesPerSecond)
+		s.imageDownloadLimiters[key] = limiter
+	}
+	return limiter
+}
+
+func serveRateLimitedFile(w http.ResponseWriter, r *http.Request, path string, limiter *rateLimiter) {
+	file, err := os.Open(path)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+	http.ServeContent(w, r, info.Name(), info.ModTime(), &rateLimitedReadSeeker{ReadSeeker: file, limiter: limiter})
+}
+
+type rateLimiter struct {
+	mu        sync.Mutex
+	rate      int64
+	capacity  int64
+	available int64
+	updated   time.Time
+}
+
+func newRateLimiter(bytesPerSecond int64) *rateLimiter {
+	if bytesPerSecond < 1 {
+		bytesPerSecond = 1
+	}
+	return &rateLimiter{rate: bytesPerSecond, capacity: bytesPerSecond, available: bytesPerSecond, updated: time.Now()}
+}
+
+func (l *rateLimiter) wait(n int) {
+	if l == nil || n <= 0 {
+		return
+	}
+	remaining := int64(n)
+	for remaining > 0 {
+		l.mu.Lock()
+		now := time.Now()
+		elapsed := now.Sub(l.updated)
+		if elapsed > 0 {
+			l.available += int64(float64(l.rate) * elapsed.Seconds())
+			if l.available > l.capacity {
+				l.available = l.capacity
+			}
+			l.updated = now
+		}
+		if l.available > 0 {
+			take := remaining
+			if take > l.available {
+				take = l.available
+			}
+			l.available -= take
+			remaining -= take
+			l.mu.Unlock()
+			continue
+		}
+		wait := time.Duration(remaining) * time.Second / time.Duration(l.rate)
+		if wait < 10*time.Millisecond {
+			wait = 10 * time.Millisecond
+		}
+		l.mu.Unlock()
+		time.Sleep(wait)
+	}
+}
+
+type rateLimitedReadSeeker struct {
+	io.ReadSeeker
+	limiter *rateLimiter
+}
+
+func (r *rateLimitedReadSeeker) Read(p []byte) (int, error) {
+	if r == nil || r.limiter == nil {
+		return r.ReadSeeker.Read(p)
+	}
+	if int64(len(p)) > r.limiter.rate/4 && r.limiter.rate >= 4 {
+		p = p[:r.limiter.rate/4]
+	}
+	n, err := r.ReadSeeker.Read(p)
+	if n > 0 {
+		r.limiter.wait(n)
+	}
+	return n, err
 }
 
 func (s *Server) ensureImageThumbnail(path string) (string, error) {

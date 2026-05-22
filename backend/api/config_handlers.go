@@ -21,13 +21,14 @@ type configPayload struct {
 		MaxUploadSizeMB int    `json:"maxUploadSizeMB"`
 	} `json:"app"`
 	Server struct {
-		Host                     string `json:"host"`
-		Port                     int    `json:"port"`
-		StaticDir                string `json:"staticDir"`
-		MaxImageConcurrency      int    `json:"maxImageConcurrency"`
-		ImageQueueLimit          int    `json:"imageQueueLimit"`
-		ImageQueueTimeoutSeconds int    `json:"imageQueueTimeoutSeconds"`
-		ImageTaskQueueTTLSeconds int    `json:"imageTaskQueueTtlSeconds"`
+		Host                         string `json:"host"`
+		Port                         int    `json:"port"`
+		StaticDir                    string `json:"staticDir"`
+		MaxImageConcurrency          int    `json:"maxImageConcurrency"`
+		ImageQueueLimit              int    `json:"imageQueueLimit"`
+		ImageQueueTimeoutSeconds     int    `json:"imageQueueTimeoutSeconds"`
+		ImageTaskQueueTTLSeconds     int    `json:"imageTaskQueueTtlSeconds"`
+		ImageDownloadRateKBPerSecond int    `json:"imageDownloadRateKbps"`
 	} `json:"server"`
 	ChatGPT struct {
 		Model                            string `json:"model"`
@@ -167,6 +168,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"image_queue_limit":            payload.Server.ImageQueueLimit,
 			"image_queue_timeout_seconds":  payload.Server.ImageQueueTimeoutSeconds,
 			"image_task_queue_ttl_seconds": payload.Server.ImageTaskQueueTTLSeconds,
+			"image_download_rate_kbps":     payload.Server.ImageDownloadRateKBPerSecond,
 		},
 		"chatgpt": {
 			"model":                                payload.ChatGPT.Model,
@@ -405,6 +407,7 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.Server.ImageQueueLimit = cfg.Server.ImageQueueLimit
 	payload.Server.ImageQueueTimeoutSeconds = cfg.Server.ImageQueueTimeoutSeconds
 	payload.Server.ImageTaskQueueTTLSeconds = cfg.Server.ImageTaskQueueTTLSeconds
+	payload.Server.ImageDownloadRateKBPerSecond = cfg.Server.ImageDownloadRateKBPerSecond
 
 	payload.ChatGPT.Model = cfg.ChatGPT.Model
 	payload.ChatGPT.SSETimeout = cfg.ChatGPT.SSETimeout

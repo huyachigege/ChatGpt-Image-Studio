@@ -23,10 +23,11 @@ var (
 )
 
 type imageTaskLease struct {
-	auth     *accounts.LocalAuth
-	account  accounts.PublicAccount
-	decision accounts.ImageAccountRoutingDecision
-	release  func()
+	auth       *accounts.LocalAuth
+	account    accounts.PublicAccount
+	decision   accounts.ImageAccountRoutingDecision
+	release    func()
+	forceRoute string
 }
 
 type imageTaskManager struct {
@@ -756,6 +757,9 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 			}, imageTaskBlocker{}, nil
 		}
 		if errors.Is(err, accounts.ErrSelectedImageGroupsExhausted) || errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
+			if preferredRoute == "responses" && m.server.externalResponsesConfigured() {
+				return m.externalResponsesLease(), imageTaskBlocker{}, nil
+			}
 			if len(excluded) > 0 {
 				imageTaskUnitClearAttempts(task, unitIndex)
 				return m.acquireLeaseForTask(task, unitIndex)
@@ -781,6 +785,9 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		}, imageTaskBlocker{}, nil
 	}
 	if errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
+		if preferredRoute == "responses" && m.server.externalResponsesConfigured() {
+			return m.externalResponsesLease(), imageTaskBlocker{}, nil
+		}
 		if len(excluded) > 0 {
 			imageTaskUnitClearAttempts(task, unitIndex)
 			return m.acquireLeaseForTask(task, unitIndex)
@@ -788,6 +795,14 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		return nil, m.busyBlocker(task), nil
 	}
 	return nil, imageTaskBlocker{}, err
+}
+
+func (m *imageTaskManager) externalResponsesLease() *imageTaskLease {
+	return &imageTaskLease{
+		auth:       &accounts.LocalAuth{AccessToken: "external_responses", Name: "external_responses"},
+		account:    accounts.PublicAccount{Type: "External Responses", Email: m.server.externalResponsesLogAccount(), Status: "正常"},
+		forceRoute: "external_responses",
+	}
 }
 
 func (m *imageTaskManager) hasPotentialCompatibleAccounts(task *imageTask) (bool, error) {

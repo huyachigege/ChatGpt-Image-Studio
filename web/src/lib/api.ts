@@ -1,6 +1,10 @@
 import { httpRequest } from "@/lib/request";
 import webConfig from "@/constants/common-env";
-import { getStoredAuthKey, getStoredAuthUser, type AuthUser } from "@/store/auth";
+import {
+  getStoredAuthKey,
+  getStoredAuthUser,
+  type AuthUser,
+} from "@/store/auth";
 import {
   buildImageAccountPolicyHeader,
   normalizeImageAccountPolicy,
@@ -340,6 +344,7 @@ export type ConfigPayload = {
     imageQueueLimit: number;
     imageQueueTimeoutSeconds: number;
     imageTaskQueueTtlSeconds: number;
+    imageDownloadRateKbps: number;
   };
   chatgpt: {
     model: string;
@@ -583,7 +588,9 @@ let cachedConfig: ConfigPayload | null = null;
 export function setCachedImageAccountPolicy(
   policy: StoredImageAccountPolicy | null,
 ) {
-  cachedImageAccountPolicy = policy ? normalizeImageAccountPolicy(policy) : null;
+  cachedImageAccountPolicy = policy
+    ? normalizeImageAccountPolicy(policy)
+    : null;
 }
 
 function setCachedConfig(config: ConfigPayload | null) {
@@ -745,7 +752,10 @@ export type InviteItem = {
 };
 
 export async function login(authKey: string): Promise<AuthResponse>;
-export async function login(username: string, password: string): Promise<AuthResponse>;
+export async function login(
+  username: string,
+  password: string,
+): Promise<AuthResponse>;
 export async function login(usernameOrKey: string, password?: string) {
   const first = String(usernameOrKey || "").trim();
   if (typeof password === "string") {
@@ -765,7 +775,12 @@ export async function login(usernameOrKey: string, password?: string) {
   });
 }
 
-export async function registerUser(payload: { username: string; password: string; inviteCode: string; name?: string }) {
+export async function registerUser(payload: {
+  username: string;
+  password: string;
+  inviteCode: string;
+  name?: string;
+}) {
   return httpRequest<AuthResponse>("/auth/register", {
     method: "POST",
     body: payload,
@@ -787,28 +802,49 @@ export async function fetchImageQuota() {
   return httpRequest<{ item: DailyImageQuota }>("/api/image/quota");
 }
 
-export async function listImageGallery(params: { page?: number; pageSize?: number; q?: string; folder?: string; group?: "user" | "month" | "day" } = {}) {
+export async function listImageGallery(
+  params: {
+    page?: number;
+    pageSize?: number;
+    q?: string;
+    folder?: string;
+    group?: "user" | "month" | "day";
+  } = {},
+) {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
   if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params.q?.trim()) searchParams.set("q", params.q.trim());
   if (params.folder?.trim()) searchParams.set("folder", params.folder.trim());
-  if (params.group && params.group !== "user") searchParams.set("group", params.group);
+  if (params.group && params.group !== "user")
+    searchParams.set("group", params.group);
   const query = searchParams.toString();
-  return httpRequest<{ items: ImageGalleryItem[]; total: number; page: number; pageSize: number; folders?: { value: string; label: string }[] }>(`/api/image/gallery${query ? `?${query}` : ""}`);
+  return httpRequest<{
+    items: ImageGalleryItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+    folders?: { value: string; label: string }[];
+  }>(`/api/image/gallery${query ? `?${query}` : ""}`);
 }
 
 export async function deleteImageGalleryItem(name: string) {
-  return httpRequest<{ ok: boolean; name: string }>(`/api/image/gallery/${encodeURIComponent(name)}`, {
-    method: "DELETE",
-  });
+  return httpRequest<{ ok: boolean; name: string }>(
+    `/api/image/gallery/${encodeURIComponent(name)}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export async function deleteImageGalleryItems(names: string[]) {
-  return httpRequest<{ ok: boolean; deleted: string[] }>("/api/image/gallery/delete", {
-    method: "POST",
-    body: { names },
-  });
+  return httpRequest<{ ok: boolean; deleted: string[] }>(
+    "/api/image/gallery/delete",
+    {
+      method: "POST",
+      body: { names },
+    },
+  );
 }
 
 export async function fetchUsers() {
@@ -828,15 +864,30 @@ export async function deleteUser(id: string) {
   });
 }
 
-export async function adjustUserQuota(id: string, kind: "free" | "paid", delta: number) {
-  return httpRequest<{ ok: boolean }>(`/api/users/${encodeURIComponent(id)}/quota`, {
-    method: "POST",
-    body: { kind, delta },
-  });
+export async function adjustUserQuota(
+  id: string,
+  kind: "free" | "paid",
+  delta: number,
+) {
+  return httpRequest<{ ok: boolean }>(
+    `/api/users/${encodeURIComponent(id)}/quota`,
+    {
+      method: "POST",
+      body: { kind, delta },
+    },
+  );
 }
 
-export async function adjustAllUsersQuota(kind: "free" | "paid", delta: number) {
-  return httpRequest<{ ok: boolean; affected: number; quota: "free" | "paid"; delta: number }>("/api/users/quota/adjust-all", {
+export async function adjustAllUsersQuota(
+  kind: "free" | "paid",
+  delta: number,
+) {
+  return httpRequest<{
+    ok: boolean;
+    affected: number;
+    quota: "free" | "paid";
+    delta: number;
+  }>("/api/users/quota/adjust-all", {
     method: "POST",
     body: { kind, delta },
   });
@@ -876,14 +927,19 @@ export async function refreshAccounts(accessTokens: string[]) {
   });
 }
 
-export async function refreshAllAccounts(options: { scope?: "all" | "routing_groups" } = {}) {
+export async function refreshAllAccounts(
+  options: { scope?: "all" | "routing_groups" } = {},
+) {
   const scope = options.scope ?? "all";
-  const policy = scope === "routing_groups" ? await getImageAccountPolicyForRequest() : null;
+  const policy =
+    scope === "routing_groups" ? await getImageAccountPolicyForRequest() : null;
   const policyHeader = policy ? buildImageAccountPolicyHeader(policy) : "";
   return httpRequest<AccountRefreshAllResponse>("/api/accounts/refresh-all", {
     method: "POST",
     body: { scope },
-    headers: policyHeader ? { "X-Studio-Account-Policy": policyHeader } : undefined,
+    headers: policyHeader
+      ? { "X-Studio-Account-Policy": policyHeader }
+      : undefined,
   });
 }
 
@@ -1049,23 +1105,40 @@ export async function fetchDefaultConfig() {
 }
 
 export async function updateConfig(config: ConfigPayload) {
-  const result = await httpRequest<{ status: string; config: ConfigPayload }>("/api/config", {
-    method: "PUT",
-    body: config,
-  });
+  const result = await httpRequest<{ status: string; config: ConfigPayload }>(
+    "/api/config",
+    {
+      method: "PUT",
+      body: config,
+    },
+  );
   setCachedConfig(result.config);
   return result;
 }
 
-export async function fetchRequestLogs(params: { page?: number; pageSize?: number; user?: string; account?: string; prompt?: string } = {}) {
+export async function fetchRequestLogs(
+  params: {
+    page?: number;
+    pageSize?: number;
+    user?: string;
+    account?: string;
+    prompt?: string;
+  } = {},
+) {
   const searchParams = new URLSearchParams();
   if (params.page) searchParams.set("page", String(params.page));
   if (params.pageSize) searchParams.set("pageSize", String(params.pageSize));
   if (params.user?.trim()) searchParams.set("user", params.user.trim());
-  if (params.account?.trim()) searchParams.set("account", params.account.trim());
+  if (params.account?.trim())
+    searchParams.set("account", params.account.trim());
   if (params.prompt?.trim()) searchParams.set("prompt", params.prompt.trim());
   const query = searchParams.toString();
-  return httpRequest<{ items: RequestLogItem[]; total: number; page: number; pageSize: number }>(`/api/requests${query ? `?${query}` : ""}`);
+  return httpRequest<{
+    items: RequestLogItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>(`/api/requests${query ? `?${query}` : ""}`);
 }
 
 export async function fetchRequestLogFilters() {
@@ -1073,20 +1146,28 @@ export async function fetchRequestLogFilters() {
 }
 
 export async function fetchRequestLogDetail(id: string) {
-  return httpRequest<RequestLogDetail>(`/api/requests/${encodeURIComponent(id)}`);
+  return httpRequest<RequestLogDetail>(
+    `/api/requests/${encodeURIComponent(id)}`,
+  );
 }
 
 export async function deleteRequestLogs(ids: string[]) {
-  return httpRequest<{ ok: boolean; deleted: string[] }>("/api/requests/delete", {
-    method: "POST",
-    body: { ids },
-  });
+  return httpRequest<{ ok: boolean; deleted: string[] }>(
+    "/api/requests/delete",
+    {
+      method: "POST",
+      body: { ids },
+    },
+  );
 }
 
 export async function deleteFailedRequestLogs() {
-  return httpRequest<{ ok: boolean; deletedCount: number }>("/api/requests/delete-failed", {
-    method: "POST",
-  });
+  return httpRequest<{ ok: boolean; deletedCount: number }>(
+    "/api/requests/delete-failed",
+    {
+      method: "POST",
+    },
+  );
 }
 
 export async function fetchVersionInfo() {
@@ -1121,7 +1202,10 @@ export async function downloadDiagnosticsExport() {
         detail?: { message?: string };
       };
       message =
-        payload?.detail?.message || payload?.message || payload?.error || message;
+        payload?.detail?.message ||
+        payload?.message ||
+        payload?.error ||
+        message;
     } catch {
       // ignore json parse errors
     }
@@ -1259,18 +1343,21 @@ export async function diagnoseImageRejection(payload: {
     url?: string;
   }>;
 }) {
-  return httpRequest<ImageRejectionDiagnostic>("/api/image/diagnose-rejection", {
-    method: "POST",
-    body: {
-      prompt: payload.prompt,
-      error: payload.error,
-      mode: payload.mode,
-      size: payload.size,
-      quality: payload.quality,
-      sourceImages: payload.sourceImages ?? [],
+  return httpRequest<ImageRejectionDiagnostic>(
+    "/api/image/diagnose-rejection",
+    {
+      method: "POST",
+      body: {
+        prompt: payload.prompt,
+        error: payload.error,
+        mode: payload.mode,
+        size: payload.size,
+        quality: payload.quality,
+        sourceImages: payload.sourceImages ?? [],
+      },
+      timeoutMs: 360_000,
     },
-    timeoutMs: 360_000,
-  });
+  );
 }
 
 export async function listImageTasks() {
@@ -1288,7 +1375,10 @@ export async function cancelImageTask(taskId: string) {
 
 export async function consumeImageTaskStream(
   handlers: {
-    onInit: (payload: { items: ImageTaskView[]; snapshot: ImageTaskSnapshot }) => void;
+    onInit: (payload: {
+      items: ImageTaskView[];
+      snapshot: ImageTaskSnapshot;
+    }) => void;
     onEvent: (event: ImageTaskStreamEvent) => void;
   },
   signal: AbortSignal,
@@ -1321,7 +1411,12 @@ export async function consumeImageTaskStream(
     dataLines = [];
     try {
       if (eventType === "init") {
-        handlers.onInit(JSON.parse(raw) as { items: ImageTaskView[]; snapshot: ImageTaskSnapshot });
+        handlers.onInit(
+          JSON.parse(raw) as {
+            items: ImageTaskView[];
+            snapshot: ImageTaskSnapshot;
+          },
+        );
       } else {
         handlers.onEvent(JSON.parse(raw) as ImageTaskStreamEvent);
       }
@@ -1334,10 +1429,18 @@ export async function consumeImageTaskStream(
 
   while (true) {
     const readPromise = reader.read();
-    const timeoutPromise = new Promise<{ value: undefined; done: true }>((_, reject) => {
-      const id = setTimeout(() => reject(new Error("stream read timeout")), STREAM_READ_TIMEOUT_MS);
-      readPromise.then(() => clearTimeout(id), () => clearTimeout(id));
-    });
+    const timeoutPromise = new Promise<{ value: undefined; done: true }>(
+      (_, reject) => {
+        const id = setTimeout(
+          () => reject(new Error("stream read timeout")),
+          STREAM_READ_TIMEOUT_MS,
+        );
+        readPromise.then(
+          () => clearTimeout(id),
+          () => clearTimeout(id),
+        );
+      },
+    );
     const { value, done } = await Promise.race([readPromise, timeoutPromise]);
     if (done) {
       flushEvent();
@@ -1432,7 +1535,9 @@ export type AnnouncementData = {
 };
 
 export async function fetchAnnouncement() {
-  return httpRequest<AnnouncementData>("/api/announcement", { redirectOnUnauthorized: false });
+  return httpRequest<AnnouncementData>("/api/announcement", {
+    redirectOnUnauthorized: false,
+  });
 }
 
 export async function setAnnouncement(content: string, expiresAt: string) {
@@ -1443,5 +1548,7 @@ export async function setAnnouncement(content: string, expiresAt: string) {
 }
 
 export async function deleteAnnouncement() {
-  return httpRequest<{ ok: boolean }>("/api/announcement", { method: "DELETE" });
+  return httpRequest<{ ok: boolean }>("/api/announcement", {
+    method: "DELETE",
+  });
 }

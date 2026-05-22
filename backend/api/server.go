@@ -57,6 +57,8 @@ type Server struct {
 	cachedSub2APIKey               string
 	responsesSessionMu             sync.Mutex
 	responsesSessions              map[string]string
+	imageDownloadLimitersMu        sync.Mutex
+	imageDownloadLimiters          map[string]*rateLimiter
 }
 
 func (s *Server) Close() error {
@@ -1785,8 +1787,9 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		defer releaseLease()
 	}
 	startedAt := time.Now()
+	forcedRoute = strings.ToLower(strings.TrimSpace(forcedRoute))
 	now := time.Now()
-	refreshRequired := account.SourceKind == accounts.AccountSourceKindToken || accounts.NeedsImageQuotaRefreshWithTTL(account, now, s.cfg.ImageQuotaRefreshTTL())
+	refreshRequired := !isExternalResponsesRoute(forcedRoute) && (account.SourceKind == accounts.AccountSourceKindToken || accounts.NeedsImageQuotaRefreshWithTTL(account, now, s.cfg.ImageQuotaRefreshTTL()))
 	if refreshRequired {
 		_, refreshErrors, refreshErr := store.RefreshAccounts(ctx, []string{authFile.AccessToken})
 		if refreshErr == nil {
@@ -1821,13 +1824,13 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 			}
 			return nil, true, fmt.Errorf("image account is unavailable")
 		}
-	} else if !isImageAccountUsable(account, s.allowDisabledStudioImageAccounts()) {
+	} else if !isExternalResponsesRoute(forcedRoute) && !isImageAccountUsable(account, s.allowDisabledStudioImageAccounts()) {
 		if preferredAccount {
 			return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
 		}
 		return nil, true, fmt.Errorf("image account is unavailable")
 	}
-	if preferredAccount && !isImageAccountUsable(account, s.allowDisabledStudioImageAccounts()) {
+	if preferredAccount && !isExternalResponsesRoute(forcedRoute) && !isImageAccountUsable(account, s.allowDisabledStudioImageAccounts()) {
 		return nil, false, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
 	}
 	if routingDecision.PolicyApplied && !store.ImageAccountAllowedForPolicy(authFile.AccessToken, account, &accounts.ImageAccountRoutingPolicy{
@@ -1924,7 +1927,6 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		direction = "cpa"
 	} else {
 		route = s.configuredImageRouteForAccount(account)
-		forcedRoute = strings.ToLower(strings.TrimSpace(forcedRoute))
 		if forcedRoute != "" {
 			route = forcedRoute
 		}
@@ -2703,7 +2705,13 @@ func shouldRetryImageRequestWithNextAccount(err error) bool {
 }
 
 func isImageAccountSwitchError(err error) bool {
-	if err == nil || isImageModelRefusalError(err) {
+	if err == nil {
+		return false
+	}
+	if isFreePlanImageLimitError(err) {
+		return true
+	}
+	if isImageModelRefusalError(err) {
 		return false
 	}
 	if code := requestErrorCode(err); code != "" {
@@ -2728,6 +2736,14 @@ func isImageFiveHourLimitError(err error) bool {
 		}
 	}
 	return strings.Contains(message, "codex") && strings.Contains(message, "限流")
+}
+
+func isFreePlanImageLimitError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "free plan limit") && strings.Contains(message, "image generation")
 }
 
 func isImageModelRefusalError(err error) bool {
@@ -2799,6 +2815,7 @@ func isImageRateLimitError(err error) bool {
 		"temporarily unavailable",
 		"image generation limit",
 		"image generation quota",
+		"free plan limit",
 		"限流",
 	} {
 		if strings.Contains(message, token) {

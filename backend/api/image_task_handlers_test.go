@@ -1048,6 +1048,81 @@ func TestCreateImageGenerateTaskDeletesAccountOnResponsesUnauthorized(t *testing
 	}
 }
 
+func TestCreateImageGenerateTaskUsesExternalResponsesWhenResponsesAccountBusy(t *testing.T) {
+	started := make(chan string, 1)
+	release := make(chan struct{})
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
+		accounts: []compatSeedAccount{
+			{
+				fileName:    "paid-busy-external.json",
+				accessToken: "token-paid-busy-external",
+				accountType: "Plus",
+				priority:    100,
+				quota:       5,
+				status:      "正常",
+			},
+		},
+		behavior: compatClientBehavior{
+			generateStarted: started,
+			generateRelease: release,
+		},
+	})
+	server.cfg.Server.MaxImageConcurrency = 2
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		UserID:           "user-a",
+		ConversationID:   "conv-generate-busy-holder-1",
+		TurnID:           "turn-generate-busy-holder-1",
+		Mode:             "generate",
+		Prompt:           "hold responses account",
+		Model:            "gpt-image-2",
+		Count:            1,
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask(holder) returned error: %v", err)
+	}
+	select {
+	case token := <-started:
+		if token != "token-paid-busy-external" {
+			t.Fatalf("started token = %q, want token-paid-busy-external", token)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("timed out waiting for holder task to occupy responses account")
+	}
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID:   "conv-generate-busy-external-1",
+		TurnID:           "turn-generate-busy-external-1",
+		Mode:             "generate",
+		Prompt:           "use external while responses busy",
+		Model:            "gpt-image-2",
+		Count:            1,
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask(external) returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-generate-busy-external-1", imageTaskStatusSucceeded)
+	close(release)
+	waitForTaskStatus(t, server, "turn-generate-busy-holder-1", imageTaskStatusSucceeded)
+	if recorder.externalCalls != 1 {
+		t.Fatalf("externalCalls = %d, want 1; sequence = %#v", recorder.externalCalls, recorder.callSequence)
+	}
+	if len(recorder.callSequence) < 2 || !strings.HasPrefix(recorder.callSequence[1], "external_responses:external_responses:generate") {
+		t.Fatalf("callSequence = %#v, want second task to use external_responses", recorder.callSequence)
+	}
+}
+
 func TestCreateImageGenerateTaskFallsBackToExternalResponsesOnResponsesLimit(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",

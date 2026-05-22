@@ -541,6 +541,25 @@ func TestImageModelRefusalDoesNotRetryNextAccount(t *testing.T) {
 	}
 }
 
+func TestFreePlanImageLimitRetriesNextAccount(t *testing.T) {
+	err := newRequestError("model_refused", "image generation refused: You've hit the free plan limit for image generations requests. You can create more images when the limit resets in 20 hours and 49 minutes.")
+	if !isImageModelRefusalError(err) {
+		t.Fatalf("isImageModelRefusalError(%v) = false, want true", err)
+	}
+	if !isFreePlanImageLimitError(err) {
+		t.Fatalf("isFreePlanImageLimitError(%v) = false, want true", err)
+	}
+	if !isImageRateLimitError(err) {
+		t.Fatalf("isImageRateLimitError(%v) = false, want true", err)
+	}
+	if !shouldRetryImageRequestWithNextAccount(err) {
+		t.Fatalf("shouldRetryImageRequestWithNextAccount(%v) = false, want true", err)
+	}
+	if got := classifyImageAttemptError(err); got != imageAttemptRetryableDisableResponses {
+		t.Fatalf("classifyImageAttemptError() = %v, want %v", got, imageAttemptRetryableDisableResponses)
+	}
+}
+
 func TestNormalizeGenerateImageSize(t *testing.T) {
 	tests := []struct {
 		name  string

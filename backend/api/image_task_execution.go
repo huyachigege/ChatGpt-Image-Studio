@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"image"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
@@ -49,7 +50,13 @@ const (
 )
 
 func classifyImageAttemptError(err error) imageAttemptErrorClass {
-	if err == nil || isImageModelRefusalError(err) || isResponsesPreviousResponseContextError(err) {
+	if err == nil || isResponsesPreviousResponseContextError(err) {
+		return imageAttemptFatal
+	}
+	if isFreePlanImageLimitError(err) {
+		return imageAttemptRetryableDisableResponses
+	}
+	if isImageModelRefusalError(err) {
 		return imageAttemptFatal
 	}
 	if code := requestErrorCode(err); code != "" {
@@ -334,6 +341,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			)
 		}
 	default:
+		if isExternalResponsesRoute(lease.forceRoute) {
+			items, _, err = s.runImageTaskGenerateExternalResponses(taskCtx, task, lease, effectivePrompt, instructions, requestedModel, metadata, fakeReq)
+			break
+		}
 		var referenceImageFiles [][]byte
 		referenceImageFiles, err = s.resolveTaskReferenceImageInputs(task)
 		if err != nil {
@@ -549,6 +560,39 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		return nil, fmt.Errorf("image task returned no images from account %s", lease.auth.AccessToken)
 	}
 	return images, nil
+}
+
+func (s *Server) runImageTaskGenerateExternalResponses(ctx context.Context, task *imageTask, lease *imageTaskLease, effectivePrompt, instructions, requestedModel string, metadata imageRequestMetadata, r *http.Request) ([]map[string]any, bool, error) {
+	applyPrompt := func(client imageWorkflowClient) string {
+		if instructions != "" {
+			if setter, ok := client.(interface{ SetInstructions(string) }); ok {
+				setter.SetInstructions(instructions)
+				return effectivePrompt
+			}
+			return instructions + "\n\n" + effectivePrompt
+		}
+		return effectivePrompt
+	}
+	return s.runImageRequestWithAdmissionRoute(
+		ctx,
+		lease.auth,
+		lease.account,
+		func() {},
+		lease.decision,
+		"generate",
+		task.ResponseFormat,
+		false,
+		requestedModel,
+		true,
+		metadata,
+		func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
+			prompt := applyPrompt(client)
+			return client.GenerateImage(ctx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background)
+		},
+		r,
+		false,
+		"external_responses",
+	)
 }
 
 func buildImageTaskEffectivePrompt(prompt string, conversationContext string) string {
