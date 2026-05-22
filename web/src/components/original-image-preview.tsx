@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode, type TouchEvent as ReactTouchEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type TouchEvent as ReactTouchEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+
+import { getStoredAuthKey } from "@/store/auth";
 
 const ORIGINAL_IMAGE_CACHE = "chatgpt-image-studio-original-images-v1";
 
@@ -44,7 +52,9 @@ function touchCenter(first: TouchPoint, second: TouchPoint) {
   };
 }
 
-async function loadOriginalImage(originalUrl: string): Promise<CachedImageResult> {
+async function loadOriginalImage(
+  originalUrl: string,
+): Promise<CachedImageResult> {
   if (typeof window === "undefined" || !("caches" in window)) {
     return { url: originalUrl, revoke: false };
   }
@@ -56,7 +66,11 @@ async function loadOriginalImage(originalUrl: string): Promise<CachedImageResult
     return { url: URL.createObjectURL(blob), revoke: true };
   }
 
-  const response = await fetch(originalUrl, { cache: "force-cache" });
+  const authKey = await getStoredAuthKey();
+  const response = await fetch(originalUrl, {
+    cache: "force-cache",
+    headers: authKey ? { Authorization: `Bearer ${authKey}` } : undefined,
+  });
   if (!response.ok) {
     return { url: originalUrl, revoke: false };
   }
@@ -65,7 +79,14 @@ async function loadOriginalImage(originalUrl: string): Promise<CachedImageResult
   return { url: URL.createObjectURL(blob), revoke: true };
 }
 
-export function OriginalImagePreview({ originalUrl, title = "查看原图", children, className, items = [], initialIndex = 0 }: OriginalImagePreviewProps) {
+export function OriginalImagePreview({
+  originalUrl,
+  title = "查看原图",
+  children,
+  className,
+  items = [],
+  initialIndex = 0,
+}: OriginalImagePreviewProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [displayUrl, setDisplayUrl] = useState("");
@@ -73,9 +94,26 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const dragStartRef = useRef<{ pointerX: number; pointerY: number; offsetX: number; offsetY: number } | null>(null);
-  const touchPanStartRef = useRef<{ pointerX: number; pointerY: number; offsetX: number; offsetY: number } | null>(null);
-  const pinchStartRef = useRef<{ distance: number; scale: number; offsetX: number; offsetY: number; centerX: number; centerY: number } | null>(null);
+  const dragStartRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const touchPanStartRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+  const pinchStartRef = useRef<{
+    distance: number;
+    scale: number;
+    offsetX: number;
+    offsetY: number;
+    centerX: number;
+    centerY: number;
+  } | null>(null);
   const dragMovedRef = useRef(false);
   const suppressNextClickRef = useRef(false);
   const scaleRef = useRef(scale);
@@ -91,7 +129,12 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
   const isPointInsideImage = (clientX: number, clientY: number) => {
     const imageRect = imageRef.current?.getBoundingClientRect();
     if (!imageRect) return false;
-    return clientX >= imageRect.left && clientX <= imageRect.right && clientY >= imageRect.top && clientY <= imageRect.bottom;
+    return (
+      clientX >= imageRect.left &&
+      clientX <= imageRect.right &&
+      clientY >= imageRect.top &&
+      clientY <= imageRect.bottom
+    );
   };
 
   useEffect(() => {
@@ -102,7 +145,10 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
     offsetRef.current = offset;
   }, [offset]);
   const previewItems = items.length > 0 ? items : [{ originalUrl, title }];
-  const boundedActiveIndex = Math.min(Math.max(activeIndex, 0), previewItems.length - 1);
+  const boundedActiveIndex = Math.min(
+    Math.max(activeIndex, 0),
+    previewItems.length - 1,
+  );
   const activeItem = previewItems[boundedActiveIndex] ?? { originalUrl, title };
   const activeTitle = activeItem.title || title;
   const hasPrevious = boundedActiveIndex > 0;
@@ -114,7 +160,9 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
       if (!event.ctrlKey) return;
       event.preventDefault();
       setScale((current) => {
-        const nextScale = clampScale(current + (event.deltaY < 0 ? 0.12 : -0.12));
+        const nextScale = clampScale(
+          current + (event.deltaY < 0 ? 0.12 : -0.12),
+        );
         if (nextScale <= 1) {
           setOffset({ x: 0, y: 0 });
         }
@@ -145,7 +193,10 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
         x: dragStart.offsetX + event.clientX - dragStart.pointerX,
         y: dragStart.offsetY + event.clientY - dragStart.pointerY,
       };
-      if (Math.abs(event.clientX - dragStart.pointerX) > 3 || Math.abs(event.clientY - dragStart.pointerY) > 3) {
+      if (
+        Math.abs(event.clientX - dragStart.pointerX) > 3 ||
+        Math.abs(event.clientY - dragStart.pointerY) > 3
+      ) {
         dragMovedRef.current = true;
       }
       setOffset(nextOffset);
@@ -211,7 +262,10 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
   const handleTouchStart = (event: ReactTouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 2) {
       const [first, second] = Array.from(event.touches);
-      if (!isPointInsideImage(first.clientX, first.clientY) || !isPointInsideImage(second.clientX, second.clientY)) {
+      if (
+        !isPointInsideImage(first.clientX, first.clientY) ||
+        !isPointInsideImage(second.clientX, second.clientY)
+      ) {
         return;
       }
       event.preventDefault();
@@ -250,28 +304,51 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
       event.preventDefault();
       const nextDistance = touchDistance(first, second);
       const nextCenter = touchCenter(first, second);
-      const nextScale = clampScale(pinchStartRef.current.scale * (nextDistance / Math.max(pinchStartRef.current.distance, 1)));
-      const scaleRatio = nextScale / Math.max(pinchStartRef.current.scale, 0.0001);
+      const nextScale = clampScale(
+        pinchStartRef.current.scale *
+          (nextDistance / Math.max(pinchStartRef.current.distance, 1)),
+      );
+      const scaleRatio =
+        nextScale / Math.max(pinchStartRef.current.scale, 0.0001);
       const nextOffset = {
-        x: nextCenter.x - (pinchStartRef.current.centerX - pinchStartRef.current.offsetX) * scaleRatio,
-        y: nextCenter.y - (pinchStartRef.current.centerY - pinchStartRef.current.offsetY) * scaleRatio,
+        x:
+          nextCenter.x -
+          (pinchStartRef.current.centerX - pinchStartRef.current.offsetX) *
+            scaleRatio,
+        y:
+          nextCenter.y -
+          (pinchStartRef.current.centerY - pinchStartRef.current.offsetY) *
+            scaleRatio,
       };
       dragMovedRef.current = true;
       setScale(nextScale);
       setOffset(nextScale <= 1 ? { x: 0, y: 0 } : nextOffset);
       return;
     }
-    if (event.touches.length !== 1 || !touchPanStartRef.current || scaleRef.current <= 1) {
+    if (
+      event.touches.length !== 1 ||
+      !touchPanStartRef.current ||
+      scaleRef.current <= 1
+    ) {
       return;
     }
     const [touch] = Array.from(event.touches);
     event.preventDefault();
-    if (Math.abs(touch.clientX - touchPanStartRef.current.pointerX) > 3 || Math.abs(touch.clientY - touchPanStartRef.current.pointerY) > 3) {
+    if (
+      Math.abs(touch.clientX - touchPanStartRef.current.pointerX) > 3 ||
+      Math.abs(touch.clientY - touchPanStartRef.current.pointerY) > 3
+    ) {
       dragMovedRef.current = true;
     }
     setOffset({
-      x: touchPanStartRef.current.offsetX + touch.clientX - touchPanStartRef.current.pointerX,
-      y: touchPanStartRef.current.offsetY + touch.clientY - touchPanStartRef.current.pointerY,
+      x:
+        touchPanStartRef.current.offsetX +
+        touch.clientX -
+        touchPanStartRef.current.pointerX,
+      y:
+        touchPanStartRef.current.offsetY +
+        touch.clientY -
+        touchPanStartRef.current.pointerY,
     });
   };
 
@@ -308,14 +385,26 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
                   return;
                 }
                 const imageRect = imageRef.current?.getBoundingClientRect();
-                if (!imageRect || event.clientX < imageRect.left || event.clientX > imageRect.right || event.clientY < imageRect.top || event.clientY > imageRect.bottom) {
+                if (
+                  !imageRect ||
+                  event.clientX < imageRect.left ||
+                  event.clientX > imageRect.right ||
+                  event.clientY < imageRect.top ||
+                  event.clientY > imageRect.bottom
+                ) {
                   setIsOpen(false);
                 }
               }}
               onMouseDown={(event) => {
                 if (scaleRef.current <= 1 || event.button !== 0) return;
                 const imageRect = imageRef.current?.getBoundingClientRect();
-                if (!imageRect || event.clientX < imageRect.left || event.clientX > imageRect.right || event.clientY < imageRect.top || event.clientY > imageRect.bottom) {
+                if (
+                  !imageRect ||
+                  event.clientX < imageRect.left ||
+                  event.clientX > imageRect.right ||
+                  event.clientY < imageRect.top ||
+                  event.clientY > imageRect.bottom
+                ) {
                   return;
                 }
                 event.preventDefault();
@@ -351,7 +440,10 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
                       src={displayUrl}
                       alt={activeTitle}
                       className={`pointer-events-auto max-h-[92vh] max-w-[calc(96vw-7rem)] rounded-[18px] bg-white object-contain shadow-2xl transition-transform duration-100 ${scale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"}`}
-                      style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, touchAction: "none" }}
+                      style={{
+                        transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                        touchAction: "none",
+                      }}
                       onClick={(event) => event.stopPropagation()}
                       draggable={false}
                     />
@@ -378,7 +470,9 @@ export function OriginalImagePreview({ originalUrl, title = "查看原图", chil
                         onMouseDown={(event) => event.stopPropagation()}
                         onClick={(event) => {
                           event.stopPropagation();
-                          setActiveIndex((current) => Math.min(previewItems.length - 1, current + 1));
+                          setActiveIndex((current) =>
+                            Math.min(previewItems.length - 1, current + 1),
+                          );
                         }}
                         disabled={!hasNext}
                         aria-label="查看下一张原图"

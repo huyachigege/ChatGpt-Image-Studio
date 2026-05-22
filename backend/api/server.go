@@ -2405,10 +2405,13 @@ func (s *Server) hasExactBearer(r *http.Request, key string) bool {
 func bearerFromRequest(r *http.Request) string {
 	header := strings.TrimSpace(r.Header.Get("Authorization"))
 	parts := strings.SplitN(header, " ", 2)
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return ""
+	if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+		return strings.TrimSpace(parts[1])
 	}
-	return strings.TrimSpace(parts[1])
+	if strings.HasPrefix(r.URL.Path, "/v1/files/image/") || strings.HasPrefix(r.URL.Path, "/v1/files/image-thumb/") {
+		return strings.TrimSpace(r.URL.Query().Get("image_token"))
+	}
+	return ""
 }
 
 func resolveStaticAsset(staticDir, requestPath string) string {

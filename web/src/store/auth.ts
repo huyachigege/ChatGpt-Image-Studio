@@ -20,12 +20,19 @@ const authStorage = localforage.createInstance({
   storeName: "auth",
 });
 
+let cachedAuthKey = "";
+
+export function getCachedAuthKey() {
+  return cachedAuthKey;
+}
+
 export async function getStoredAuthKey() {
   if (typeof window === "undefined") {
     return "";
   }
   const value = await authStorage.getItem<string>(AUTH_KEY_STORAGE_KEY);
-  return String(value || "").trim();
+  cachedAuthKey = String(value || "").trim();
+  return cachedAuthKey;
 }
 
 export async function setStoredAuthKey(authKey: string) {
@@ -34,6 +41,7 @@ export async function setStoredAuthKey(authKey: string) {
     await clearStoredAuthKey();
     return;
   }
+  cachedAuthKey = normalizedAuthKey;
   await authStorage.setItem(AUTH_KEY_STORAGE_KEY, normalizedAuthKey);
 }
 
@@ -56,6 +64,7 @@ export async function clearStoredAuthKey() {
   if (typeof window === "undefined") {
     return;
   }
+  cachedAuthKey = "";
   await authStorage.removeItem(AUTH_KEY_STORAGE_KEY);
   await authStorage.removeItem(AUTH_USER_STORAGE_KEY);
 }
