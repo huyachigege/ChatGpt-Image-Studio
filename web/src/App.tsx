@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AccountsPage from "@/app/accounts/page";
 import ImagePage from "@/app/image/page";
 import ImageGalleryPage from "@/app/image-gallery/page";
+import ImageFavoritesPage from "@/app/image-favorites/page";
 import AppShell from "@/app/layout";
 import LoginPage from "@/app/login/page";
 import HomePage from "@/app/page";
@@ -20,6 +21,7 @@ export default function App() {
         <Route path="/image/history" element={<ImagePage />} />
         <Route path="/image/workspace" element={<ImagePage />} />
         <Route path="/image/gallery" element={<ImageGalleryPage />} />
+        <Route path="/image/favorites" element={<ImageFavoritesPage />} />
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/startup-check" element={<StartupCheckPage />} />

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Activity, Check, ChevronLeft, Copy, ImageIcon, Images, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Terminal, X } from "lucide-react";
+import { Activity, Check, ChevronLeft, Copy, Heart, ImageIcon, Images, LogOut, PanelLeftClose, PanelLeftOpen, Settings2, Shield, Terminal, X } from "lucide-react";
 
 import webConfig from "@/constants/common-env";
 import { fetchVersionInfo } from "@/lib/api";
@@ -29,6 +29,7 @@ function formatVersionLabel(value: string) {
 const navItems = [
   { group: "工作区", href: "/image/history", matchPrefix: "/image/history", label: "图片工作台", description: "生成与编辑", icon: ImageIcon },
   { group: "工作区", href: "/image/gallery", matchPrefix: "/image/gallery", label: "历史图库", description: "按用户目录管理出图", icon: Images },
+  { group: "工作区", href: "/image/favorites", matchPrefix: "/image/favorites", label: "收藏管理", description: "模板与图片收藏", icon: Heart },
   { group: "后台", href: "/accounts", matchPrefix: "/accounts", label: "账号管理", description: "号池、额度与同步", icon: Shield },
   { group: "后台", href: "/settings", matchPrefix: "/settings", label: "配置管理", description: "模式、接口与后端配置", icon: Settings2 },
   { group: "后台", href: "/requests", matchPrefix: "/requests", label: "调用请求", description: "官方与 CPA 请求日志", icon: Activity },
@@ -328,7 +329,7 @@ export function TopNav() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isImageRoute = pathname === "/image" || pathname?.startsWith("/image/");
-  const shouldCollapseNav = isImageRoute && pathname !== "/image/gallery";
+  const shouldCollapseNav = isImageRoute && pathname !== "/image/gallery" && pathname !== "/image/favorites";
   const isMobileWorkspaceRoute = pathname === "/image/workspace";
   const [versionLabel, setVersionLabel] = useState("读取中");
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
