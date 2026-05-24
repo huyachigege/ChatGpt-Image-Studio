@@ -524,6 +524,8 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /api/sync/status", s.requireAdminAuth(http.HandlerFunc(s.handleSyncStatus)))
 	mux.Handle("POST /api/sync/run", s.requireAdminAuth(http.HandlerFunc(s.handleRunSync)))
 	mux.Handle("GET /api/image/quota", s.requireWorkspaceAuth(http.HandlerFunc(s.handleGetUserImageQuota)))
+	mux.Handle("GET /api/favorites/{type}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListFavorites)))
+	mux.Handle("PUT /api/favorites/{type}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleSetFavorite)))
 	mux.Handle("GET /api/image/gallery", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageGallery)))
 	mux.Handle("POST /api/image/gallery/delete", s.requireWorkspaceAuth(http.HandlerFunc(s.handleBatchDeleteImageGallery)))
 	mux.Handle("DELETE /api/image/gallery/{name}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageGalleryItem)))

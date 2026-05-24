@@ -30,10 +30,10 @@ const (
 	maxResponsesInlineEditBytes    = 768 << 10
 	maxResponsesReferenceImages           = 9
 	maxResponsesReferenceCompactThreshold = 5
-	maxResponsesReferenceBytes            = 2 << 20
-	maxResponsesReferenceThumbSide        = 768
-	maxResponsesReferenceCompactThumbSide = 480
-	maxResponsesSSELineBytes              = 128 << 20
+	maxResponsesReferenceBytes                 = 2 << 20
+	maxResponsesReferenceShortSide             = 768
+	maxResponsesReferenceCompactShortSide      = 540
+	maxResponsesSSELineBytes                   = 128 << 20
 )
 
 type ImageWorkflowClient interface {
@@ -625,9 +625,9 @@ func prepareResponsesReferenceImages(images [][]byte) ([][]byte, error) {
 	if !SupportsResponsesReferenceImages(images) {
 		return nil, fmt.Errorf("responses reference image payload is too large")
 	}
-	thumbSide := maxResponsesReferenceThumbSide
+	thumbSide := maxResponsesReferenceShortSide
 	if len(images) >= maxResponsesReferenceCompactThreshold {
-		thumbSide = maxResponsesReferenceCompactThumbSide
+		thumbSide = maxResponsesReferenceCompactShortSide
 	}
 	prepared := make([][]byte, 0, len(images))
 	totalBytes := 0
@@ -656,12 +656,12 @@ func encodeResponsesReferenceThumbnail(data []byte, thumbSide int) ([]byte, erro
 	if width <= 0 || height <= 0 {
 		return nil, fmt.Errorf("decode reference image: empty bounds")
 	}
-	maxSide := max(width, height)
-	if maxSide <= thumbSide {
+	shortSide := min(width, height)
+	if shortSide <= thumbSide {
 		return encodeResponsesReferenceJPEG(img)
 	}
-	nextWidth := max(1, width*thumbSide/maxSide)
-	nextHeight := max(1, height*thumbSide/maxSide)
+	nextWidth := max(1, width*thumbSide/shortSide)
+	nextHeight := max(1, height*thumbSide/shortSide)
 	thumb := image.NewRGBA(image.Rect(0, 0, nextWidth, nextHeight))
 	for y := 0; y < nextHeight; y++ {
 		sourceY := bounds.Min.Y + y*height/nextHeight

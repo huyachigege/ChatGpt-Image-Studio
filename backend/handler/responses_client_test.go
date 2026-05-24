@@ -321,7 +321,7 @@ func TestPrepareResponsesReferenceImagesRejectsTenImages(t *testing.T) {
 	}
 }
 
-func TestPrepareResponsesReferenceImagesUsesOriginalThumbSideForFourImages(t *testing.T) {
+func TestPrepareResponsesReferenceImagesUsesOriginalShortSideForFourImages(t *testing.T) {
 	imageBytes := testLargePNGBytes(t, 1200, 800)
 	images := [][]byte{imageBytes, imageBytes, imageBytes, imageBytes}
 
@@ -334,12 +334,12 @@ func TestPrepareResponsesReferenceImagesUsesOriginalThumbSideForFourImages(t *te
 		t.Fatalf("decode jpeg: %v", err)
 	}
 	bounds := img.Bounds()
-	if got := max(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceThumbSide {
-		t.Fatalf("thumbnail max side = %d, want %d", got, maxResponsesReferenceThumbSide)
+	if got := min(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceShortSide {
+		t.Fatalf("thumbnail short side = %d, want %d", got, maxResponsesReferenceShortSide)
 	}
 }
 
-func TestPrepareResponsesReferenceImagesUsesCompactThumbSideForFiveImages(t *testing.T) {
+func TestPrepareResponsesReferenceImagesUsesCompactShortSideForFiveImages(t *testing.T) {
 	imageBytes := testLargePNGBytes(t, 1200, 800)
 	images := [][]byte{imageBytes, imageBytes, imageBytes, imageBytes, imageBytes}
 
@@ -352,8 +352,8 @@ func TestPrepareResponsesReferenceImagesUsesCompactThumbSideForFiveImages(t *tes
 		t.Fatalf("decode jpeg: %v", err)
 	}
 	bounds := img.Bounds()
-	if got := max(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceCompactThumbSide {
-		t.Fatalf("thumbnail max side = %d, want %d", got, maxResponsesReferenceCompactThumbSide)
+	if got := min(bounds.Dx(), bounds.Dy()); got != maxResponsesReferenceCompactShortSide {
+		t.Fatalf("thumbnail short side = %d, want %d", got, maxResponsesReferenceCompactShortSide)
 	}
 }
 

@@ -721,6 +721,8 @@ export type ImageGalleryItem = {
   turnId?: string;
 };
 
+export type FavoriteType = "template" | "image";
+
 export type AppUserItem = {
   id: string;
   username: string;
@@ -802,6 +804,20 @@ export async function fetchImageQuota() {
   return httpRequest<{ item: DailyImageQuota }>("/api/image/quota");
 }
 
+export async function listFavorites(type: FavoriteType) {
+  return httpRequest<{ items: string[] }>(`/api/favorites/${encodeURIComponent(type)}`);
+}
+
+export async function setFavorite(type: FavoriteType, key: string, favorite: boolean) {
+  return httpRequest<{ ok: boolean; key: string; favorite: boolean }>(
+    `/api/favorites/${encodeURIComponent(type)}`,
+    {
+      method: "PUT",
+      body: { key, favorite },
+    },
+  );
+}
+
 export async function listImageGallery(
   params: {
     page?: number;
@@ -809,6 +825,7 @@ export async function listImageGallery(
     q?: string;
     folder?: string;
     group?: "user" | "month" | "day";
+    favorite?: boolean;
   } = {},
 ) {
   const searchParams = new URLSearchParams();
@@ -818,6 +835,7 @@ export async function listImageGallery(
   if (params.folder?.trim()) searchParams.set("folder", params.folder.trim());
   if (params.group && params.group !== "user")
     searchParams.set("group", params.group);
+  if (params.favorite) searchParams.set("favorite", "1");
   const query = searchParams.toString();
   return httpRequest<{
     items: ImageGalleryItem[];

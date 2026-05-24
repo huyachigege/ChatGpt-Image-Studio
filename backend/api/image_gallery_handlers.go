@@ -66,10 +66,18 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	folderFilter := strings.TrimSpace(r.URL.Query().Get("folder"))
 	groupMode := strings.TrimSpace(r.URL.Query().Get("group"))
+	favoriteOnly := strings.TrimSpace(r.URL.Query().Get("favorite")) == "1" || strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("favorite")), "true")
 	items, err := s.listImageGalleryItems(r.Context(), identity)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
+	}
+	if favoriteOnly {
+		items, err = s.filterFavoriteImageGalleryItems(r.Context(), identity, items)
+		if err != nil {
+			writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+			return
+		}
 	}
 	var folders []imageGalleryFolderOption
 	if identity.Role == users.RoleAdmin {
@@ -146,6 +154,29 @@ func parsePositiveQueryInt(r *http.Request, key string, fallback int) int {
 		return fallback
 	}
 	return value
+}
+
+func (s *Server) filterFavoriteImageGalleryItems(ctx context.Context, identity authIdentity, items []imageGalleryItem) ([]imageGalleryItem, error) {
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		return nil, err
+	}
+	defer store.Close()
+	favoriteKeys, err := store.ListFavorites(ctx, identity.UserID, favoriteTypeImage)
+	if err != nil {
+		return nil, err
+	}
+	favoriteSet := make(map[string]struct{}, len(favoriteKeys))
+	for _, key := range favoriteKeys {
+		favoriteSet[strings.TrimSpace(key)] = struct{}{}
+	}
+	filtered := make([]imageGalleryItem, 0, len(items))
+	for _, item := range items {
+		if _, ok := favoriteSet[item.Name]; ok {
+			filtered = append(filtered, item)
+		}
+	}
+	return filtered, nil
 }
 
 func filterImageGalleryItemsByPrompt(items []imageGalleryItem, query string) []imageGalleryItem {

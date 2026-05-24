@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Copy, Download, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
+import { Copy, Download, Heart, ImageIcon, ImagePlus, Info, LoaderCircle, Pencil, RefreshCw, Search, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteImageGalleryItems, listImageGallery, type ImageGalleryItem } from "@/lib/api";
+import { deleteImageGalleryItems, listFavorites, listImageGallery, setFavorite, type ImageGalleryItem } from "@/lib/api";
 import {
   exportLocalImageConversationsSnapshot,
   exportServerImageConversationsSnapshot,
@@ -97,6 +97,18 @@ function buildGallerySourceImage(item: ImageGalleryItem, index = 0) {
   };
 }
 
+function buildGalleryRouteState(mode: "generate" | "edit", references: ImageGalleryItem[]) {
+  const prompt = references
+    .map((item) => item.prompt?.trim())
+    .filter(Boolean)
+    .join("\n\n");
+  return {
+    mode,
+    prompt,
+    sourceImages: references.map((item, index) => buildGallerySourceImage(item, index)),
+  };
+}
+
 function imagePromptKeys(value?: string) {
   const trimmed = String(value || "").trim().split("?")[0];
   if (!trimmed) return [];
@@ -172,15 +184,17 @@ export default function ImageGalleryPage() {
   const [folderFilter, setFolderFilter] = useState("");
   const [folderOptionQuery, setFolderOptionQuery] = useState("");
   const [groupMode, setGroupMode] = useState<"user" | "month" | "day">("user");
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [favoriteImageNames, setFavoriteImageNames] = useState<Set<string>>(() => new Set());
   const [folderOptions, setFolderOptions] = useState<{ value: string; label: string }[]>([]);
   const [detailItem, setDetailItem] = useState<ImageGalleryItem | null>(null);
 
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
-  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day") => {
+  const loadItems = useCallback(async (nextPage: number, nextQuery: string, nextPageSize: number, nextFolder: string, nextGroupMode: "user" | "month" | "day", nextFavoriteOnly: boolean) => {
     setIsLoading(true);
     try {
-      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode });
+      const payload = await listImageGallery({ page: nextPage, pageSize: nextPageSize, q: nextQuery, folder: nextFolder || undefined, group: nextGroupMode, favorite: nextFavoriteOnly });
       let nextItems = payload.items || [];
       if (nextItems.some((item) => !item.prompt)) {
         const [localConversations, serverConversations] = await Promise.all([
@@ -220,8 +234,20 @@ export default function ImageGalleryPage() {
   }, []);
 
   useEffect(() => {
-    void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
-  }, [loadItems, page, pageSize, searchQuery, folderFilter, groupMode]);
+    let cancelled = false;
+    listFavorites("image")
+      .then((payload) => {
+        if (!cancelled) setFavoriteImageNames(new Set(payload.items || []));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly);
+  }, [loadItems, page, pageSize, searchQuery, folderFilter, groupMode, favoriteOnly]);
 
   const totalSize = useMemo(() => items.reduce((sum, item) => sum + (Number.isFinite(item.size) ? item.size : 0), 0), [items]);
   const previewItems = useMemo(() => items.map((item) => ({ originalUrl: item.url, title: basename(item.name) })), [items]);
@@ -266,7 +292,7 @@ export default function ImageGalleryPage() {
     try {
       await deleteImageGalleryItems([item.name]);
       toast.success("图片已删除");
-      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
+      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "删除图片失败");
     } finally {
@@ -284,24 +310,37 @@ export default function ImageGalleryPage() {
     toast.success("提示词已复制");
   };
 
-  const handleEditImage = (item: ImageGalleryItem) => {
+  const handleUseImages = (mode: "generate" | "edit", references: ImageGalleryItem[]) => {
+    if (references.length === 0) return;
     navigate("/image/workspace", {
-      state: {
-        mode: "edit",
-        prompt: item.prompt || "",
-        sourceImages: [buildGallerySourceImage(item)],
-      },
+      state: buildGalleryRouteState(mode, references),
     });
   };
 
-  const handleReferenceImages = (references: ImageGalleryItem[]) => {
-    if (references.length === 0) return;
-    navigate("/image/workspace", {
-      state: {
-        mode: "generate",
-        sourceImages: references.map((item, index) => buildGallerySourceImage(item, index)),
-      },
+  const toggleImageFavorite = (item: ImageGalleryItem) => {
+    const nextFavorite = !favoriteImageNames.has(item.name);
+    setFavoriteImageNames((current) => {
+      const next = new Set(current);
+      if (nextFavorite) next.add(item.name);
+      else next.delete(item.name);
+      return next;
     });
+    setFavorite("image", item.name, nextFavorite)
+      .then(() => {
+        toast.success(nextFavorite ? "图片已收藏" : "已取消收藏");
+        if (!nextFavorite && favoriteOnly) {
+          void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly);
+        }
+      })
+      .catch((error) => {
+        setFavoriteImageNames((current) => {
+          const next = new Set(current);
+          if (nextFavorite) next.delete(item.name);
+          else next.add(item.name);
+          return next;
+        });
+        toast.error(error instanceof Error ? error.message : "收藏图片失败");
+      });
   };
 
   const handleBatchDelete = async () => {
@@ -311,7 +350,7 @@ export default function ImageGalleryPage() {
       const payload = await deleteImageGalleryItems(selectedNames);
       const deleted = payload.deleted || selectedNames;
       toast.success(`已删除 ${deleted.length} 张图片`);
-      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode);
+      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "批量删除失败");
     } finally {
@@ -397,14 +436,20 @@ export default function ImageGalleryPage() {
                   <Search className="size-4" />搜索
                 </Button>
               </form>
-              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => handleReferenceImages(selectedItems)} disabled={selectedItems.length === 0}>
-                <ImagePlus className="size-4" />参考选中 {selectedItems.length > 0 ? selectedItems.length : ""}
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => handleUseImages("generate", selectedItems)} disabled={selectedItems.length === 0}>
+                <ImagePlus className="size-4" />生成引用 {selectedItems.length > 0 ? selectedItems.length : ""}
+              </Button>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => handleUseImages("edit", selectedItems)} disabled={selectedItems.length === 0}>
+                <Pencil className="size-4" />编辑引用 {selectedItems.length > 0 ? selectedItems.length : ""}
               </Button>
               <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-[13px] text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleBatchDelete()} disabled={selectedNames.length === 0 || isBatchDeleting}>
                 {isBatchDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                 删除选中 {selectedNames.length > 0 ? selectedNames.length : ""}
               </Button>
-              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize, folderFilter, groupMode)} disabled={isLoading}>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => { setFavoriteOnly((current) => !current); setPage(1); }}>
+                <Heart className={`size-4 ${favoriteOnly ? "fill-current text-rose-500" : ""}`} />收藏
+              </Button>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly)} disabled={isLoading}>
                 {isLoading ? <LoaderCircle className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}
                 刷新
               </Button>
@@ -447,6 +492,9 @@ export default function ImageGalleryPage() {
                         <label className={`absolute left-2 top-2 rounded-full border border-white/25 bg-white/18 px-2 py-1 text-[11px] text-white shadow-[0_8px_24px_rgba(15,23,42,0.18)] backdrop-blur-md transition dark:border-white/10 dark:bg-stone-950/20 ${selectedSet.has(item.name) ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}>
                           <input type="checkbox" className="mr-1.5 align-middle accent-white" checked={selectedSet.has(item.name)} onChange={() => toggleSelected(item.name)} />选择
                         </label>
+                        <button type="button" className={`absolute right-2 top-2 inline-flex size-8 items-center justify-center rounded-full border border-white/25 bg-white/18 text-white shadow-[0_8px_24px_rgba(15,23,42,0.18)] backdrop-blur-md transition hover:bg-white/25 ${favoriteImageNames.has(item.name) ? "opacity-100 text-rose-100" : "opacity-0 group-hover:opacity-100"}`} onClick={() => toggleImageFavorite(item)} title={favoriteImageNames.has(item.name) ? "取消收藏" : "收藏图片"} aria-label={favoriteImageNames.has(item.name) ? "取消收藏图片" : "收藏图片"}>
+                          <Heart className={`size-4 ${favoriteImageNames.has(item.name) ? "fill-current" : ""}`} />
+                        </button>
                         <div className="pointer-events-none absolute inset-x-2 bottom-2 flex items-center gap-1.5 rounded-full border border-white/25 bg-white/18 px-2 py-1 text-[11px] text-white opacity-0 shadow-[0_8px_24px_rgba(15,23,42,0.18)] backdrop-blur-md transition group-hover:opacity-100 dark:border-white/10 dark:bg-stone-950/20">
                           <span className="min-w-0 flex-1 truncate">
                             {formatTime(item.createdAt)} · {formatSize(item.size)} · {formatResolution(item)}
@@ -466,11 +514,11 @@ export default function ImageGalleryPage() {
                           ) : null}
                         </div>
                         <div className="grid shrink-0 grid-cols-2 gap-1 pt-0.5">
-                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleEditImage(item)}>
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleUseImages("edit", [item])}>
                             <Pencil className="size-3.5" />编辑
                           </Button>
-                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleReferenceImages([item])}>
-                            <ImagePlus className="size-3.5" />参考
+                          <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" onClick={() => handleUseImages("generate", [item])}>
+                            <ImagePlus className="size-3.5" />生成
                           </Button>
                           <Button type="button" variant="outline" className="h-7 rounded-xl border-stone-200 bg-white px-2 text-[11px] text-stone-700 shadow-none" asChild>
                             <a href={item.url} download={basename(item.name)}><Download className="size-3.5" />下载</a>
@@ -523,6 +571,7 @@ export default function ImageGalleryPage() {
                     ) : null}
                   </dd>
                 </div>
+                <div><dt className="text-xs text-stone-500">收藏状态</dt><dd className="mt-1 text-stone-800 dark:text-[var(--studio-text)]">{favoriteImageNames.has(detailItem.name) ? "已收藏" : "未收藏"}</dd></div>
                 <div><dt className="text-xs text-stone-500">URL</dt><dd className="mt-1 break-all font-mono text-xs text-stone-800 dark:text-[var(--studio-text)]">{detailItem.url}</dd></div>
               </dl>
             </div>

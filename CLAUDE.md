@@ -94,7 +94,7 @@ Startup path:
 HTTP routes are registered in `Server.Handler()` in three broad groups:
 
 - Public/system: `/auth/login`, `/auth/register`, `/version`, `/health`, and web app fallback.
-- Admin/workspace: `/api/accounts`, `/api/config`, `/api/sync`, `/api/requests`, `/api/image/conversations`, `/api/image/tasks`, gallery, quota, diagnostics, users, and announcement APIs. Admin routes use `requireAdminAuth`; workspace routes use `requireWorkspaceAuth`.
+- Admin/workspace: `/api/accounts`, `/api/config`, `/api/sync`, `/api/requests`, `/api/image/conversations`, `/api/image/tasks`, `/api/favorites/{type}`, gallery, quota, diagnostics, users, and announcement APIs. Admin routes use `requireAdminAuth`; workspace routes use `requireWorkspaceAuth`.
 - OpenAI-compatible image APIs: `/v1/images/generations`, `/v1/images/edits`, `/v1/chat/completions`, `/v1/responses`, `/v1/models`, and image file serving. These use `requireImageAuth`.
 
 Image workflow shape:
@@ -108,6 +108,7 @@ Storage/config shape:
 
 - `internal/config` defines TOML-backed runtime config sections including app, server, chatgpt, accounts, storage, sync, proxy, CPA, NewAPI, and Sub2API.
 - Account storage supports local/current, SQLite, and Redis paths via `internal/accounts`.
+- User login/session/quota data lives in SQLite through `internal/users`; per-user template/image favorites are stored in `app_user_favorites`.
 - Config storage can be file or Redis (`internal/configstore`).
 - Image conversation/data modes can be browser or server, controlled by storage config and reflected in frontend store behavior.
 

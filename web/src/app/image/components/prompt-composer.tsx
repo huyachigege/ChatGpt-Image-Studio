@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUp, Brush, ChevronDown, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowUp, Brush, ChevronDown, Heart, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
 import { OriginalImagePreview } from "@/components/original-image-preview";
@@ -39,6 +39,7 @@ type PromptComposerProps = {
   sourceImages: StoredSourceImage[];
   imagePrompt: string;
   promptPresets?: ImagePromptPreset[];
+  favoritePromptPresetIds?: Set<string>;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   uploadInputRef: RefObject<HTMLInputElement | null>;
   maskInputRef: RefObject<HTMLInputElement | null>;
@@ -50,6 +51,7 @@ type PromptComposerProps = {
   onPromptChange: (value: string) => void;
   onPromptPaste: (event: ReactClipboardEvent<Element>) => void;
   onApplyPromptPreset?: (preset: ImagePromptPreset) => void;
+  onTogglePromptPresetFavorite?: (preset: ImagePromptPreset) => void;
   onRemoveSourceImage: (id: string) => void;
   onOpenSourceSelectionEditor: (sourceImageId: string) => void;
   onAppendFiles: (files: FileList | null, role: "image" | "mask") => Promise<void>;
@@ -75,6 +77,7 @@ export function PromptComposer({
   sourceImages,
   imagePrompt,
   promptPresets = [],
+  favoritePromptPresetIds,
   textareaRef,
   uploadInputRef,
   maskInputRef,
@@ -86,6 +89,7 @@ export function PromptComposer({
   onPromptChange,
   onPromptPaste,
   onApplyPromptPreset,
+  onTogglePromptPresetFavorite,
   onRemoveSourceImage,
   onOpenSourceSelectionEditor,
   onAppendFiles,
@@ -97,9 +101,11 @@ export function PromptComposer({
   const [isPresetPanelOpen, setIsPresetPanelOpen] = useState(false);
   const [presetQuery, setPresetQuery] = useState("");
   const [activePresetCategory, setActivePresetCategory] = useState("全部");
+  const [showFavoritePresetsOnly, setShowFavoritePresetsOnly] = useState(false);
   const presetCategories = Array.from(new Set(promptPresets.map((preset) => preset.category).filter(Boolean)));
   const filteredPromptPresets = promptPresets
     .filter((preset) => activePresetCategory === "全部" || preset.category === activePresetCategory)
+    .filter((preset) => !showFavoritePresetsOnly || favoritePromptPresetIds?.has(preset.id))
     .filter((preset) => {
       const query = presetQuery.trim().toLowerCase();
       if (!query) {
@@ -436,6 +442,19 @@ export function PromptComposer({
                         placeholder="搜索标题、提示词、分类、作者"
                         className="h-10 rounded-full border-stone-200 bg-stone-50 px-4 text-sm shadow-none focus-visible:ring-1 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel-muted)]"
                       />
+                      <button
+                        type="button"
+                        className={cn(
+                          "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-semibold transition",
+                          showFavoritePresetsOnly
+                            ? "bg-rose-50 text-rose-600 dark:bg-rose-500/15 dark:text-rose-200"
+                            : "bg-stone-100 text-stone-600 hover:bg-stone-200 hover:text-stone-900 dark:bg-[var(--studio-panel-muted)] dark:text-[var(--studio-text-muted)] dark:hover:text-[var(--studio-text-strong)]",
+                        )}
+                        onClick={() => setShowFavoritePresetsOnly((current) => !current)}
+                      >
+                        <Heart className={cn("size-3.5", showFavoritePresetsOnly && "fill-current")} />
+                        {showFavoritePresetsOnly ? "收藏检索" : "只看收藏"}
+                      </button>
                       <div className="hide-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 lg:max-w-[520px]">
                         {["全部", ...presetCategories].map((category) => (
                           <button
@@ -478,6 +497,18 @@ export function PromptComposer({
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">{preset.category}</span>
                                   <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-stone-500 dark:bg-[var(--studio-panel)] dark:text-[var(--studio-text-muted)]">{preset.model}</span>
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "ml-auto inline-flex size-7 items-center justify-center rounded-full text-stone-400 transition hover:bg-white hover:text-rose-500 dark:hover:bg-[var(--studio-panel)]",
+                                      favoritePromptPresetIds?.has(preset.id) && "text-rose-500",
+                                    )}
+                                    onClick={() => onTogglePromptPresetFavorite?.(preset)}
+                                    title={favoritePromptPresetIds?.has(preset.id) ? "取消收藏" : "收藏模板"}
+                                    aria-label={favoritePromptPresetIds?.has(preset.id) ? "取消收藏模板" : "收藏模板"}
+                                  >
+                                    <Heart className={cn("size-4", favoritePromptPresetIds?.has(preset.id) && "fill-current")} />
+                                  </button>
                                 </div>
                                 <h3 className="mt-2 line-clamp-2 text-sm font-semibold leading-5 text-stone-950 dark:text-[var(--studio-text-strong)] sm:text-[15px]">{preset.title}</h3>
                                 <div className="mt-1 truncate text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">by {preset.author}</div>

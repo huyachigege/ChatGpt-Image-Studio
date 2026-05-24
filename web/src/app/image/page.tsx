@@ -10,7 +10,9 @@ import {
   cancelImageTask,
   consumeImageTaskStream,
   fetchImageQuota,
+  listFavorites,
   listImageTasks,
+  setFavorite,
   type ImageTaskSnapshot,
   type ImageTaskView,
   type ImageQuality,
@@ -474,8 +476,21 @@ export default function ImagePage() {
   );
   const [showTaskStats, setShowTaskStats] = useState(false);
   const [inspirationExamples, setInspirationExamples] = useState<ImagePromptPreset[]>(() => pickRandomPromptPresets());
+  const [favoritePromptPresetIds, setFavoritePromptPresetIds] = useState<Set<string>>(() => new Set());
   const persistedTaskStatesRef = useRef<Record<string, string>>({});
   const cancellingTaskIdsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    let cancelled = false;
+    listFavorites("template")
+      .then((payload) => {
+        if (!cancelled) setFavoritePromptPresetIds(new Set(payload.items || []));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const activeTasks = useMemo(
     () =>
@@ -1225,6 +1240,27 @@ export default function ImagePage() {
     [openDraftConversation],
   );
 
+  const togglePromptPresetFavorite = useCallback((preset: ImagePromptPreset) => {
+    const nextFavorite = !favoritePromptPresetIds.has(preset.id);
+    setFavoritePromptPresetIds((current) => {
+      const next = new Set(current);
+      if (nextFavorite) next.add(preset.id);
+      else next.delete(preset.id);
+      return next;
+    });
+    setFavorite("template", preset.id, nextFavorite)
+      .then(() => toast.success(nextFavorite ? "模板已收藏" : "已取消收藏"))
+      .catch((error) => {
+        setFavoritePromptPresetIds((current) => {
+          const next = new Set(current);
+          if (nextFavorite) next.delete(preset.id);
+          else next.add(preset.id);
+          return next;
+        });
+        toast.error(error instanceof Error ? error.message : "收藏模板失败");
+      });
+  }, [favoritePromptPresetIds]);
+
   useEffect(() => {
     const state = location.state as ImageWorkspaceRouteState | null;
     const prompt = state?.prompt?.trim() || "";
@@ -1439,6 +1475,7 @@ export default function ImagePage() {
         sourceImages={sourceImages}
         imagePrompt={imagePrompt}
         promptPresets={imagePromptPresets}
+        favoritePromptPresetIds={favoritePromptPresetIds}
         textareaRef={textareaRef}
         uploadInputRef={uploadInputRef}
         maskInputRef={maskInputRef}
@@ -1469,6 +1506,7 @@ export default function ImagePage() {
         onPromptChange={setImagePrompt}
         onPromptPaste={handlePromptPaste}
         onApplyPromptPreset={applyPromptPreset}
+        onTogglePromptPresetFavorite={togglePromptPresetFavorite}
         onRemoveSourceImage={removeSourceImage}
         onOpenSourceSelectionEditor={openSourceSelectionEditor}
         onAppendFiles={appendFiles}

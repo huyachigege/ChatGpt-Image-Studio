@@ -142,8 +142,16 @@ func (s *Store) Init(ctx context.Context) error {
 			updated_at TEXT NOT NULL,
 			PRIMARY KEY(user_id, quota_date)
 		)`,
+		`CREATE TABLE IF NOT EXISTS app_user_favorites (
+			user_id TEXT NOT NULL,
+			favorite_type TEXT NOT NULL,
+			favorite_key TEXT NOT NULL,
+			created_at TEXT NOT NULL,
+			PRIMARY KEY(user_id, favorite_type, favorite_key)
+		)`,
 		`CREATE INDEX IF NOT EXISTS idx_app_user_sessions_user_id ON app_user_sessions(user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_app_invites_created_at ON app_invites(created_at DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_app_user_favorites_user_type ON app_user_favorites(user_id, favorite_type, created_at DESC)`,
 	}
 	for _, stmt := range stmts {
 		if _, err := s.db.ExecContext(ctx, stmt); err != nil {
@@ -425,6 +433,7 @@ func (s *Store) DeleteUser(ctx context.Context, userID string) error {
 	}
 	_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_sessions WHERE user_id = ?`, userID)
 	_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_daily_image_quotas WHERE user_id = ?`, userID)
+	_, _ = s.db.ExecContext(ctx, `DELETE FROM app_user_favorites WHERE user_id = ?`, userID)
 	_, _ = s.db.ExecContext(ctx, `UPDATE app_invites SET used_by_user_id = '', used_at = '' WHERE used_by_user_id = ?`, userID)
 	result, err := s.db.ExecContext(ctx, `DELETE FROM app_users WHERE id = ?`, userID)
 	if err != nil {
@@ -779,6 +788,52 @@ func (s *Store) AdjustAllUsersDailyImageQuota(ctx context.Context, quotaKind str
 	}
 	committed = true
 	return int(rowsAffected), nil
+}
+
+func (s *Store) ListFavorites(ctx context.Context, userID, favoriteType string) ([]string, error) {
+	userID = strings.TrimSpace(userID)
+	favoriteType = strings.TrimSpace(favoriteType)
+	if userID == "" {
+		return nil, fmt.Errorf("user id is required")
+	}
+	if favoriteType == "" {
+		return nil, fmt.Errorf("favorite type is required")
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT favorite_key FROM app_user_favorites WHERE user_id = ? AND favorite_type = ? ORDER BY created_at DESC`, userID, favoriteType)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := make([]string, 0)
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		items = append(items, key)
+	}
+	return items, rows.Err()
+}
+
+func (s *Store) SetFavorite(ctx context.Context, userID, favoriteType, favoriteKey string, favorite bool) error {
+	userID = strings.TrimSpace(userID)
+	favoriteType = strings.TrimSpace(favoriteType)
+	favoriteKey = strings.TrimSpace(favoriteKey)
+	if userID == "" {
+		return fmt.Errorf("user id is required")
+	}
+	if favoriteType == "" {
+		return fmt.Errorf("favorite type is required")
+	}
+	if favoriteKey == "" {
+		return fmt.Errorf("favorite key is required")
+	}
+	if !favorite {
+		_, err := s.db.ExecContext(ctx, `DELETE FROM app_user_favorites WHERE user_id = ? AND favorite_type = ? AND favorite_key = ?`, userID, favoriteType, favoriteKey)
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO app_user_favorites (user_id, favorite_type, favorite_key, created_at) VALUES (?, ?, ?, ?) ON CONFLICT(user_id, favorite_type, favorite_key) DO NOTHING`, userID, favoriteType, favoriteKey, time.Now().UTC().Format(time.RFC3339Nano))
+	return err
 }
 
 func currentQuotaDateKey() string {
