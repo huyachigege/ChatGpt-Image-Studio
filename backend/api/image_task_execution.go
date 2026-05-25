@@ -532,8 +532,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			if s.externalResponsesConfigured() {
 				items, attemptClass, err = tryExternal()
 			}
-			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-				items, attemptClass, err = tryNextLegacy()
+			if len(referenceImageFiles) == 0 && task.ContextReference == nil {
+				for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+					items, attemptClass, err = tryNextLegacy()
+				}
 			}
 		} else if err != nil && attemptClass != imageAttemptFatal {
 			if s.externalResponsesConfigured() {
@@ -543,16 +545,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					items, attemptClass, err = tryNextResponses()
 				}
 			}
-			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid {
+			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil {
 				items, attemptClass, err = trySameLegacy()
 			}
 		}
-		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
 			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 				items, attemptClass, err = tryNextLegacy()
 			}
 		}
-		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil && strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
 			items, attemptClass, err = trySameLegacy()
 			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 				items, attemptClass, err = tryNextLegacy()
