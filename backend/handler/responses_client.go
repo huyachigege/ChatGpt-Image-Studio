@@ -136,6 +136,7 @@ func (c *ResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Cont
 	if len(images) == 0 {
 		return nil, fmt.Errorf("at least one image is required")
 	}
+	images, mask = compressInlineEditPayload(images, mask)
 	if !SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
@@ -580,6 +581,25 @@ func mimeTypeFromOutputFormat(outputFormat string) string {
 	default:
 		return "image/png"
 	}
+}
+
+func compressInlineEditPayload(images [][]byte, mask []byte) ([][]byte, []byte) {
+	compressed := make([][]byte, 0, len(images))
+	for _, img := range images {
+		if len(img) > maxResponsesInlineEditBytes {
+			if thumb, err := encodeResponsesReferenceThumbnail(img, maxResponsesReferenceShortSide); err == nil {
+				compressed = append(compressed, thumb)
+				continue
+			}
+		}
+		compressed = append(compressed, img)
+	}
+	if len(mask) > maxResponsesInlineEditBytes {
+		if thumb, err := encodeResponsesReferenceThumbnail(mask, maxResponsesReferenceShortSide); err == nil {
+			mask = thumb
+		}
+	}
+	return compressed, mask
 }
 
 func SupportsResponsesInlineEdit(images [][]byte, mask []byte) bool {
