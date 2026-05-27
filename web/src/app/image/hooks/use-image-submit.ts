@@ -41,6 +41,7 @@ type UseImageSubmitOptions = {
   parsedCount: number;
   imageSize: string;
   imageResolutionAccess: ImageResolutionAccess;
+  editResolutionAccess: ImageResolutionAccess;
   imageQuality: ImageQuality;
   selectedConversationId: string | null;
   conversationTurns: ImageConversationTurn[];
@@ -145,6 +146,7 @@ export function useImageSubmit({
   parsedCount,
   imageSize,
   imageResolutionAccess,
+  editResolutionAccess,
   imageQuality,
   selectedConversationId,
   conversationTurns,
@@ -194,9 +196,8 @@ export function useImageSubmit({
         editorTarget.conversationId ?? selectedConversationId;
       const conversationId = targetConversationId ?? makeId();
       const conversationContext = buildImageConversationContext(conversationTurns);
-      const supportsEditableOutputOptions = false;
       const nextQuality = normalizeImageQuality(overrideQuality, imageQuality);
-      const useSourceContextEdit = Boolean(sourceReference?.source_account_id);
+      const useSourceContextEdit = editResolutionAccess === "free" && Boolean(sourceReference?.source_account_id);
       const turnId = makeId();
       const now = new Date().toISOString();
       const draftTurn = createConversationTurn({
@@ -206,10 +207,8 @@ export function useImageSubmit({
         prompt,
         model: imageModel,
         count: 1,
-        size: supportsEditableOutputOptions ? imageSize : undefined,
-        resolutionAccess: supportsEditableOutputOptions
-          ? imageResolutionAccess
-          : undefined,
+        size: undefined,
+        resolutionAccess: editResolutionAccess,
         quality: nextQuality,
         sourceImages: [
           buildSourceReference({
@@ -261,10 +260,8 @@ export function useImageSubmit({
           prompt,
           model: imageModel,
           count: 1,
-          size: supportsEditableOutputOptions ? imageSize : undefined,
-          resolutionAccess: supportsEditableOutputOptions
-            ? imageResolutionAccess
-            : undefined,
+          size: undefined,
+          resolutionAccess: editResolutionAccess,
           quality: nextQuality,
           sourceImages: draftTurn.sourceImages,
           sourceReference: useSourceContextEdit ? sourceReference : undefined,
@@ -320,8 +317,7 @@ export function useImageSubmit({
       focusConversation,
       imageModel,
       imageQuality,
-      imageResolutionAccess,
-      imageSize,
+      editResolutionAccess,
       makeId,
       persistConversation,
       selectedConversationId,
@@ -356,6 +352,7 @@ export function useImageSubmit({
         (item) => item.role === "image" && buildSourceImageUrl(item),
       );
       const turnQuality = turn.quality || "high";
+      const turnResolutionAccess = turn.resolutionAccess ?? (turnMode === "edit" ? "paid" : undefined);
       const isSingleImageRetry =
         turnMode === "generate" &&
         typeof imageIndex === "number" &&
@@ -398,6 +395,8 @@ export function useImageSubmit({
             { excludeTurnId: turn.id },
           );
       const referenceImages = referenceImage && turnSourceImages.length === 0 ? [referenceImage] : undefined;
+      const retrySourceReference = undefined;
+      const retryContextReference = undefined;
       const draftTurn = createConversationTurn({
         turnId: turn.id,
         title: buildConversationTitle(turnMode, prompt),
@@ -406,11 +405,11 @@ export function useImageSubmit({
         model: turn.model,
         count: displayCount,
         size: turn.size,
-        resolutionAccess: turn.resolutionAccess,
+        resolutionAccess: turnResolutionAccess,
         quality: turnQuality,
         sourceImages: turnSourceImages,
-        sourceReference: omitOriginalReferences ? undefined : turn.sourceReference,
-        contextReference: omitOriginalReferences ? undefined : turn.contextReference,
+        sourceReference: omitOriginalReferences ? undefined : retrySourceReference,
+        contextReference: omitOriginalReferences ? undefined : retryContextReference,
         images: nextImages,
         createdAt: new Date().toISOString(),
         status: isSingleImageRetry ? "running" : "queued",
@@ -438,12 +437,12 @@ export function useImageSubmit({
           count: requestCount,
           retryImageIndex: isSingleImageRetry ? imageIndex : undefined,
           size: turn.size,
-          resolutionAccess: turn.resolutionAccess,
+          resolutionAccess: turnResolutionAccess,
           quality: turnQuality,
           sourceImages: turnSourceImages,
           referenceImages,
-          sourceReference: omitOriginalReferences ? undefined : turn.sourceReference,
-          contextReference: omitOriginalReferences ? undefined : turn.contextReference,
+          sourceReference: omitOriginalReferences ? undefined : retrySourceReference,
+          contextReference: omitOriginalReferences ? undefined : retryContextReference,
           conversationContext,
           privatePhotoMode,
           systemHint,
@@ -649,7 +648,7 @@ export function useImageSubmit({
       model: imageModel,
       count: expectedCount,
       size: mode === "generate" ? imageSize : undefined,
-      resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
+      resolutionAccess: mode === "generate" ? imageResolutionAccess : editResolutionAccess,
       quality: imageQuality,
       sourceImages,
       contextReference,
@@ -683,7 +682,7 @@ export function useImageSubmit({
         model: imageModel,
         count: expectedCount,
         size: mode === "generate" ? imageSize : undefined,
-        resolutionAccess: mode === "generate" ? imageResolutionAccess : undefined,
+        resolutionAccess: mode === "generate" ? imageResolutionAccess : editResolutionAccess,
         quality: imageQuality,
         sourceImages,
         referenceImages,
@@ -743,6 +742,7 @@ export function useImageSubmit({
     mode,
     imageSize,
     imageResolutionAccess,
+    editResolutionAccess,
     imageQuality,
     parsedCount,
     persistConversation,

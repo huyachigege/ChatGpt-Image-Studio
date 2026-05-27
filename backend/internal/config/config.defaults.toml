@@ -112,6 +112,8 @@ base_url = ""
 api_key = ""
 model = "gpt-5"
 request_timeout = 300
+# external_responses 遇到 5xx 时的无感重试次数，默认 3，最大 10。
+retry_times = 3
 
 [newapi]
 base_url = ""

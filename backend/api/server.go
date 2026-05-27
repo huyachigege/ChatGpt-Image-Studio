@@ -2803,6 +2803,18 @@ func isImageHTTPStatusError(err error, status int) bool {
 	return false
 }
 
+func isImage5xxHTTPStatusError(err error) bool {
+	if err == nil {
+		return false
+	}
+	for status := 500; status <= 599; status++ {
+		if isImageHTTPStatusError(err, status) {
+			return true
+		}
+	}
+	return false
+}
+
 func isImageRateLimitError(err error) bool {
 	if err == nil {
 		return false

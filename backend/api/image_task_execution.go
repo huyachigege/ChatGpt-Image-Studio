@@ -72,7 +72,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
 		return imageAttemptRetryableDisableResponses
 	}
-	if isImageHTTPStatusError(err, 502) || isImageHTTPStatusError(err, 503) {
+	if isImage5xxHTTPStatusError(err) {
 		return imageAttemptRetrySameOnce
 	}
 	if isImageRateLimitError(err) || isTransientImageStreamError(err) || isInvalidImageTokenError(err) {
@@ -349,7 +349,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			)
 			attemptClass = classifyImageAttemptError(err)
 		}
-		if shouldTryImageFallback(err, attemptClass) && !isImageHTTPStatusError(err, 500) {
+		if shouldTryImageFallback(err, attemptClass) && !isImage5xxHTTPStatusError(err) {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -516,7 +516,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			if !s.externalResponsesConfigured() {
 				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
 			}
-			attemptItems, attemptClass, attemptErr := tryRoute(lease, "external_responses")
+			retries := s.cfg.ExternalResponsesRetryTimes()
+			var attemptItems []map[string]any
+			var attemptClass imageAttemptErrorClass
+			var attemptErr error
+			for attempt := 0; attempt < retries; attempt++ {
+				attemptItems, attemptClass, attemptErr = tryRoute(lease, "external_responses")
+				if attemptErr == nil || attemptClass != imageAttemptRetrySameOnce || !isImage5xxHTTPStatusError(attemptErr) {
+					break
+				}
+			}
 			if attemptErr != nil {
 				rememberAttempt(lease)
 			}
@@ -532,15 +541,16 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 
 		var attemptClass imageAttemptErrorClass
 		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
-		items, attemptClass, err = tryRoute(lease, startRoute)
-		if err != nil {
-			rememberAttempt(lease)
+		if isExternalResponsesRoute(startRoute) {
+			items, attemptClass, err = tryExternal()
+		} else {
+			items, attemptClass, err = tryRoute(lease, startRoute)
+			if err != nil {
+				rememberAttempt(lease)
+			}
 		}
 		if err != nil && attemptClass != imageAttemptFatal && isExternalResponsesRoute(startRoute) {
-			for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal && task.Requirement.NeedPaid; i++ {
-				items, attemptClass, err = tryExternal()
-			}
-			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid {
+			if !task.Requirement.NeedPaid {
 				for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 					items, attemptClass, err = tryNextLegacy()
 				}

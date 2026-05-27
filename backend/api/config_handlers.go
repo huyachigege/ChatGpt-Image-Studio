@@ -97,6 +97,7 @@ type configPayload struct {
 		APIKey         string `json:"apiKey"`
 		Model          string `json:"model"`
 		RequestTimeout int    `json:"requestTimeout"`
+		RetryTimes     int    `json:"retryTimes"`
 	} `json:"externalResponses"`
 	NewAPI struct {
 		BaseURL        string `json:"baseUrl"`
@@ -237,6 +238,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"api_key":         payload.ExternalResponses.APIKey,
 			"model":           payload.ExternalResponses.Model,
 			"request_timeout": payload.ExternalResponses.RequestTimeout,
+			"retry_times":     payload.ExternalResponses.RetryTimes,
 		},
 		"newapi": {
 			"base_url":        payload.NewAPI.BaseURL,
@@ -469,6 +471,7 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ExternalResponses.APIKey = cfg.ExternalResponses.APIKey
 	payload.ExternalResponses.Model = cfg.ExternalResponses.Model
 	payload.ExternalResponses.RequestTimeout = cfg.ExternalResponses.RequestTimeout
+	payload.ExternalResponses.RetryTimes = cfg.ExternalResponses.RetryTimes
 
 	payload.NewAPI.BaseURL = cfg.NewAPI.BaseURL
 	payload.NewAPI.Username = cfg.NewAPI.Username

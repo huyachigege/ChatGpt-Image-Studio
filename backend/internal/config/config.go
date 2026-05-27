@@ -128,6 +128,7 @@ type ExternalResponsesConfig struct {
 	APIKey         string `toml:"api_key"`
 	Model          string `toml:"model"`
 	RequestTimeout int    `toml:"request_timeout"`
+	RetryTimes     int    `toml:"retry_times"`
 }
 
 type NewAPIConfig struct {
@@ -513,6 +514,20 @@ func (c *Config) ExternalResponsesConfig() ExternalResponsesConfig {
 	return c.ExternalResponses
 }
 
+func (c *Config) ExternalResponsesRetryTimes() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	retries := c.ExternalResponses.RetryTimes
+	if retries <= 0 {
+		retries = 3
+	}
+	if retries > 10 {
+		retries = 10
+	}
+	return retries
+}
+
 func (c *Config) ImageQueueConfig() (int, int, time.Duration) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -658,6 +673,12 @@ func (c *Config) validate() error {
 	c.ExternalResponses.Model = strings.TrimSpace(c.ExternalResponses.Model)
 	if c.ExternalResponses.RequestTimeout <= 0 {
 		c.ExternalResponses.RequestTimeout = 300
+	}
+	if c.ExternalResponses.RetryTimes <= 0 {
+		c.ExternalResponses.RetryTimes = 3
+	}
+	if c.ExternalResponses.RetryTimes > 10 {
+		c.ExternalResponses.RetryTimes = 10
 	}
 	if c.ExternalResponses.Enabled {
 		if c.ExternalResponses.BaseURL == "" {

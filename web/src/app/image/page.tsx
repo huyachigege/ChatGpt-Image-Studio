@@ -453,6 +453,8 @@ export default function ImagePage() {
     useState<ImageAspectRatio>("auto");
   const [imageResolutionTier, setImageResolutionTier] =
     useState<ImageResolutionTier>("auto-paid");
+  const [editResolutionAccess, setEditResolutionAccess] =
+    useState<ImageResolutionAccess>("paid");
   const [imageQuality, setImageQuality] = useState<ImageQuality>("high");
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState(() =>
@@ -711,6 +713,16 @@ export default function ImagePage() {
     () => selectedResolutionPreset?.access ?? "free",
     [selectedResolutionPreset],
   );
+  const editResolutionTierOptions = useMemo(
+    () => [
+      { label: "Paid 链路（默认）", value: "paid" },
+      { label: "Free 链路", value: "free" },
+    ],
+    [],
+  );
+  const editResolutionTierLabel =
+    editResolutionTierOptions.find((item) => item.value === editResolutionAccess)?.label ??
+    "Paid 链路（默认）";
   const imageSources = useMemo(
     () => sourceImages.filter((item) => item.role === "image"),
     [sourceImages],
@@ -1293,6 +1305,7 @@ export default function ImagePage() {
       parsedCount,
       imageSize,
       imageResolutionAccess,
+      editResolutionAccess,
       imageQuality,
       selectedConversationId,
       conversationTurns: selectedConversationTurns,
@@ -1464,9 +1477,9 @@ export default function ImagePage() {
         imageCount={imageCount}
         imageAspectRatio={imageAspectRatio}
         imageAspectRatioOptions={imageAspectRatioOptions}
-        imageResolutionTier={imageResolutionTier}
-        imageResolutionTierLabel={imageResolutionTierLabel}
-        imageResolutionTierOptions={imageResolutionTierOptions}
+        imageResolutionTier={mode === "edit" ? editResolutionAccess : imageResolutionTier}
+        imageResolutionTierLabel={mode === "edit" ? editResolutionTierLabel : imageResolutionTierLabel}
+        imageResolutionTierOptions={mode === "edit" ? editResolutionTierOptions : imageResolutionTierOptions}
         imageQuality={imageQuality}
         imageQualityOptions={imageQualityOptions}
         imageQualityDisabled={!isImageQualityEnabled}
@@ -1499,9 +1512,13 @@ export default function ImagePage() {
         onImageAspectRatioChange={(value) =>
           setImageAspectRatio(value as ImageAspectRatio)
         }
-        onImageResolutionTierChange={(value) =>
-          setImageResolutionTier(value as ImageResolutionTier)
-        }
+        onImageResolutionTierChange={(value) => {
+          if (mode === "edit") {
+            setEditResolutionAccess(value as ImageResolutionAccess);
+            return;
+          }
+          setImageResolutionTier(value as ImageResolutionTier);
+        }}
         onImageQualityChange={(value) => setImageQuality(value as ImageQuality)}
         onPromptChange={setImagePrompt}
         onPromptPaste={handlePromptPaste}
@@ -1543,11 +1560,11 @@ export default function ImagePage() {
         imageName={editorTarget?.imageName || "image.png"}
         imageSrc={editorTarget?.sourceDataUrl || ""}
         isSubmitting={false}
-        allowOutputOptions={false}
-        imageAspectRatio={imageAspectRatio}
-        imageAspectRatioOptions={imageAspectRatioOptions}
-        imageResolutionTier={imageResolutionTier}
-        imageResolutionTierOptions={imageResolutionTierOptions}
+        allowOutputOptions={true}
+        imageAspectRatio="auto"
+        imageAspectRatioOptions={[{ label: "原比例", value: "auto" }]}
+        imageResolutionTier={editResolutionAccess}
+        imageResolutionTierOptions={editResolutionTierOptions}
         imageQuality={imageQuality}
         imageQualityOptions={imageQualityOptions}
         imageQualityDisabled={!isImageQualityEnabled}
@@ -1556,7 +1573,7 @@ export default function ImagePage() {
           setImageAspectRatio(value as ImageAspectRatio)
         }
         onImageResolutionTierChange={(value) =>
-          setImageResolutionTier(value as ImageResolutionTier)
+          setEditResolutionAccess(value as ImageResolutionAccess)
         }
         onImageQualityChange={(value) => setImageQuality(value as ImageQuality)}
         onClose={closeSelectionEditor}

@@ -504,8 +504,8 @@ export function ImageEditModal({
       await onSubmit({
         prompt: trimmedPrompt,
         mask,
-        aspectRatio: allowOutputOptions ? imageAspectRatio : undefined,
-        resolutionTier: allowOutputOptions ? imageResolutionTier : undefined,
+        aspectRatio: imageAspectRatio,
+        resolutionTier: imageResolutionTier,
         quality: imageQuality,
       });
     } catch (error) {
@@ -698,22 +698,6 @@ export function ImageEditModal({
               <div className="hide-scrollbar -mx-1 mb-2 flex items-center gap-2 overflow-x-auto px-1 pb-1">
                 {allowOutputOptions ? (
                   <>
-                    <Select
-                      value={imageAspectRatio}
-                      onValueChange={(value) => onImageAspectRatioChange?.(value)}
-                    >
-                      <SelectTrigger className="h-9 w-[88px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:w-[108px] sm:text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {imageAspectRatioOptions.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
                     <Select
                       value={imageResolutionTier}
                       onValueChange={(value) =>

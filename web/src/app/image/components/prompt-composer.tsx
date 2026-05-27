@@ -115,6 +115,7 @@ export function PromptComposer({
     })
     .slice(0, 60);
   const showImageOutputControls = mode === "generate";
+  const showImageRouteControl = mode === "edit";
   const showImageQualityControl = mode === "edit" || mode === "generate";
   const imageQualityPrefix = "质量";
   const hasComposerContent = imagePrompt.trim().length > 0 || sourceImages.length > 0;
@@ -208,7 +209,7 @@ export function PromptComposer({
               </Select>
             ) : null}
 
-            {showImageOutputControls ? (
+            {showImageOutputControls || showImageRouteControl ? (
               <Select value={imageResolutionTier} onValueChange={onImageResolutionTierChange}>
                 <SelectTrigger
                   className="h-9 w-[168px] shrink-0 rounded-full border-stone-200 bg-white text-[13px] font-medium text-stone-700 shadow-none focus-visible:ring-0 sm:h-10 sm:w-[238px] sm:text-sm"

@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	defaultImageDir           = "data/tmp/image"
-	imageThumbnailMaxDim      = 720
-	imageThumbnailJPEGQuality = 88
+	defaultImageDir               = "data/tmp/image"
+	imageThumbnailShortSide       = 768
+	imageThumbnailSkipCompressMax = 768 << 10
+	imageThumbnailJPEGQuality     = 88
 )
 
 // downloadAndCache downloads an upstream image using the image client's transport
@@ -102,17 +103,30 @@ func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (strin
 	if len(data) == 0 {
 		return "", fmt.Errorf("image is empty")
 	}
-	src, _, err := image.Decode(bytes.NewReader(data))
+	src, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("decode image: %w", err)
 	}
-	thumb := resizeImageShortestSide(src, 768)
 	hash := sha256.Sum256(data)
-	filename := fmt.Sprintf("%s-%x.jpg", firstNonEmpty(strings.TrimSpace(prefix), "image"), hash[:12])
+	namePrefix := firstNonEmpty(strings.TrimSpace(prefix), "image")
 	cacheDir := filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), ".thumbs")
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
 		return "", err
 	}
+	if len(data) < imageThumbnailSkipCompressMax {
+		filename := fmt.Sprintf("%s-%x%s", namePrefix, hash[:12], imageFormatExtension(format))
+		path := filepath.Join(cacheDir, filename)
+		if _, err := os.Stat(path); err == nil {
+			return ".thumbs/" + filename, nil
+		}
+		if err := writeFileAtomic(path, data); err != nil {
+			return "", err
+		}
+		return ".thumbs/" + filename, nil
+	}
+
+	thumb := resizeImageShortestSide(src, imageThumbnailShortSide)
+	filename := fmt.Sprintf("%s-%x.jpg", namePrefix, hash[:12])
 	path := filepath.Join(cacheDir, filename)
 	if _, err := os.Stat(path); err == nil {
 		return ".thumbs/" + filename, nil
@@ -225,6 +239,10 @@ func (s *Server) handleImageThumbnail(w http.ResponseWriter, r *http.Request) {
 	path := s.resolveImageFilePath(name)
 	if path == "" {
 		writeError(w, http.StatusNotFound, "image not found")
+		return
+	}
+	if info, err := os.Stat(path); err == nil && info.Mode().IsRegular() && info.Size() < imageThumbnailSkipCompressMax {
+		s.serveImageFile(w, r, path)
 		return
 	}
 
@@ -398,7 +416,7 @@ func (s *Server) ensureImageThumbnail(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	thumb := resizeImageNearest(src, imageThumbnailMaxDim)
+	thumb := resizeImageShortestSide(src, imageThumbnailShortSide)
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
 		return "", err
 	}
@@ -426,7 +444,7 @@ func (s *Server) ensureImageThumbnail(path string) (string, error) {
 
 func (s *Server) imageThumbnailCachePath(path string, info os.FileInfo) string {
 	cacheRoot := filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), ".thumbs")
-	fingerprint := fmt.Sprintf("%s:%d:%d:%d:%d", filepath.Clean(path), info.ModTime().UnixNano(), info.Size(), imageThumbnailMaxDim, imageThumbnailJPEGQuality)
+	fingerprint := fmt.Sprintf("%s:%d:%d:%d:%d", filepath.Clean(path), info.ModTime().UnixNano(), info.Size(), imageThumbnailShortSide, imageThumbnailJPEGQuality)
 	hash := sha256.Sum256([]byte(fingerprint))
 	return filepath.Join(cacheRoot, fmt.Sprintf("%x.jpg", hash[:12]))
 }
@@ -447,7 +465,7 @@ func resizeImageNearest(src image.Image, maxDim int) *image.RGBA {
 		return image.NewRGBA(image.Rect(0, 0, 1, 1))
 	}
 	if maxDim <= 0 {
-		maxDim = imageThumbnailMaxDim
+		maxDim = imageThumbnailShortSide
 	}
 	dstW, dstH := width, height
 	if width > height && width > maxDim {
@@ -468,13 +486,48 @@ func resizeImageShortestSide(src image.Image, shortSide int) *image.RGBA {
 		return image.NewRGBA(image.Rect(0, 0, 1, 1))
 	}
 	if shortSide <= 0 {
-		shortSide = 768
+		shortSide = imageThumbnailShortSide
 	}
 	currentShortSide := min(width, height)
 	if currentShortSide <= shortSide {
 		return resizeImageNearestTo(src, width, height)
 	}
-	return resizeImageNearestTo(src, max(1, width*shortSide/currentShortSide), max(1, height*shortSide/currentShortSide))
+	if width > height {
+		return resizeImageNearestTo(src, max(1, ceilDiv(width*shortSide, height)), shortSide)
+	}
+	return resizeImageNearestTo(src, shortSide, max(1, ceilDiv(height*shortSide, width)))
+}
+
+func ceilDiv(n, d int) int {
+	if d <= 0 {
+		return 0
+	}
+	return (n + d - 1) / d
+}
+
+func imageFormatExtension(format string) string {
+	switch strings.ToLower(strings.TrimSpace(format)) {
+	case "jpeg", "jpg":
+		return ".jpg"
+	case "png":
+		return ".png"
+	case "gif":
+		return ".gif"
+	default:
+		return ".img"
+	}
+}
+
+func writeFileAtomic(path string, data []byte) error {
+	tmpFile := path + ".tmp"
+	if err := os.WriteFile(tmpFile, data, 0o644); err != nil {
+		return err
+	}
+	if err := os.Rename(tmpFile, path); err != nil {
+		_ = os.Remove(tmpFile)
+		return err
+	}
+	return nil
 }
 
 func resizeImageNearestTo(src image.Image, dstW, dstH int) *image.RGBA {
