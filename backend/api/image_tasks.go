@@ -89,6 +89,7 @@ type createImageTaskRequest struct {
 	ConversationContext string                              `json:"conversationContext,omitempty"`
 	Policy              *accounts.ImageAccountRoutingPolicy `json:"policy,omitempty"`
 	SystemHint          string                              `json:"systemHint,omitempty"`
+	RequestBaseURL      string                              `json:"-"`
 }
 
 type imageTaskBlocker struct {
@@ -209,6 +210,7 @@ type imageTask struct {
 	PrivateSystemHint   string
 	SystemHint          string
 	ConversationContext string
+	RequestBaseURL      string
 	SourceImages        []imageTaskSourceImage
 	ReferenceImages     []imageTaskSourceImage
 	SourceReference     *imageTaskSourceReference

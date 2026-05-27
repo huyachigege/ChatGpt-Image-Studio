@@ -1307,7 +1307,7 @@ func TestCreateImageGenerateFallsBackToLegacyWhenResponsesReferenceFails(t *test
 	want := []string{
 		"responses:token-compat:previous-response",
 		"responses:token-compat:reference-generate",
-		"official:token-compat:context-generate",
+		"official:token-compat:reference-generate",
 	}
 	if len(recorder.callSequence) != len(want) {
 		t.Fatalf("callSequence = %#v, want %#v", recorder.callSequence, want)

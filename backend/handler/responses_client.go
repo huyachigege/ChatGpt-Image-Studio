@@ -23,17 +23,17 @@ import (
 )
 
 const (
-	codexResponsesBaseURL          = "https://chatgpt.com/backend-api/codex"
-	claudeResponsesUserAgent       = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
-	codexResponsesOriginator       = "codex-tui"
-	maxResponsesInlineEditImages   = 1
-	maxResponsesInlineEditBytes    = 768 << 10
+	codexResponsesBaseURL                 = "https://chatgpt.com/backend-api/codex"
+	claudeResponsesUserAgent              = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
+	codexResponsesOriginator              = "codex-tui"
+	maxResponsesInlineEditImages          = 1
+	maxResponsesInlineEditBytes           = 768 << 10
 	maxResponsesReferenceImages           = 9
 	maxResponsesReferenceCompactThreshold = 5
-	maxResponsesReferenceBytes                 = 2 << 20
-	maxResponsesReferenceShortSide             = 768
-	maxResponsesReferenceCompactShortSide      = 540
-	maxResponsesSSELineBytes                   = 128 << 20
+	maxResponsesReferenceBytes            = 2 << 20
+	maxResponsesReferenceShortSide        = 768
+	maxResponsesReferenceCompactShortSide = 540
+	maxResponsesSSELineBytes              = 128 << 20
 )
 
 type ImageWorkflowClient interface {
@@ -121,6 +121,13 @@ func (c *ResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, 
 	return c.generateViaResponsesWithAction(ctx, buildResponsesReferencePrompt(prompt, len(references)), model, size, quality, background, references, nil, "", "generate")
 }
 
+func (c *ResponsesClient) GenerateImageWithReferenceImageURLs(ctx context.Context, prompt, model string, n int, size, quality, background string, imageURLs []string) ([]ImageResult, error) {
+	if len(imageURLs) == 0 {
+		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	}
+	return c.generateViaResponsesWithActionAndImageURLs(ctx, buildResponsesReferencePrompt(prompt, len(imageURLs)), model, size, quality, background, nil, nil, imageURLs, "", "generate")
+}
+
 func (c *ResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]ImageResult, error) {
 	if len(mask) == 0 && len(images) > 0 && !SupportsResponsesInlineEdit(images, nil) {
 		references, err := prepareResponsesReferenceImages(images)
@@ -130,6 +137,13 @@ func (c *ResponsesClient) EditImageByUpload(ctx context.Context, prompt, model s
 		return c.generateViaResponsesWithAction(ctx, buildResponsesEditPrompt(prompt, len(references), false), model, size, quality, "", references, nil, "", "edit")
 	}
 	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
+}
+
+func (c *ResponsesClient) EditImageByUploadWithImageURLs(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]ImageResult, error) {
+	if len(imageURLs) == 0 {
+		return nil, fmt.Errorf("at least one image is required")
+	}
+	return c.generateViaResponsesWithActionAndImageURLs(ctx, buildResponsesEditPrompt(prompt, len(imageURLs), len(mask) > 0), model, size, quality, "", nil, mask, imageURLs, "", "edit")
 }
 
 func (c *ResponsesClient) EditImageByUploadWithPreviousResponse(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string, previousResponseID string) ([]ImageResult, error) {
@@ -165,6 +179,10 @@ func (c *ResponsesClient) generateViaResponses(ctx context.Context, prompt, mode
 }
 
 func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, prompt, model string, size, quality, background string, images [][]byte, mask []byte, previousResponseID string, action string) ([]ImageResult, error) {
+	return c.generateViaResponsesWithActionAndImageURLs(ctx, prompt, model, size, quality, background, images, mask, nil, previousResponseID, action)
+}
+
+func (c *ResponsesClient) generateViaResponsesWithActionAndImageURLs(ctx context.Context, prompt, model string, size, quality, background string, images [][]byte, mask []byte, imageURLs []string, previousResponseID string, action string) ([]ImageResult, error) {
 	if c == nil || c.backend == nil {
 		return nil, fmt.Errorf("responses client is not initialized")
 	}
@@ -178,7 +196,7 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 	toolAction := strings.ToLower(strings.TrimSpace(action))
 	if toolAction == "" {
 		toolAction = "generate"
-		if len(images) > 0 {
+		if len(images) > 0 || len(imageURLs) > 0 {
 			toolAction = "edit"
 		}
 	}
@@ -194,7 +212,7 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		return nil, err
 	}
 
-	content := make([]map[string]any, 0, 1+len(images))
+	content := make([]map[string]any, 0, 1+len(images)+len(imageURLs))
 	content = append(content, map[string]any{
 		"type": "input_text",
 		"text": prompt,
@@ -206,6 +224,15 @@ func (c *ResponsesClient) generateViaResponsesWithAction(ctx context.Context, pr
 		content = append(content, map[string]any{
 			"type":      "input_image",
 			"image_url": encodeImageDataURL(image, detectMIME(image)),
+		})
+	}
+	for _, imageURL := range imageURLs {
+		if imageURL = strings.TrimSpace(imageURL); imageURL == "" {
+			continue
+		}
+		content = append(content, map[string]any{
+			"type":      "input_image",
+			"image_url": imageURL,
 		})
 	}
 	instructions := "You generate and edit images for the user."

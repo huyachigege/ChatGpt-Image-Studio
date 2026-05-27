@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"fmt"
 	"image"
@@ -63,12 +64,79 @@ func downloadAndCache(client imageDownloader, upstreamURL string, cacheDir strin
 
 // gatewayImageURL builds the public URL for a cached image.
 func gatewayImageURL(r *http.Request, filename string) string {
+	baseURL := requestPublicBaseURL(r)
+	if baseURL == "" {
+		return "/v1/files/image/" + strings.TrimLeft(filename, "/")
+	}
+	return baseURL + "/v1/files/image/" + strings.TrimLeft(filename, "/")
+}
+
+func requestPublicBaseURL(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
 	scheme := "http"
-	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+	if r.TLS != nil || strings.EqualFold(strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Proto"), ",")[0]), "https") {
 		scheme = "https"
 	}
-	host := r.Host
-	return fmt.Sprintf("%s://%s/v1/files/image/%s", scheme, host, strings.TrimLeft(filename, "/"))
+	host := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0])
+	if host == "" {
+		host = strings.TrimSpace(r.Host)
+	}
+	if host == "" {
+		return ""
+	}
+	return scheme + "://" + host
+}
+
+func absoluteImageFileURL(baseURL, name string) string {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	name = strings.TrimLeft(strings.TrimSpace(name), "/")
+	if baseURL == "" || name == "" {
+		return ""
+	}
+	return baseURL + "/v1/files/image/" + name
+}
+
+func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("image is empty")
+	}
+	src, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("decode image: %w", err)
+	}
+	thumb := resizeImageShortestSide(src, 768)
+	hash := sha256.Sum256(data)
+	filename := fmt.Sprintf("%s-%x.jpg", firstNonEmpty(strings.TrimSpace(prefix), "image"), hash[:12])
+	cacheDir := filepath.Join(s.cfg.ResolvePath(s.cfg.Storage.ImageDir), ".thumbs")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(cacheDir, filename)
+	if _, err := os.Stat(path); err == nil {
+		return ".thumbs/" + filename, nil
+	}
+	tmpFile := path + ".tmp"
+	out, err := os.Create(tmpFile)
+	if err != nil {
+		return "", err
+	}
+	encodeErr := jpeg.Encode(out, thumb, &jpeg.Options{Quality: imageThumbnailJPEGQuality})
+	closeErr := out.Close()
+	if encodeErr != nil {
+		_ = os.Remove(tmpFile)
+		return "", encodeErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(tmpFile)
+		return "", closeErr
+	}
+	if err := os.Rename(tmpFile, path); err != nil {
+		_ = os.Remove(tmpFile)
+		return "", err
+	}
+	return ".thumbs/" + filename, nil
 }
 
 func (s *Server) resolveImageFilePath(name string) string {
@@ -389,6 +457,30 @@ func resizeImageNearest(src image.Image, maxDim int) *image.RGBA {
 		dstH = maxDim
 		dstW = max(1, width*maxDim/height)
 	}
+	return resizeImageNearestTo(src, dstW, dstH)
+}
+
+func resizeImageShortestSide(src image.Image, shortSide int) *image.RGBA {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1))
+	}
+	if shortSide <= 0 {
+		shortSide = 768
+	}
+	currentShortSide := min(width, height)
+	if currentShortSide <= shortSide {
+		return resizeImageNearestTo(src, width, height)
+	}
+	return resizeImageNearestTo(src, max(1, width*shortSide/currentShortSide), max(1, height*shortSide/currentShortSide))
+}
+
+func resizeImageNearestTo(src image.Image, dstW, dstH int) *image.RGBA {
+	bounds := src.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
 	dst := image.NewRGBA(image.Rect(0, 0, dstW, dstH))
 	for y := 0; y < dstH; y++ {
 		sy := bounds.Min.Y + y*height/dstH

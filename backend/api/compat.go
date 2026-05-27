@@ -164,6 +164,7 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 		Background:     strings.TrimSpace(req.Background),
 		ResponseFormat: "url",
 		Policy:         policy,
+		RequestBaseURL: requestPublicBaseURL(r),
 	})
 	if err != nil {
 		return nil, err
@@ -226,6 +227,7 @@ func (s *Server) executeImageEdit(ctx context.Context, req imageEditRequest, r *
 		ResponseFormat: "url",
 		SourceImages:   sourceImages,
 		Policy:         policy,
+		RequestBaseURL: requestPublicBaseURL(r),
 	})
 	if err != nil {
 		return nil, err
@@ -275,6 +277,7 @@ func (s *Server) executeImageSelectionEdit(ctx context.Context, req imageSelecti
 		Count:          1,
 		ResponseFormat: "url",
 		SourceImages:   sourceImages,
+		RequestBaseURL: requestPublicBaseURL(r),
 		SourceReference: &imageTaskSourceReferencePayload{
 			OriginalFileID:  strings.TrimSpace(req.OriginalFileID),
 			OriginalGenID:   strings.TrimSpace(req.OriginalGenID),

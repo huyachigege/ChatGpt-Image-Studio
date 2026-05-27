@@ -68,11 +68,11 @@ func (c *externalResponsesClient) DownloadAsBase64(ctx context.Context, url stri
 }
 
 func (c *externalResponsesClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, size, quality, background, "", "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, "", "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, size, quality, background, previousResponseID, "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, previousResponseID, "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
@@ -83,7 +83,14 @@ func (c *externalResponsesClient) GenerateImageWithReferenceImages(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(references)), references, nil, size, quality, background, "", "generate")
+	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(references)), references, nil, nil, size, quality, background, "", "generate")
+}
+
+func (c *externalResponsesClient) GenerateImageWithReferenceImageURLs(ctx context.Context, prompt, model string, n int, size, quality, background string, imageURLs []string) ([]handler.ImageResult, error) {
+	if len(imageURLs) == 0 {
+		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	}
+	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(imageURLs)), nil, nil, imageURLs, size, quality, background, "", "generate")
 }
 
 func (c *externalResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
@@ -92,7 +99,7 @@ func (c *externalResponsesClient) EditImageByUpload(ctx context.Context, prompt,
 		if err != nil {
 			return nil, err
 		}
-		return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(references), false), references, nil, size, quality, "", "", "edit")
+		return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(references), false), references, nil, nil, size, quality, "", "", "edit")
 	}
 	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
 }
@@ -104,7 +111,14 @@ func (c *externalResponsesClient) EditImageByUploadWithPreviousResponse(ctx cont
 	if !handler.SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(images), len(mask) > 0), images, mask, size, quality, "", previousResponseID, "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(images), len(mask) > 0), images, mask, nil, size, quality, "", previousResponseID, "")
+}
+
+func (c *externalResponsesClient) EditImageByUploadWithImageURLs(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]handler.ImageResult, error) {
+	if len(imageURLs) == 0 {
+		return nil, fmt.Errorf("at least one image is required")
+	}
+	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(imageURLs), len(mask) > 0), nil, mask, imageURLs, size, quality, "", "", "edit")
 }
 
 func (c *externalResponsesClient) InpaintImageByMask(ctx context.Context, prompt string, model string, originalFileID string, originalGenID string, conversationID string, parentMessageID string, mask []byte, size string, quality string) ([]handler.ImageResult, error) {
@@ -175,16 +189,16 @@ func (c *externalResponsesClient) SetSessionID(sessionID string) {
 	_ = sessionID
 }
 
-func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, size, quality, background string, previousResponseID string, action string) ([]handler.ImageResult, error) {
-	payload, err := c.buildResponsesRequest(prompt, images, mask, size, quality, background, previousResponseID, action)
+func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string) ([]handler.ImageResult, error) {
+	payload, err := c.buildResponsesRequest(prompt, images, mask, imageURLs, size, quality, background, previousResponseID, action)
 	if err != nil {
 		return nil, err
 	}
 	return c.executeResponsesRequest(ctx, payload)
 }
 
-func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, size, quality, background string, previousResponseID string, action string) (map[string]any, error) {
-	content := make([]map[string]any, 0, 1+len(images))
+func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string) (map[string]any, error) {
+	content := make([]map[string]any, 0, 1+len(images)+len(imageURLs))
 	content = append(content, map[string]any{
 		"type": "input_text",
 		"text": strings.TrimSpace(prompt),
@@ -198,11 +212,20 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 			"image_url": handler.EncodeResponsesImageDataURL(image),
 		})
 	}
+	for _, imageURL := range imageURLs {
+		if imageURL = strings.TrimSpace(imageURL); imageURL == "" {
+			continue
+		}
+		content = append(content, map[string]any{
+			"type":      "input_image",
+			"image_url": imageURL,
+		})
+	}
 
 	toolAction := strings.ToLower(strings.TrimSpace(action))
 	if toolAction == "" {
 		toolAction = "generate"
-		if len(images) > 0 {
+		if len(images) > 0 || len(imageURLs) > 0 {
 			toolAction = "edit"
 		}
 	}
@@ -512,9 +535,31 @@ func (c *fallbackResponsesClient) GenerateImageWithReferenceImages(ctx context.C
 	})
 }
 
+func (c *fallbackResponsesClient) GenerateImageWithReferenceImageURLs(ctx context.Context, prompt, model string, n int, size, quality, background string, imageURLs []string) ([]handler.ImageResult, error) {
+	return c.run(ctx, func(client imageWorkflowClient) ([]handler.ImageResult, error) {
+		if generator, ok := client.(interface {
+			GenerateImageWithReferenceImageURLs(context.Context, string, string, int, string, string, string, []string) ([]handler.ImageResult, error)
+		}); ok {
+			return generator.GenerateImageWithReferenceImageURLs(ctx, prompt, model, n, size, quality, background, imageURLs)
+		}
+		return client.GenerateImage(ctx, prompt, model, n, size, quality, background)
+	})
+}
+
 func (c *fallbackResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
 	return c.run(ctx, func(client imageWorkflowClient) ([]handler.ImageResult, error) {
 		return client.EditImageByUpload(ctx, prompt, model, images, mask, size, quality)
+	})
+}
+
+func (c *fallbackResponsesClient) EditImageByUploadWithImageURLs(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]handler.ImageResult, error) {
+	return c.run(ctx, func(client imageWorkflowClient) ([]handler.ImageResult, error) {
+		if editor, ok := client.(interface {
+			EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
+		}); ok {
+			return editor.EditImageByUploadWithImageURLs(ctx, prompt, model, imageURLs, mask, size, quality)
+		}
+		return client.EditImageByUpload(ctx, prompt, model, nil, mask, size, quality)
 	})
 }
 

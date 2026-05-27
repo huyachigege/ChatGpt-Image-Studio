@@ -62,6 +62,12 @@ func (c *fallbackStubClient) GenerateImageWithPreviousResponse(ctx context.Conte
 func (c *fallbackStubClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
 	return c.GenerateImage(ctx, prompt, model, 1, size, quality, "")
 }
+func (c *fallbackStubClient) EditImageByUploadWithImageURLs(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]handler.ImageResult, error) {
+	return c.GenerateImage(ctx, prompt, model, 1, size, quality, "")
+}
+func (c *fallbackStubClient) GenerateImageWithReferenceImageURLs(ctx context.Context, prompt, model string, n int, size, quality, background string, imageURLs []string) ([]handler.ImageResult, error) {
+	return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
+}
 func (c *fallbackStubClient) InpaintImageByMask(ctx context.Context, prompt string, model string, originalFileID string, originalGenID string, conversationID string, parentMessageID string, mask []byte, size string, quality string) ([]handler.ImageResult, error) {
 	return c.GenerateImage(ctx, prompt, model, 1, size, quality, "")
 }

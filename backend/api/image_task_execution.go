@@ -285,13 +285,26 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil {
 			return nil, err
 		}
-		responsesEligible := handler.SupportsResponsesInlineEdit(imageFiles, mask) || (len(mask) == 0 && handler.SupportsResponsesReferenceImages(imageFiles))
+		imageFileURLs, urlErr := s.buildTaskImageURLs(imageFiles, task.UserID, task.RequestBaseURL, "source")
+		if urlErr != nil {
+			return nil, urlErr
+		}
+		responsesEligible := len(imageFileURLs) > 0 || handler.SupportsResponsesInlineEdit(imageFiles, mask) || (len(mask) == 0 && handler.SupportsResponsesReferenceImages(imageFiles))
 		editRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			applySystemHint(client)
 			prompt := effectivePrompt
 			if instructions != "" {
 				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
 					prompt = instructions + "\n\n" + prompt
+				}
+			}
+			if len(imageFileURLs) > 0 {
+				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
+					if editor, ok := client.(interface {
+						EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
+					}); ok {
+						return editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
+					}
 				}
 			}
 			return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
@@ -333,7 +346,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			)
 			attemptClass = classifyImageAttemptError(err)
 		}
-		if shouldTryImageFallback(err, attemptClass) {
+		if shouldTryImageFallback(err, attemptClass) && !isImageHTTPStatusError(err, 500) {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -362,6 +375,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil {
 			return nil, err
 		}
+		referenceImageURLs, urlErr := s.buildTaskImageURLs(referenceImageFiles, task.UserID, task.RequestBaseURL, "reference")
+		if urlErr != nil {
+			return nil, urlErr
+		}
 		buildPrompt := func(client imageWorkflowClient) string {
 			applySystemHint(client)
 			prompt := effectivePrompt
@@ -375,7 +392,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		sameSourceAccount := task.ContextReference != nil && strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
-			if task.ContextReference != nil && len(referenceImageFiles) == 0 {
+			if task.ContextReference != nil {
 				if sameSourceAccount && task.ContextReference.ResponseID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
@@ -388,13 +405,22 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 						}
 					}
 				}
-				if sameSourceAccount && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
+				if len(referenceImageFiles) == 0 && sameSourceAccount && task.ContextReference.ConversationID != "" && task.ContextReference.ParentMessageID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); !ok || !responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
 							GenerateImageWithContext(context.Context, string, string, int, string, string, string, string, string) ([]handler.ImageResult, error)
 						}); ok {
 							return generator.GenerateImageWithContext(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ConversationID, task.ContextReference.ParentMessageID)
 						}
+					}
+				}
+			}
+			if len(referenceImageURLs) > 0 && strings.TrimSpace(task.RequestBaseURL) != "" {
+				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
+					if generator, ok := client.(interface {
+						GenerateImageWithReferenceImageURLs(context.Context, string, string, int, string, string, string, []string) ([]handler.ImageResult, error)
+					}); ok {
+						return generator.GenerateImageWithReferenceImageURLs(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageURLs)
 					}
 				}
 			}
@@ -545,6 +571,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					items, attemptClass, err = tryNextResponses()
 				}
 			}
+			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && task.ContextReference != nil {
+				items, attemptClass, err = trySameLegacy()
+			}
 			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil {
 				items, attemptClass, err = trySameLegacy()
 			}
@@ -686,6 +715,27 @@ func shouldRetryImageTaskOnSameAccount(account accounts.PublicAccount, err error
 		return false
 	}
 	return !isPaidImageAccountType(account.Type)
+}
+
+func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix string) ([]string, error) {
+	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if baseURL == "" || len(images) == 0 {
+		return nil, nil
+	}
+	urls := make([]string, 0, len(images))
+	for index, image := range images {
+		if len(image) == 0 {
+			continue
+		}
+		name, err := s.saveImageBytesForURL(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
+		if err != nil {
+			return nil, err
+		}
+		if url := absoluteImageFileURL(baseURL, name); url != "" {
+			urls = append(urls, url)
+		}
+	}
+	return urls, nil
 }
 
 func (s *Server) resolveTaskEditInputs(task *imageTask) ([]byte, [][]byte, error) {
