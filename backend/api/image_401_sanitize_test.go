@@ -36,13 +36,13 @@ func TestExternalResponsesUnavailableIsRetryableFallback(t *testing.T) {
 	}
 }
 
-func TestRaw403IsRetryableFallback(t *testing.T) {
+func TestRaw403IsFatal(t *testing.T) {
 	err := errors.New("upload image 0: pre-upload returned 403: forbidden")
-	if got := classifyImageAttemptError(err); got != imageAttemptRetryableDisableResponses {
-		t.Fatalf("classifyImageAttemptError = %v, want %v", got, imageAttemptRetryableDisableResponses)
+	if got := classifyImageAttemptError(err); got != imageAttemptFatal {
+		t.Fatalf("classifyImageAttemptError = %v, want %v", got, imageAttemptFatal)
 	}
-	if !shouldRetryImageRequestWithNextAccount(err) {
-		t.Fatalf("shouldRetryImageRequestWithNextAccount returned false for 403")
+	if shouldRetryImageRequestWithNextAccount(err) {
+		t.Fatalf("shouldRetryImageRequestWithNextAccount returned true for 403")
 	}
 }
 

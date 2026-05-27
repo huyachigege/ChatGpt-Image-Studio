@@ -704,7 +704,7 @@ func TestCreateImageTaskSelectionEditFallsBackToSourceMaskEdit(t *testing.T) {
 	}
 }
 
-func TestCreateImageTaskDoesNotSwitchAccountForGenericEditError(t *testing.T) {
+func TestCreateImageTaskRetriesExternalResponsesForGenericEditError(t *testing.T) {
 	oldBackoffBase := imageTaskRetryBackoffBase
 	oldBackoffMax := imageTaskRetryBackoffMax
 	imageTaskRetryBackoffBase = 20 * time.Millisecond
@@ -722,6 +722,7 @@ func TestCreateImageTaskDoesNotSwitchAccountForGenericEditError(t *testing.T) {
 		paidRoute:   "responses",
 		paidModel:   "gpt-5.4-mini",
 	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
 		accounts: []compatSeedAccount{
 			{
 				fileName:    "edit-transient.json",
@@ -768,15 +769,13 @@ func TestCreateImageTaskDoesNotSwitchAccountForGenericEditError(t *testing.T) {
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusFailed)
-	if len(recorder.callSequence) != 1 {
-		t.Fatalf("callSequence = %#v, want only first account", recorder.callSequence)
+	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusSucceeded)
+	joinedSequence := strings.Join(recorder.callSequence, ",")
+	if !strings.Contains(joinedSequence, "token-edit-transient") {
+		t.Fatalf("callSequence = %#v, want first account attempted", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-edit-transient") {
-		t.Fatalf("callSequence[0] = %q, want first account", recorder.callSequence[0])
-	}
-	if strings.Contains(strings.Join(recorder.callSequence, ","), "token-edit-healthy") {
-		t.Fatalf("callSequence = %#v, generic edit error must not switch account", recorder.callSequence)
+	if !strings.Contains(joinedSequence, "external_responses") {
+		t.Fatalf("callSequence = %#v, want generic edit error to retry external_responses", recorder.callSequence)
 	}
 }
 

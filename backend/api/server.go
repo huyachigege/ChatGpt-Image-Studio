@@ -31,34 +31,36 @@ import (
 )
 
 type Server struct {
-	cfg                            *config.Config
-	runtimeMu                      sync.RWMutex
-	store                          *accounts.Store
-	syncClient                     *cliproxy.Client
-	syncRunMu                      sync.RWMutex
-	syncRunCache                   map[string]*sourceSyncRunResult
-	accountRefreshMu               sync.RWMutex
-	accountRefreshRun              *accountRefreshRunResult
-	accountRefreshCancel           context.CancelFunc
-	staticDir                      string
-	reqLogs                        *imageRequestLogStore
-	imageAdmission                 *imageAdmissionController
-	imageTasks                     *imageTaskManager
-	officialClientFactory          func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
-	responsesClientFactory         func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
-	externalResponsesClientFactory func(cfg config.ExternalResponsesConfig) imageWorkflowClient
-	cpaClientFactory               func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient
-	newAPIClientFactory            func(cfg *config.Config) *newapi.Client
-	sub2apiClientFactory           func(cfg *config.Config) *sub2api.Client
-	sourceClientMu                 sync.Mutex
-	cachedNewAPIClient             *newapi.Client
-	cachedNewAPIKey                string
-	cachedSub2APIClient            *sub2api.Client
-	cachedSub2APIKey               string
-	responsesSessionMu             sync.Mutex
-	responsesSessions              map[string]string
-	imageDownloadLimitersMu        sync.Mutex
-	imageDownloadLimiters          map[string]*rateLimiter
+	cfg                                    *config.Config
+	runtimeMu                              sync.RWMutex
+	store                                  *accounts.Store
+	syncClient                             *cliproxy.Client
+	syncRunMu                              sync.RWMutex
+	syncRunCache                           map[string]*sourceSyncRunResult
+	accountRefreshMu                       sync.RWMutex
+	accountRefreshRun                      *accountRefreshRunResult
+	accountRefreshCancel                   context.CancelFunc
+	staticDir                              string
+	reqLogs                                *imageRequestLogStore
+	imageAdmission                         *imageAdmissionController
+	imageTasks                             *imageTaskManager
+	officialClientFactory                  func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
+	responsesClientFactory                 func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
+	externalResponsesClientFactory         func(cfg config.ExternalResponsesConfig) imageWorkflowClient
+	cpaClientFactory                       func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient
+	newAPIClientFactory                    func(cfg *config.Config) *newapi.Client
+	sub2apiClientFactory                   func(cfg *config.Config) *sub2api.Client
+	sourceClientMu                         sync.Mutex
+	cachedNewAPIClient                     *newapi.Client
+	cachedNewAPIKey                        string
+	cachedSub2APIClient                    *sub2api.Client
+	cachedSub2APIKey                       string
+	responsesSessionMu                     sync.Mutex
+	responsesSessions                      map[string]string
+	imageConversationPromptMetadataCacheMu sync.RWMutex
+	imageConversationPromptMetadataCache   map[string]imageConversationPromptMetadataCacheEntry
+	imageDownloadLimitersMu                sync.Mutex
+	imageDownloadLimiters                  map[string]*rateLimiter
 }
 
 func (s *Server) Close() error {
@@ -132,14 +134,15 @@ func (e *requestError) Error() string {
 
 func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.Client) *Server {
 	server := &Server{
-		cfg:               cfg,
-		store:             store,
-		syncClient:        syncClient,
-		syncRunCache:      map[string]*sourceSyncRunResult{},
-		staticDir:         cfg.ResolvePath(cfg.Server.StaticDir),
-		reqLogs:           newImageRequestLogStore(cfg),
-		imageAdmission:    newImageAdmissionController(),
-		responsesSessions: map[string]string{},
+		cfg:                                  cfg,
+		store:                                store,
+		syncClient:                           syncClient,
+		syncRunCache:                         map[string]*sourceSyncRunResult{},
+		staticDir:                            cfg.ResolvePath(cfg.Server.StaticDir),
+		reqLogs:                              newImageRequestLogStore(cfg),
+		imageAdmission:                       newImageAdmissionController(),
+		responsesSessions:                    map[string]string{},
+		imageConversationPromptMetadataCache: map[string]imageConversationPromptMetadataCacheEntry{},
 		officialClientFactory: func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
 			return handler.NewChatGPTClientWithAuthData(accessToken, proxyURL, authData, requestConfig)
 		},
@@ -381,6 +384,7 @@ func (s *Server) reloadRuntimeDependencies(previous configPayload) error {
 	if previousStore != nil && previousStore != nextStore {
 		_ = previousStore.Close()
 	}
+	s.invalidateAllImageConversationPromptMetadataCache()
 	return nil
 }
 
@@ -1987,19 +1991,8 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 			upstreamModel = externalConfig.Model
 			direction = "external"
 		case "responses":
-			route = "external_responses"
-			externalConfig := s.cfg.ExternalResponsesConfig()
-			if !s.externalResponsesConfigured() {
-				err := newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置 base_url、api_key 与 model")
-				return nil, false, err
-			}
-			if s.externalResponsesClientFactory != nil {
-				client = s.externalResponsesClientFactory(externalConfig)
-			} else {
-				client = newExternalResponsesClient(externalConfig)
-			}
-			upstreamModel = externalConfig.Model
-			direction = "external"
+			client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
+			direction = "responses"
 		case "legacy":
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
@@ -2100,7 +2093,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		applyImageRoutingLogFields(routingDecision, &entry)
 		metadata.applyTo(&entry)
 		s.logImageRequestWithContext(ctx, entry)
-		if isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) {
+		if isImageHTTPStatusError(err, 429) {
 			if !isExternalResponsesRoute(route) {
 				store.CooldownImageAccountByToken(authFile.AccessToken, "限流")
 				return nil, true, newRequestError("source_account_rate_limited", "当前账号已限流，已进入冷却并切换下一个账号")
@@ -2732,7 +2725,10 @@ func isImageAccountSwitchError(err error) bool {
 			return false
 		}
 	}
-	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err)
+	if isImageHTTPStatusError(err, 403) {
+		return false
+	}
+	return isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err)
 }
 
 func isImageFiveHourLimitError(err error) bool {

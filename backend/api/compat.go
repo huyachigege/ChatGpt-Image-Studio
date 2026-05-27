@@ -312,7 +312,7 @@ func (s *Server) saveCompatTaskHistory(ctx context.Context, identity authIdentit
 		return
 	}
 	defer store.Close()
-	_, _ = store.Save(ctx, imagehistory.Conversation{
+	item, err := store.Save(ctx, imagehistory.Conversation{
 		ID:           firstNonEmpty(task.ConversationID, task.ID),
 		UserID:       identity.UserID,
 		Title:        title,
@@ -343,6 +343,9 @@ func (s *Server) saveCompatTaskHistory(ctx context.Context, identity authIdentit
 			},
 		},
 	})
+	if err == nil && item != nil {
+		s.addImageConversationPromptMetadataCache(identity.UserID, *item)
+	}
 }
 
 func (s *Server) handleImageChatCompletions(w http.ResponseWriter, r *http.Request) {

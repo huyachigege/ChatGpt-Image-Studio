@@ -743,10 +743,11 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		)
 		if err == nil {
 			return &imageTaskLease{
-				auth:     auth,
-				account:  account,
-				decision: decision,
-				release:  release,
+				auth:       auth,
+				account:    account,
+				decision:   decision,
+				release:    release,
+				forceRoute: preferredRoute,
 			}, imageTaskBlocker{}, nil
 		}
 		if errors.Is(err, accounts.ErrSelectedImageGroupsExhausted) || errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
@@ -756,7 +757,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 					excluded, allowAny, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, preferredRoute,
 				)
 				if err2 == nil {
-					return &imageTaskLease{auth: auth2, account: account2, decision: decision2, release: release2}, imageTaskBlocker{}, nil
+					return &imageTaskLease{auth: auth2, account: account2, decision: decision2, release: release2, forceRoute: preferredRoute}, imageTaskBlocker{}, nil
 				}
 			}
 			if !isFreeResolution && m.server.externalResponsesConfigured() {
@@ -781,9 +782,10 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	)
 	if err == nil {
 		return &imageTaskLease{
-			auth:    auth,
-			account: account,
-			release: release,
+			auth:       auth,
+			account:    account,
+			release:    release,
+			forceRoute: preferredRoute,
 		}, imageTaskBlocker{}, nil
 	}
 	if errors.Is(err, accounts.ErrNoAvailableImageAuth) || errors.Is(err, accounts.ErrImageAuthInUse) {
@@ -793,7 +795,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 				excluded, allowAny, allowDisabled, task.UserID, task.ConversationID, preferredRoute,
 			)
 			if err2 == nil {
-				return &imageTaskLease{auth: auth2, account: account2, release: release2}, imageTaskBlocker{}, nil
+				return &imageTaskLease{auth: auth2, account: account2, release: release2, forceRoute: preferredRoute}, imageTaskBlocker{}, nil
 			}
 		}
 		if !isFreeResolution && m.server.externalResponsesConfigured() {
@@ -834,13 +836,13 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ..
 		}
 	}
 	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 || task.ContextReference != nil {
-		return "external_responses"
+		return "responses"
 	}
 	if task.Mode == "generate" && task.Requirement.NeedPaid {
-		return "external_responses"
+		return "responses"
 	}
 	if task.Mode == "generate" && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
-		return "external_responses"
+		return "responses"
 	}
 	return "legacy"
 }

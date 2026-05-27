@@ -491,13 +491,11 @@ func TestResolveImageAcquireError(t *testing.T) {
 	}
 }
 
-func TestOnlyHTTP401403And429SwitchImageAccount(t *testing.T) {
+func TestOnlyHTTP401And429SwitchImageAccount(t *testing.T) {
 	switchErrors := []error{
 		errors.New("conversation returned 401: unauthorized"),
-		errors.New("pre-upload returned 403: forbidden"),
 		errors.New("responses returned 429: too many requests"),
 		errors.New("http 401"),
-		errors.New("status 403"),
 		errors.New("status 429"),
 		errors.New("5h limit reached"),
 		errors.New("检测到 Codex 5h 限流，仅保留 legacy 链路"),
@@ -509,6 +507,8 @@ func TestOnlyHTTP401403And429SwitchImageAccount(t *testing.T) {
 	}
 
 	nonSwitchErrors := []error{
+		errors.New("pre-upload returned 403: forbidden"),
+		errors.New("status 403"),
 		errors.New("responses returned 500: upstream unavailable"),
 		errors.New("rate limit bucket temporarily unavailable"),
 		errors.New("quota exceeded"),
@@ -780,7 +780,7 @@ func TestStudioRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	}
 }
 
-func TestStudioResponsesRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
+func TestStudioResponses403DoesNotRetryWithNextAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Plus",
@@ -821,32 +821,32 @@ func TestStudioResponsesRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 	rec := httptest.NewRecorder()
 	server.Handler().ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want 502, body = %s", rec.Code, rec.Body.String())
 	}
 
 	if recorder.lastFactory != "responses" {
 		t.Fatalf("last factory = %q, want %q", recorder.lastFactory, "responses")
 	}
-	if len(recorder.callSequence) != 2 {
-		t.Fatalf("call sequence = %v, want two attempts", recorder.callSequence)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("call sequence = %v, want one non-retried 403 attempt", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-limited-paid") || !strings.Contains(recorder.callSequence[1], "token-fallback-paid") {
-		t.Fatalf("call sequence = %v, want limited then fallback responses account", recorder.callSequence)
+	if !strings.Contains(recorder.callSequence[0], "token-limited-paid") {
+		t.Fatalf("call sequence = %v, want limited account attempted", recorder.callSequence)
 	}
 
 	limitedAccount, err := server.getStore().GetAccountByToken("token-limited-paid")
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited paid) returned error: %v", err)
 	}
-	if limitedAccount.Status != "限流" {
-		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "限流")
+	if limitedAccount.Status != "正常" {
+		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "正常")
 	}
 	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
 		t.Fatalf("limited paid account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
 	}
-	if accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
-		t.Fatalf("limited paid account routes = %v, want responses removed", limitedAccount.ImageRoutes)
+	if !accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
+		t.Fatalf("limited paid account routes = %v, want responses retained after 403", limitedAccount.ImageRoutes)
 	}
 }
 

@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -191,6 +193,132 @@ func TestImageGenerationPreservesPaidResolutionErrorCode(t *testing.T) {
 	if payload.Error.Code != "paid_resolution_requires_paid_account" {
 		t.Fatalf("error code = %q, want %q", payload.Error.Code, "paid_resolution_requires_paid_account")
 	}
+}
+
+func TestImageTaskRetriesExternalResponsesForGenericErrors(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
+		behavior: compatClientBehavior{
+			responsesGenerateErrors: map[string]error{
+				"token-compat": fmt.Errorf("official responses exploded"),
+			},
+		},
+	})
+
+	finalTask := createAndWaitImageTaskForTest(t, server, createImageTaskRequest{
+		UserID:           "admin",
+		Username:         "admin",
+		TurnID:           "external-retry-generic",
+		Mode:             "generate",
+		Prompt:           "retry external prompt",
+		Count:            1,
+		ResolutionAccess: "paid",
+	})
+
+	if finalTask.Status != imageTaskStatusSucceeded {
+		t.Fatalf("task status = %q, want succeeded; error = %q", finalTask.Status, finalTask.Error)
+	}
+	if recorder.externalCalls == 0 {
+		t.Fatalf("externalCalls = 0, want external_responses retry")
+	}
+}
+
+func TestImageTaskLegacyGenericErrorSwitchesAccount(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "priority-first.json", accessToken: "token-first", accountType: "Free", priority: 100, quota: 5},
+			{fileName: "fallback-second.json", accessToken: "token-second", accountType: "Free", priority: 10, quota: 5},
+		},
+		behavior: compatClientBehavior{
+			officialGenerateErrors: map[string]error{
+				"token-first": fmt.Errorf("upstream exploded"),
+			},
+		},
+	})
+
+	finalTask := createAndWaitImageTaskForTest(t, server, createImageTaskRequest{
+		UserID:           "admin",
+		Username:         "admin",
+		TurnID:           "legacy-switch-generic",
+		Mode:             "generate",
+		Prompt:           "retry legacy prompt",
+		Count:            1,
+		ResolutionAccess: "legacy",
+	})
+
+	if finalTask.Status != imageTaskStatusSucceeded {
+		t.Fatalf("task status = %q, want succeeded; error = %q", finalTask.Status, finalTask.Error)
+	}
+	if got, want := recorder.callSequence, []string{"official:token-first:generate", "official:token-second:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("callSequence = %#v, want %#v", got, want)
+	}
+}
+
+func TestImageTaskLegacy403DoesNotRetry(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Free",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		accounts: []compatSeedAccount{
+			{fileName: "priority-first.json", accessToken: "token-first", accountType: "Free", priority: 100, quota: 5},
+			{fileName: "fallback-second.json", accessToken: "token-second", accountType: "Free", priority: 10, quota: 5},
+		},
+		behavior: compatClientBehavior{
+			officialGenerateErrors: map[string]error{
+				"token-first": fmt.Errorf("HTTP 403 forbidden"),
+			},
+		},
+	})
+
+	finalTask := createAndWaitImageTaskForTest(t, server, createImageTaskRequest{
+		UserID:           "admin",
+		Username:         "admin",
+		TurnID:           "legacy-403-no-retry",
+		Mode:             "generate",
+		Prompt:           "retry legacy prompt",
+		Count:            1,
+		ResolutionAccess: "legacy",
+	})
+
+	if finalTask.Status != imageTaskStatusFailed {
+		t.Fatalf("task status = %q, want failed", finalTask.Status)
+	}
+	if got, want := recorder.callSequence, []string{"official:token-first:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("callSequence = %#v, want %#v", got, want)
+	}
+}
+
+func createAndWaitImageTaskForTest(t *testing.T, server *Server, req createImageTaskRequest) *imageTaskView {
+	t.Helper()
+	task, err := server.imageTasks.createTask(req)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	finalTask, err := server.imageTasks.waitForTask(ctx, task.ID)
+	if err != nil {
+		t.Fatalf("wait task: %v", err)
+	}
+	return finalTask
 }
 
 func newCompatFreeOnlyStudioServer(t *testing.T) *Server {

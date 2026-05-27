@@ -69,7 +69,10 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 			return imageAttemptFatal
 		}
 	}
-	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 403) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
+	if isImageHTTPStatusError(err, 403) {
+		return imageAttemptFatal
+	}
+	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
 		return imageAttemptRetryableDisableResponses
 	}
 	if isImage5xxHTTPStatusError(err) {
@@ -78,7 +81,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 	if isImageRateLimitError(err) || isTransientImageStreamError(err) || isInvalidImageTokenError(err) {
 		return imageAttemptRetryable
 	}
-	return imageAttemptFatal
+	return imageAttemptRetryable
 }
 
 func shouldImmediateExternalResponsesFallback(attemptClass imageAttemptErrorClass) bool {
@@ -90,13 +93,7 @@ func shouldTryImageFallback(err error, attemptClass imageAttemptErrorClass) bool
 }
 
 func shouldRetryExternalResponsesSameRoute(ctx context.Context, err error, attemptClass imageAttemptErrorClass) bool {
-	if err == nil || ctx.Err() != nil {
-		return false
-	}
-	if attemptClass == imageAttemptRetrySameOnce && isImage5xxHTTPStatusError(err) {
-		return true
-	}
-	return attemptClass == imageAttemptRetryable && isTransientImageStreamError(err)
+	return err != nil && ctx.Err() == nil && attemptClass != imageAttemptFatal
 }
 
 func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) bool {
@@ -322,7 +319,8 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 		}
-		items, _, err = s.runImageRequestWithAdmission(
+		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
+		items, _, err = s.runImageRequestWithAdmissionRoute(
 			taskCtx,
 			lease.auth,
 			lease.account,
@@ -337,9 +335,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			editRun,
 			fakeReq,
 			false,
+			startRoute,
 		)
 		attemptClass := classifyImageAttemptError(err)
-		if err != nil && responsesEligible && !isExternalResponsesRoute(lease.forceRoute) && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
+		if err != nil && responsesEligible && startRoute == "responses" && !isExternalResponsesRoute(lease.forceRoute) && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -359,7 +358,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			)
 			attemptClass = classifyImageAttemptError(err)
 		}
-		if shouldTryImageFallback(err, attemptClass) && !isImage5xxHTTPStatusError(err) {
+		if shouldTryImageFallback(err, attemptClass) {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -538,14 +537,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return attemptItems, attemptClass, attemptErr
 		}
-		trySameLegacy := func() ([]map[string]any, imageAttemptErrorClass, error) {
-			attemptItems, attemptClass, attemptErr := tryRoute(lease, "legacy")
-			if attemptErr != nil {
-				rememberAttempt(lease)
-			}
-			return attemptItems, attemptClass, attemptErr
-		}
-
 		var attemptClass imageAttemptErrorClass
 		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
 		if isExternalResponsesRoute(startRoute) {
@@ -556,16 +547,24 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				rememberAttempt(lease)
 			}
 		}
-		if err != nil && attemptClass != imageAttemptFatal && isExternalResponsesRoute(startRoute) {
-			if !task.Requirement.NeedPaid {
+		if err != nil && attemptClass != imageAttemptFatal {
+			if isExternalResponsesRoute(startRoute) {
+				if !task.Requirement.NeedPaid {
+					for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+						items, attemptClass, err = tryNextLegacy()
+					}
+				}
+			} else if startRoute == "responses" && s.externalResponsesConfigured() {
+				items, attemptClass, err = tryExternal()
+				if !task.Requirement.NeedPaid {
+					for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
+						items, attemptClass, err = tryNextLegacy()
+					}
+				}
+			} else {
 				for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 					items, attemptClass, err = tryNextLegacy()
 				}
-			}
-		} else if err != nil && attemptClass != imageAttemptFatal {
-			items, attemptClass, err = trySameLegacy()
-			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-				items, attemptClass, err = tryNextLegacy()
 			}
 		}
 		_ = attemptClass
@@ -690,10 +689,9 @@ func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image
 }
 
 func shouldRetryImageTaskOnSameAccount(account accounts.PublicAccount, err error) bool {
-	if err == nil || isImageModelRefusalError(err) || shouldRetryImageRequestWithNextAccount(err) || strings.EqualFold(strings.TrimSpace(account.Type), "External Responses") {
-		return false
-	}
-	return !isPaidImageAccountType(account.Type)
+	_ = account
+	_ = err
+	return false
 }
 
 func isResponsesURLReferenceFallbackError(err error) bool {
