@@ -303,7 +303,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if editor, ok := client.(interface {
 						EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
 					}); ok {
-						return editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
+						results, err := editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
+						if err == nil || !isResponsesURLReferenceFallbackError(err) {
+							return results, err
+						}
 					}
 				}
 			}
@@ -420,7 +423,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if generator, ok := client.(interface {
 						GenerateImageWithReferenceImageURLs(context.Context, string, string, int, string, string, string, []string) ([]handler.ImageResult, error)
 					}); ok {
-						return generator.GenerateImageWithReferenceImageURLs(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageURLs)
+						results, err := generator.GenerateImageWithReferenceImageURLs(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageURLs)
+						if err == nil || !isResponsesURLReferenceFallbackError(err) {
+							return results, err
+						}
 					}
 				}
 			}
@@ -715,6 +721,17 @@ func shouldRetryImageTaskOnSameAccount(account accounts.PublicAccount, err error
 		return false
 	}
 	return !isPaidImageAccountType(account.Type)
+}
+
+func isResponsesURLReferenceFallbackError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, "server_error") ||
+		strings.Contains(message, "response.failed") ||
+		strings.Contains(message, "an error occurred while processing your request") ||
+		strings.Contains(message, "help.openai.com")
 }
 
 func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix string) ([]string, error) {

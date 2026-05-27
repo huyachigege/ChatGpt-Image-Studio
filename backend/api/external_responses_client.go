@@ -314,6 +314,7 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 			Type   string `json:"type"`
 			ItemID string `json:"item_id"`
 			Error  *struct {
+				Code    string `json:"code"`
 				Message string `json:"message"`
 			} `json:"error"`
 			PartialImageB64 string `json:"partial_image_b64"`
@@ -337,9 +338,19 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 			return nil
 		}
 		switch payload.Type {
-		case "error":
-			if payload.Error != nil && strings.TrimSpace(payload.Error.Message) != "" {
-				return errors.New(payload.Error.Message)
+		case "error", "response.failed":
+			if payload.Error != nil {
+				message := strings.TrimSpace(payload.Error.Message)
+				code := strings.TrimSpace(payload.Error.Code)
+				if code != "" && message != "" {
+					return fmt.Errorf("%s: %s", code, message)
+				}
+				if message != "" {
+					return errors.New(message)
+				}
+				if code != "" {
+					return errors.New(code)
+				}
 			}
 			return errors.New("external responses stream returned an error")
 		case "response.image_generation_call.partial_image":
