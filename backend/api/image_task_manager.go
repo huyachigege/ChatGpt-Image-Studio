@@ -56,18 +56,6 @@ func (m *imageTaskManager) createTask(req createImageTaskRequest) (*imageTaskVie
 	if err != nil {
 		return nil, err
 	}
-	if ok, err := m.hasPotentialCompatibleAccounts(task); err != nil {
-		return nil, err
-	} else if !ok {
-		if task.Requirement.NeedPaid {
-			return nil, newRequestError("paid_resolution_requires_paid_account", "当前分辨率仅支持 Plus / Pro / Team 图片账号，请先确保有可用 Paid 账号")
-		}
-		if task.Requirement.SourceAccountID != "" {
-			return nil, newRequestError("source_account_unavailable", "原始图片所属账号当前不可用，请使用普通编辑重试")
-		}
-		return nil, newRequestError("no_available_image_accounts", "当前没有可用的图片账号")
-	}
-
 	m.mu.Lock()
 	if existing := m.tasks[task.ID]; existing != nil && !isFinalImageTaskStatus(existing.Status) {
 		m.mu.Unlock()
@@ -716,7 +704,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
 	preferredRoute := m.preferredRouteForTask(task, unitIndex)
 	if task.Requirement.SourceAccountID != "" {
-		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, preferredRoute)
+		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, "legacy")
 		if err == nil {
 			if _, attempted := excluded[auth.AccessToken]; !attempted {
 				return &imageTaskLease{
@@ -735,6 +723,10 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 			}
 			return nil, imageTaskBlocker{}, err
 		}
+	}
+
+	if isExternalResponsesRoute(preferredRoute) {
+		return m.externalResponsesLease(), imageTaskBlocker{}, nil
 	}
 
 	allowAccount := m.allowAccountFn(task)
@@ -824,38 +816,15 @@ func (m *imageTaskManager) externalResponsesLease() *imageTaskLease {
 	}
 }
 
-func (m *imageTaskManager) hasPotentialCompatibleAccounts(task *imageTask) (bool, error) {
-	store := m.server.getStore()
-	allowDisabled := m.server.allowDisabledStudioImageAccounts()
-
-	if task.Requirement.SourceAccountID != "" {
-		auth, account, err := store.FindImageAuthByID(task.Requirement.SourceAccountID)
-		if err != nil || auth == nil {
-			return false, nil
-		}
-		if !isImageAccountUsable(account, allowDisabled) && !accounts.NeedsImageQuotaRefreshWithTTL(account, time.Now(), m.server.cfg.ImageQuotaRefreshTTL()) {
-			return false, nil
-		}
-		return true, nil
-	}
-
-	count, err := store.CountPotentialImageAuthCandidatesWithPolicyFilteredWithDisabledOption(
-		m.allowAccountFn(task),
-		allowDisabled,
-		task.Requirement.PolicySnapshot,
-	)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
-}
-
 func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicAccount) bool {
 	return imageTaskAttemptAllowAccount(task)
 }
 
 func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ...int) string {
 	if task == nil || m == nil || m.server == nil {
+		return "legacy"
+	}
+	if task.Requirement.SourceAccountID != "" || strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "free") {
 		return "legacy"
 	}
 	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 && len(unitIndexes) > 0 {
@@ -865,13 +834,13 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ..
 		}
 	}
 	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 || task.ContextReference != nil {
-		return "responses"
+		return "external_responses"
 	}
 	if task.Mode == "generate" && task.Requirement.NeedPaid {
-		return "responses"
+		return "external_responses"
 	}
-	if task.Mode == "generate" && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") && m.server.externalResponsesConfigured() {
-		return "responses"
+	if task.Mode == "generate" && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+		return "external_responses"
 	}
 	return "legacy"
 }

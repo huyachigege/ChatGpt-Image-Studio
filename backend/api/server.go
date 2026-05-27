@@ -1796,6 +1796,9 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 	}
 	startedAt := time.Now()
 	forcedRoute = strings.ToLower(strings.TrimSpace(forcedRoute))
+	if forcedRoute == "" && authFile != nil && strings.EqualFold(strings.TrimSpace(authFile.AccessToken), "external_responses") {
+		forcedRoute = "external_responses"
+	}
 	now := time.Now()
 	refreshRequired := !isExternalResponsesRoute(forcedRoute) && (account.SourceKind == accounts.AccountSourceKindToken || accounts.NeedsImageQuotaRefreshWithTTL(account, now, s.cfg.ImageQuotaRefreshTTL()))
 	if refreshRequired {
@@ -1941,15 +1944,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
 		if forcedRoute == "" {
-			if shouldUseOfficialResponses(preferredAccount, responsesEligible, route) {
-				client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
-				if setter, ok := client.(interface{ SetSessionID(string) }); ok {
-					scope := responsesSessionScopeFromContext(ctx)
-					setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
-				}
-			} else {
-				client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
-			}
+			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
 		switch forcedRoute {
 		case "external_responses":
@@ -1992,15 +1987,19 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 			upstreamModel = externalConfig.Model
 			direction = "external"
 		case "responses":
-			if s.responsesClientFactory != nil {
-				client = s.responsesClientFactory(authFile.AccessToken, s.cfg.ChatGPTProxyURL(), authFile.Data, s.imageRequestConfig())
+			route = "external_responses"
+			externalConfig := s.cfg.ExternalResponsesConfig()
+			if !s.externalResponsesConfigured() {
+				err := newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置 base_url、api_key 与 model")
+				return nil, false, err
+			}
+			if s.externalResponsesClientFactory != nil {
+				client = s.externalResponsesClientFactory(externalConfig)
 			} else {
-				client = handler.NewResponsesClientWithProxyAndConfig(authFile.AccessToken, s.cfg.ChatGPTProxyURL(), authFile.Data, s.imageRequestConfig())
+				client = newExternalResponsesClient(externalConfig)
 			}
-			if setter, ok := client.(interface{ SetSessionID(string) }); ok {
-				scope := responsesSessionScopeFromContext(ctx)
-				setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, route))
-			}
+			upstreamModel = externalConfig.Model
+			direction = "external"
 		case "legacy":
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}

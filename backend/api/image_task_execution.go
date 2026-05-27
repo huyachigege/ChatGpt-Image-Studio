@@ -63,7 +63,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 		switch code {
 		case "source_account_rate_limited", "external_responses_unavailable":
 			return imageAttemptRetryableDisableResponses
-		case "source_account_unavailable", "image_account_route_unavailable":
+		case "source_account_unavailable", "image_account_route_unavailable", "external_responses_not_configured":
 			return imageAttemptRetryable
 		default:
 			return imageAttemptFatal
@@ -93,7 +93,7 @@ func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) 
 	if task == nil {
 		return nil
 	}
-	if task.Requirement.NeedPaid {
+	if task.Requirement.NeedPaid || task.Requirement.SourceAccountID != "" {
 		return func(account accounts.PublicAccount) bool {
 			return isPaidImageAccountType(account.Type)
 		}
@@ -110,7 +110,7 @@ func imageTaskAttemptAllowAnyAccount(task *imageTask) func(accounts.PublicAccoun
 	if task == nil {
 		return nil
 	}
-	if task.Requirement.NeedPaid {
+	if task.Requirement.NeedPaid || task.Requirement.SourceAccountID != "" {
 		return func(account accounts.PublicAccount) bool {
 			return isPaidImageAccountType(account.Type)
 		}
@@ -123,7 +123,7 @@ func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[stri
 	allowDisabled := s.allowDisabledStudioImageAccounts()
 	allowAccount := imageTaskAttemptAllowAccount(task)
 	if task.Requirement.SourceAccountID != "" {
-		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, route)
+		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, "legacy")
 		if err != nil {
 			return nil, err
 		}
@@ -329,7 +329,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			false,
 		)
 		attemptClass := classifyImageAttemptError(err)
-		if err != nil && responsesEligible && accounts.AccountSupportsImageRoute(lease.account, "responses") && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
+		if err != nil && responsesEligible && !isExternalResponsesRoute(lease.forceRoute) && shouldImmediateExternalResponsesFallback(attemptClass) && s.externalResponsesConfigured() {
 			items, _, err = s.runImageRequestWithAdmissionRoute(
 				taskCtx,
 				lease.auth,
@@ -369,10 +369,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			)
 		}
 	default:
-		if isExternalResponsesRoute(lease.forceRoute) {
-			items, _, err = s.runImageTaskGenerateExternalResponses(taskCtx, task, lease, effectivePrompt, instructions, requestedModel, metadata, fakeReq)
-			break
-		}
 		var referenceImageFiles [][]byte
 		referenceImageFiles, err = s.resolveTaskReferenceImageInputs(task)
 		if err != nil {
@@ -453,9 +449,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			if attemptLease == nil || attemptLease.auth == nil {
 				return nil, imageAttemptFatal, fmt.Errorf("task lease is required")
 			}
-			if route == "responses" && !accounts.AccountSupportsImageRoute(attemptLease.account, "responses") {
-				return nil, imageAttemptRetryable, newRequestError("image_account_route_unavailable", "当前账号不支持 responses 链路")
-			}
 			runOnce := func() ([]map[string]any, bool, error) {
 				return s.runImageRequestWithAdmissionRoute(
 					taskCtx,
@@ -505,20 +498,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		acquireNext := func(route string) (*imageTaskLease, error) {
 			return s.acquireImageTaskAttemptLease(task, excluded, route)
 		}
-		tryNextResponses := func() ([]map[string]any, imageAttemptErrorClass, error) {
-			nextLease, acquireErr := acquireNext("responses")
-			if acquireErr != nil {
-				return nil, imageAttemptRetryable, acquireErr
-			}
-			if nextLease.release != nil {
-				defer nextLease.release()
-			}
-			attemptItems, attemptClass, attemptErr := tryRoute(nextLease, "responses")
-			if attemptErr != nil {
-				rememberAttempt(nextLease)
-			}
-			return attemptItems, attemptClass, attemptErr
-		}
 		tryNextLegacy := func() ([]map[string]any, imageAttemptErrorClass, error) {
 			nextLease, acquireErr := acquireNext("legacy")
 			if acquireErr != nil {
@@ -552,44 +531,21 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		}
 
 		var attemptClass imageAttemptErrorClass
-		startRoute := "legacy"
-		if task.Requirement.NeedPaid || accounts.AccountSupportsImageRoute(lease.account, "responses") {
-			startRoute = "responses"
-		}
+		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
 		items, attemptClass, err = tryRoute(lease, startRoute)
 		if err != nil {
 			rememberAttempt(lease)
 		}
-		if err != nil && attemptClass != imageAttemptFatal && startRoute == "legacy" {
-			if s.externalResponsesConfigured() {
+		if err != nil && attemptClass != imageAttemptFatal && isExternalResponsesRoute(startRoute) {
+			for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal && task.Requirement.NeedPaid; i++ {
 				items, attemptClass, err = tryExternal()
 			}
-			if len(referenceImageFiles) == 0 && task.ContextReference == nil {
+			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid {
 				for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 					items, attemptClass, err = tryNextLegacy()
 				}
 			}
 		} else if err != nil && attemptClass != imageAttemptFatal {
-			if s.externalResponsesConfigured() {
-				items, attemptClass, err = tryExternal()
-			} else {
-				for i := 0; i < 2 && err != nil && attemptClass != imageAttemptFatal; i++ {
-					items, attemptClass, err = tryNextResponses()
-				}
-			}
-			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && task.ContextReference != nil {
-				items, attemptClass, err = trySameLegacy()
-			}
-			if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil {
-				items, attemptClass, err = trySameLegacy()
-			}
-		}
-		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
-			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-				items, attemptClass, err = tryNextLegacy()
-			}
-		}
-		if err != nil && attemptClass != imageAttemptFatal && !task.Requirement.NeedPaid && len(referenceImageFiles) == 0 && task.ContextReference == nil && strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
 			items, attemptClass, err = trySameLegacy()
 			for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
 				items, attemptClass, err = tryNextLegacy()
@@ -717,7 +673,7 @@ func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image
 }
 
 func shouldRetryImageTaskOnSameAccount(account accounts.PublicAccount, err error) bool {
-	if err == nil || isImageModelRefusalError(err) || shouldRetryImageRequestWithNextAccount(err) {
+	if err == nil || isImageModelRefusalError(err) || shouldRetryImageRequestWithNextAccount(err) || strings.EqualFold(strings.TrimSpace(account.Type), "External Responses") {
 		return false
 	}
 	return !isPaidImageAccountType(account.Type)

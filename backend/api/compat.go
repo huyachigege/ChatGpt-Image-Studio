@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/imagehistory"
 	"chatgpt2api/internal/imaging"
 )
@@ -121,31 +120,9 @@ func (s *Server) executeImageGeneration(ctx context.Context, req imageGeneration
 	} else if quotaErr != nil {
 		return nil, quotaErr
 	}
-	requirePaidAccount := s.configuredImageMode() == "studio" && imaging.RequiresPaidGenerateAccount(size)
-	var allowAccount func(accounts.PublicAccount) bool
-	if requirePaidAccount {
-		allowAccount = func(account accounts.PublicAccount) bool {
-			return isPaidImageAccountType(account.Type)
-		}
-	}
 	policy, err := parseRequestImageAccountRoutingPolicy(r)
 	if err != nil {
 		return nil, err
-	}
-
-	count, countErr := s.getStore().CountPotentialImageAuthCandidatesWithPolicyFilteredWithDisabledOption(
-		allowAccount,
-		s.allowDisabledStudioImageAccounts(),
-		policy,
-	)
-	if countErr != nil {
-		return nil, countErr
-	}
-	if count == 0 {
-		if requirePaidAccount {
-			return nil, newRequestError("paid_resolution_requires_paid_account", "当前分辨率仅支持 Plus / Pro / Team 图片账号，请先确保有可用 Paid 账号")
-		}
-		return nil, newRequestError("no_available_image_accounts", "当前没有可用的图片账号")
 	}
 
 	identity := identityFromContext(ctx)
