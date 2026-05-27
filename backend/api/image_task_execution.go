@@ -89,6 +89,16 @@ func shouldTryImageFallback(err error, attemptClass imageAttemptErrorClass) bool
 	return err != nil && attemptClass != imageAttemptFatal
 }
 
+func shouldRetryExternalResponsesSameRoute(ctx context.Context, err error, attemptClass imageAttemptErrorClass) bool {
+	if err == nil || ctx.Err() != nil {
+		return false
+	}
+	if attemptClass == imageAttemptRetrySameOnce && isImage5xxHTTPStatusError(err) {
+		return true
+	}
+	return attemptClass == imageAttemptRetryable && isTransientImageStreamError(err)
+}
+
 func imageTaskAttemptAllowAccount(task *imageTask) func(accounts.PublicAccount) bool {
 	if task == nil {
 		return nil
@@ -519,7 +529,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			var attemptErr error
 			for attempt := 0; attempt < retries; attempt++ {
 				attemptItems, attemptClass, attemptErr = tryRoute(lease, "external_responses")
-				if attemptErr == nil || attemptClass != imageAttemptRetrySameOnce || !isImage5xxHTTPStatusError(attemptErr) {
+				if !shouldRetryExternalResponsesSameRoute(taskCtx, attemptErr, attemptClass) {
 					break
 				}
 			}

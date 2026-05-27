@@ -1213,6 +1213,43 @@ func TestCreateImageGenerateTaskRetriesExternalResponses5xxThreeTimes(t *testing
 	}
 }
 
+func TestCreateImageGenerateTaskRetriesExternalResponsesSSEContextCanceledThreeTimes(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "external_responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
+		behavior: compatClientBehavior{
+			externalGenerateErr: fmt.Errorf("external responses SSE read error: %w", context.Canceled),
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID:   "conv-external-sse-canceled-retry-1",
+		TurnID:           "turn-external-sse-canceled-retry-1",
+		Mode:             "generate",
+		Prompt:           "external sse canceled retry generate",
+		Model:            "gpt-image-2",
+		Count:            1,
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-external-sse-canceled-retry-1", imageTaskStatusFailed)
+	if recorder.externalCalls != 3 {
+		t.Fatalf("externalCalls = %d, want 3; sequence = %#v", recorder.externalCalls, recorder.callSequence)
+	}
+	if len(recorder.callSequence) != 3 {
+		t.Fatalf("callSequence = %#v, want 3 external retry attempts", recorder.callSequence)
+	}
+}
+
 func TestCreateImageGenerateUsesPreviousResponseOnlyForSameResponsesAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
