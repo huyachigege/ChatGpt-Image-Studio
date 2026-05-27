@@ -871,6 +871,7 @@ type compatClientBehavior struct {
 	cpaGenerateErrors        map[string]error
 	cpaEditErrors            map[string]error
 	cpaInpaintErr            error
+	externalGenerateErr      error
 	generateStarted          chan string
 	generateRelease          <-chan struct{}
 }
@@ -971,9 +972,10 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 		recorder.externalCalls++
 		recorder.mu.Unlock()
 		return &compatStubWorkflowClient{
-			factory:  "external_responses",
-			token:    "external_responses",
-			recorder: recorder,
+			factory:     "external_responses",
+			token:       "external_responses",
+			recorder:    recorder,
+			generateErr: options.behavior.externalGenerateErr,
 		}
 	}
 	server.cpaClientFactory = func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient {

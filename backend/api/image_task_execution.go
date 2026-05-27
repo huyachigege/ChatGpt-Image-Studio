@@ -476,10 +476,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			if attemptClass == imageAttemptRetryableDisableResponses && attemptLease.auth != nil {
 				store.RemoveImageRouteCapability(attemptLease.auth.AccessToken, "responses")
 			}
-			if route == "responses" {
-				if attemptClass == imageAttemptRetrySameOnce {
-					attemptClass = imageAttemptRetryable
-				}
+			if route == "responses" || route == "external_responses" {
 				return attemptItems, attemptClass, attemptErr
 			}
 			if attemptClass != imageAttemptRetrySameOnce {
