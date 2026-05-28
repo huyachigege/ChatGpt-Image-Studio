@@ -473,7 +473,13 @@ func (m *imageTaskManager) runUnit(taskID string, unitIndex int, lease *imageTas
 		task.Images[unitIndex].Error = "任务已取消"
 	} else if errors.As(err, &deferredErr) {
 		if shouldRememberImageTaskFailedAttempt(deferredErr) {
-			imageTaskUnitRememberAttempt(&task.Units[unitIndex], deferredErr.accessToken)
+			if len(deferredErr.attemptedTokens) > 0 {
+				for _, token := range deferredErr.attemptedTokens {
+					imageTaskUnitRememberAttempt(&task.Units[unitIndex], token)
+				}
+			} else {
+				imageTaskUnitRememberAttempt(&task.Units[unitIndex], deferredErr.accessToken)
+			}
 		}
 		task.Units[unitIndex].DeferredCount++
 		m.logTaskDeferredError(task, unitIndex, deferredErr)

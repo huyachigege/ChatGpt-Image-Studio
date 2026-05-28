@@ -784,11 +784,7 @@ func TestImageModeCompatibilityBlackBoxEditsAndSelection(t *testing.T) {
 	}
 }
 
-func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
-	if os.Getenv(imageModeCompatEnv) == "" {
-		t.Skipf("set %s=1 to run optional image mode compatibility tests", imageModeCompatEnv)
-	}
-
+func TestLegacyImageGenerationRetrySwitchesAccount(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -827,7 +823,9 @@ func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
 	rec := httptest.NewRecorder()
 	server.Handler().ServeHTTP(rec, req)
 
-	assertCompatResponse(t, rec, http.StatusOK, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
 
 	if got, want := recorder.officialCalls, 2; got != want {
 		t.Fatalf("officialCalls = %d, want %d", got, want)
@@ -835,11 +833,16 @@ func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
 	if len(recorder.callSequence) != 2 {
 		t.Fatalf("callSequence = %#v, want 2 entries", recorder.callSequence)
 	}
-	if recorder.callSequence[0] != "official:token-first:generate" {
-		t.Fatalf("first attempt = %q, want token-first generate", recorder.callSequence[0])
+	firstToken := strings.Split(recorder.callSequence[0], ":")[1]
+	secondToken := strings.Split(recorder.callSequence[1], ":")[1]
+	if firstToken == secondToken {
+		t.Fatalf("retry used same account twice: %#v", recorder.callSequence)
 	}
-	if recorder.callSequence[1] != "official:token-second:generate" {
-		t.Fatalf("second attempt = %q, want token-second generate", recorder.callSequence[1])
+	if firstToken != "token-first" {
+		t.Fatalf("first attempt token = %q, want token-first", firstToken)
+	}
+	if secondToken != "token-second" {
+		t.Fatalf("second attempt token = %q, want token-second", secondToken)
 	}
 
 	entries := server.reqLogs.list(2)
@@ -849,12 +852,22 @@ func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
 	if !entries[0].Success || entries[1].Success {
 		t.Fatalf("log success flags = [%v %v], want [true false]", entries[0].Success, entries[1].Success)
 	}
+	if entries[0].AccountFile == entries[1].AccountFile {
+		t.Fatalf("retry log used same account twice: success=%q failure=%q", entries[0].AccountFile, entries[1].AccountFile)
+	}
 	if entries[0].AccountFile != "fallback-second.json" {
 		t.Fatalf("success account = %q, want fallback-second.json", entries[0].AccountFile)
 	}
 	if entries[1].AccountFile != "priority-first.json" {
 		t.Fatalf("failure account = %q, want priority-first.json", entries[1].AccountFile)
 	}
+}
+
+func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
+	if os.Getenv(imageModeCompatEnv) == "" {
+		t.Skipf("set %s=1 to run optional image mode compatibility tests", imageModeCompatEnv)
+	}
+	TestLegacyImageGenerationRetrySwitchesAccount(t)
 }
 
 type compatSeedAccount struct {

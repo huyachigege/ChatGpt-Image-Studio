@@ -200,11 +200,10 @@ func parsePositiveQueryInt(r *http.Request, key string, fallback int) int {
 }
 
 func (s *Server) filterFavoriteImageGalleryItems(ctx context.Context, identity authIdentity, items []imageGalleryItem) ([]imageGalleryItem, error) {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return nil, err
 	}
-	defer store.Close()
 	favoriteKeys, err := store.ListFavorites(ctx, identity.UserID, favoriteTypeImage)
 	if err != nil {
 		return nil, err
@@ -352,11 +351,10 @@ func (s *Server) listAdminImageGalleryItems(ctx context.Context) ([]imageGallery
 }
 
 func (s *Server) imageGalleryUsernames(ctx context.Context) map[string]string {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return map[string]string{}
 	}
-	defer store.Close()
 	items, err := store.ListUsers(ctx)
 	if err != nil {
 		return map[string]string{}
@@ -465,7 +463,6 @@ func (s *Server) imageConversationPromptMetadata(ctx context.Context, userID str
 	if err != nil {
 		return metadataByName
 	}
-	defer store.Close()
 	conversations, err := store.List(ctx)
 	if err != nil {
 		return metadataByName

@@ -14,12 +14,11 @@ type userImageQuotaKindContextKey struct{}
 
 func (s *Server) handleGetUserImageQuota(w http.ResponseWriter, r *http.Request) {
 	identity := identityFromContext(r.Context())
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 
 	status, err := store.GetDailyImageQuota(r.Context(), identity.UserID)
 	if err != nil {
@@ -114,11 +113,10 @@ func (s *Server) ensureUserImageQuotaAvailable(ctx context.Context, quotaKind st
 	if identity.Role == users.RoleAdmin || strings.TrimSpace(identity.UserID) == "" {
 		return nil
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return err
 	}
-	defer store.Close()
 	status, err := store.GetDailyImageQuota(ctx, identity.UserID)
 	if err != nil {
 		return err
@@ -144,11 +142,10 @@ func (s *Server) consumeUserImageQuota(ctx context.Context, quotaKind string) er
 	if identity.Role == users.RoleAdmin || strings.TrimSpace(identity.UserID) == "" {
 		return nil
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return err
 	}
-	defer store.Close()
 	quotaKind = userImageQuotaKindFromContext(ctx, quotaKind)
 	_, err = store.ConsumeDailyImageQuota(ctx, identity.UserID, quotaKind)
 	if err == nil {

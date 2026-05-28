@@ -20,10 +20,11 @@ import (
 const imageTaskFakeHost = "workspace.local"
 
 type imageTaskDeferredError struct {
-	cause        error
-	accessToken  string
-	accountEmail string
-	accountFile  string
+	cause           error
+	accessToken     string
+	attemptedTokens []string
+	accountEmail    string
+	accountFile     string
 }
 
 func (e *imageTaskDeferredError) Error() string {
@@ -131,19 +132,25 @@ func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[stri
 	allowAccount := imageTaskAttemptAllowAccount(task)
 	if task.Requirement.SourceAccountID != "" {
 		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, "legacy")
-		if err != nil {
+		if err == nil {
+			if _, blocked := excluded[strings.TrimSpace(auth.AccessToken)]; !blocked {
+				return &imageTaskLease{auth: auth, account: account, release: release}, nil
+			}
+			if release != nil {
+				release()
+			}
+		} else if len(excluded) == 0 {
 			return nil, err
 		}
-		return &imageTaskLease{auth: auth, account: account, release: release}, nil
 	}
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
-		auth, account, decision, release, err := store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, route)
+		auth, account, decision, release, err := store.AcquireRandomImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, route)
 		if err != nil {
 			return nil, err
 		}
 		return &imageTaskLease{auth: auth, account: account, decision: decision, release: release}, nil
 	}
-	auth, account, release, err := store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.UserID, task.ConversationID, route)
+	auth, account, release, err := store.AcquireRandomImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.UserID, task.ConversationID, route)
 	if err != nil {
 		return nil, err
 	}
@@ -185,8 +192,9 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	holdLease := func() {}
 
 	var (
-		items []map[string]any
-		err   error
+		items           []map[string]any
+		err             error
+		attemptedTokens func() []string
 	)
 
 	switch {
@@ -209,6 +217,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				if _, ok := client.(interface{ SetInstructions(string) }); !ok {
 					prompt = instructions + "\n\n" + prompt
 				}
+			}
+			sameSourceAccount := strings.TrimSpace(task.SourceReference.SourceAccountID) != "" && strings.TrimSpace(task.SourceReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
+			if !sameSourceAccount && len(imageFiles) > 0 {
+				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			}
 			if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
 				previousResponseID := providerScopedPreviousResponseID(client, task.SourceReference.ResponseProviderID, task.SourceReference.ResponseID)
@@ -400,10 +412,14 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return prompt
 		}
-		sameSourceAccount := task.ContextReference != nil && strings.TrimSpace(task.ContextReference.SourceAccountID) != "" && strings.TrimSpace(task.ContextReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
+		sameSourceAccount := false
+		if task.ContextReference != nil {
+			sourceAccountID := strings.TrimSpace(task.ContextReference.SourceAccountID)
+			sameSourceAccount = sourceAccountID == "" || sourceAccountID == strings.TrimSpace(lease.account.ID) || isExternalResponsesAttemptToken(lease.auth.AccessToken)
+		}
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
-			if task.ContextReference != nil {
+			if task.ContextReference != nil && sameSourceAccount {
 				if previousResponseID := providerScopedPreviousResponseID(client, task.ContextReference.ResponseProviderID, task.ContextReference.ResponseID); previousResponseID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
@@ -454,9 +470,19 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		}
 		rememberAttempt := func(attemptLease *imageTaskLease) {
 			if attemptLease != nil && attemptLease.auth != nil && strings.TrimSpace(attemptLease.auth.AccessToken) != "" {
-				excluded[attemptLease.auth.AccessToken] = struct{}{}
+				excluded[strings.TrimSpace(attemptLease.auth.AccessToken)] = struct{}{}
 			}
 		}
+		attemptedTokens = func() []string {
+			tokens := make([]string, 0, len(excluded))
+			for token := range excluded {
+				if strings.TrimSpace(token) != "" && !isExternalResponsesAttemptToken(token) {
+					tokens = append(tokens, strings.TrimSpace(token))
+				}
+			}
+			return tokens
+		}
+		legacyRetryLimit := max(1, min(64, s.cfg.ImageAccountRetryTimes()))
 		tryRoute := func(attemptLease *imageTaskLease, route string) ([]map[string]any, imageAttemptErrorClass, error) {
 			if attemptLease == nil || attemptLease.auth == nil {
 				return nil, imageAttemptFatal, fmt.Errorf("task lease is required")
@@ -521,6 +547,11 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return attemptItems, attemptClass, attemptErr
 		}
+		tryLegacyRetries := func(attemptClass *imageAttemptErrorClass) {
+			for i := 0; i < legacyRetryLimit && err != nil && *attemptClass != imageAttemptFatal && len(excluded) < 64; i++ {
+				items, *attemptClass, err = tryNextLegacy()
+			}
+		}
 		tryExternal := func() ([]map[string]any, imageAttemptErrorClass, error) {
 			if !s.externalResponsesConfigured() {
 				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
@@ -559,21 +590,15 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil && attemptClass != imageAttemptFatal {
 			if isExternalResponsesRoute(startRoute) {
 				if !task.Requirement.NeedPaid {
-					for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-						items, attemptClass, err = tryNextLegacy()
-					}
+					tryLegacyRetries(&attemptClass)
 				}
 			} else if startRoute == "responses" && s.externalResponsesConfigured() {
 				items, attemptClass, err = tryExternal()
 				if !task.Requirement.NeedPaid {
-					for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-						items, attemptClass, err = tryNextLegacy()
-					}
+					tryLegacyRetries(&attemptClass)
 				}
 			} else {
-				for i := 0; i < 3 && err != nil && attemptClass != imageAttemptFatal; i++ {
-					items, attemptClass, err = tryNextLegacy()
-				}
+				tryLegacyRetries(&attemptClass)
 			}
 		}
 		_ = attemptClass
@@ -581,7 +606,11 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 
 	if err != nil {
 		if shouldRetryImageRequestWithNextAccount(err) || shouldRetryImageTaskOnSameAccount(lease.account, err) {
-			return nil, &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}
+			deferred := &imageTaskDeferredError{cause: err, accessToken: lease.auth.AccessToken, accountEmail: lease.account.Email, accountFile: lease.auth.Name}
+			if attemptedTokens != nil {
+				deferred.attemptedTokens = attemptedTokens()
+			}
+			return nil, deferred
 		}
 		return nil, err
 	}

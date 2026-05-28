@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"math"
+	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -86,7 +87,7 @@ func (s *Store) AcquireImageAuthLeaseWithPolicyFilteredWithDisabledOption(
 	allowDisabled bool,
 	policy *ImageAccountRoutingPolicy,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, "", "", "")
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, "", "", "", false)
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption(
@@ -96,7 +97,7 @@ func (s *Store) AcquireImageAuthLeaseForUserWithPolicyFilteredWithDisabledOption
 	policy *ImageAccountRoutingPolicy,
 	userID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, "", "")
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, "", "", false)
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDisabledOption(
@@ -107,7 +108,7 @@ func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyFilteredWithDi
 	userID string,
 	conversationID string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, "")
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, "", false)
 }
 
 func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
@@ -119,7 +120,19 @@ func (s *Store) AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredW
 	conversationID string,
 	preferredRoute string,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
-	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, preferredRoute)
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, preferredRoute, false)
+}
+
+func (s *Store) AcquireRandomImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(
+	excluded map[string]struct{},
+	allow func(PublicAccount) bool,
+	allowDisabled bool,
+	policy *ImageAccountRoutingPolicy,
+	userID string,
+	conversationID string,
+	preferredRoute string,
+) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
+	return s.acquireImageAuthWithPolicyLease(excluded, allow, allowDisabled, policy, userID, conversationID, preferredRoute, true)
 }
 
 func (s *Store) ImageAccountAllowedForPolicy(accessToken string, account PublicAccount, policy *ImageAccountRoutingPolicy) bool {
@@ -324,9 +337,20 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 	userID string,
 	conversationID string,
 	preferredRoute string,
+	randomize bool,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), error) {
 	if policy == nil || !policy.Enabled {
-		auth, account, release, err := s.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allow, allowDisabled, userID, conversationID, preferredRoute)
+		var (
+			auth    *LocalAuth
+			account PublicAccount
+			release func()
+			err     error
+		)
+		if randomize {
+			auth, account, release, err = s.AcquireRandomImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allow, allowDisabled, userID, conversationID, preferredRoute)
+		} else {
+			auth, account, release, err = s.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(excluded, allow, allowDisabled, userID, conversationID, preferredRoute)
+		}
 		return auth, account, ImageAccountRoutingDecision{}, release, err
 	}
 
@@ -389,6 +413,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 		userID,
 		conversationID,
 		preferredRoute,
+		randomize,
 	)
 	if ok {
 		return auth, account, decision, release, nil
@@ -410,6 +435,7 @@ func (s *Store) acquireImageAuthWithPolicyLease(
 			userID,
 			conversationID,
 			preferredRoute,
+			randomize,
 		)
 		if ok {
 			return auth, account, ImageAccountRoutingDecision{}, release, nil
@@ -487,6 +513,7 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 	userID string,
 	conversationID string,
 	preferredRoute string,
+	randomize bool,
 ) (*LocalAuth, PublicAccount, ImageAccountRoutingDecision, func(), bool) {
 	preferredRoute = NormalizeImageRouteCapability(preferredRoute)
 	sawSelectedGroup := false
@@ -541,47 +568,49 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			continue
 		}
 
-		if boundToken := s.imageConversationBoundTokenLocked(userID, conversationID, preferredRoute); boundToken != "" {
-			for _, candidate := range groupCandidates {
-				if strings.TrimSpace(candidate.auth.AccessToken) != boundToken {
-					continue
+		if !randomize {
+			if boundToken := s.imageConversationBoundTokenLocked(userID, conversationID, preferredRoute); boundToken != "" {
+				for _, candidate := range groupCandidates {
+					if strings.TrimSpace(candidate.auth.AccessToken) != boundToken {
+						continue
+					}
+					if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
+						break
+					}
+					release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
+					if leaseErr != nil {
+						continue
+					}
+					s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+					return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
+						PolicyApplied:  true,
+						GroupIndex:     groupIndex,
+						SortMode:       normalizedPolicy.SortMode,
+						ReservePercent: normalizedPolicy.ReservePercent,
+					}, release, true
 				}
-				if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
-					break
-				}
-				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
-				if leaseErr != nil {
-					continue
-				}
-				s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
-				return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
-					PolicyApplied:  true,
-					GroupIndex:     groupIndex,
-					SortMode:       normalizedPolicy.SortMode,
-					ReservePercent: normalizedPolicy.ReservePercent,
-				}, release, true
 			}
-		}
-		if userToken := s.imageUserBoundTokenLocked(userID, preferredRoute); userToken != "" {
-			for _, candidate := range groupCandidates {
-				if strings.TrimSpace(candidate.auth.AccessToken) != userToken {
-					continue
+			if userToken := s.imageUserBoundTokenLocked(userID, preferredRoute); userToken != "" {
+				for _, candidate := range groupCandidates {
+					if strings.TrimSpace(candidate.auth.AccessToken) != userToken {
+						continue
+					}
+					if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
+						break
+					}
+					release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
+					if leaseErr != nil {
+						continue
+					}
+					s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
+					s.rememberImageConversationAccountLocked(candidate.auth.AccessToken, userID, conversationID, preferredRoute)
+					return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
+						PolicyApplied:  true,
+						GroupIndex:     groupIndex,
+						SortMode:       normalizedPolicy.SortMode,
+						ReservePercent: normalizedPolicy.ReservePercent,
+					}, release, true
 				}
-				if preferredRoute != "" && !AccountSupportsImageRoute(candidate.account, preferredRoute) {
-					break
-				}
-				release, leaseErr := s.acquireImageLeaseLocked(candidate.auth.AccessToken, userID, preferredRoute)
-				if leaseErr != nil {
-					continue
-				}
-				s.rememberImageAccountUserLocked(candidate.auth.AccessToken, userID, preferredRoute)
-				s.rememberImageConversationAccountLocked(candidate.auth.AccessToken, userID, conversationID, preferredRoute)
-				return &candidate.auth, candidate.account, ImageAccountRoutingDecision{
-					PolicyApplied:  true,
-					GroupIndex:     groupIndex,
-					SortMode:       normalizedPolicy.SortMode,
-					ReservePercent: normalizedPolicy.ReservePercent,
-				}, release, true
 			}
 		}
 
@@ -606,6 +635,11 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 			if leftOtherUser != rightOtherUser {
 				return !leftOtherUser
 			}
+			leftSameUserOtherRoute := s.imageAccountUsedBySameUserOtherRouteLocked(groupCandidates[i].auth.AccessToken, userID, preferredRoute)
+			rightSameUserOtherRoute := s.imageAccountUsedBySameUserOtherRouteLocked(groupCandidates[j].auth.AccessToken, userID, preferredRoute)
+			if leftSameUserOtherRoute != rightSameUserOtherRoute {
+				return !leftSameUserOtherRoute
+			}
 			if groupCandidates[i].account.Priority != groupCandidates[j].account.Priority {
 				return groupCandidates[i].account.Priority > groupCandidates[j].account.Priority
 			}
@@ -616,6 +650,9 @@ func (s *Store) selectImageRoutingCandidateFromGroups(
 		})
 
 		selected := groupCandidates[0]
+		if randomize {
+			selected = groupCandidates[rand.Intn(len(groupCandidates))]
+		}
 		release, leaseErr := s.acquireImageLeaseLocked(selected.auth.AccessToken, userID, preferredRoute)
 		if leaseErr != nil {
 			continue

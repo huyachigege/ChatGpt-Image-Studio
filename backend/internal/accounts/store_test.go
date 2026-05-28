@@ -524,6 +524,54 @@ func TestAcquireImageAuthLeaseForUserPrefersAccountNotUsedByOtherUser(t *testing
 	}
 }
 
+func TestAcquireRandomImageAuthLeaseExcludesAttemptedToken(t *testing.T) {
+	rootDir := t.TempDir()
+	authDir := filepath.Join(rootDir, "auths")
+	syncDir := filepath.Join(rootDir, "sync")
+	if err := os.MkdirAll(authDir, 0o755); err != nil {
+		t.Fatalf("mkdir auth dir: %v", err)
+	}
+	if err := os.MkdirAll(syncDir, 0o755); err != nil {
+		t.Fatalf("mkdir sync dir: %v", err)
+	}
+
+	store := &Store{
+		authDir:      authDir,
+		syncStateDir: syncDir,
+		stateFile:    filepath.Join(rootDir, "state.json"),
+		defaultQuota: 5,
+		providerType: "codex",
+		states: map[string]RuntimeState{
+			"first.json":  {Type: "Free", Status: "正常", Quota: 5, QuotaKnown: true, ImageRoutes: []string{"legacy"}},
+			"second.json": {Type: "Free", Status: "正常", Quota: 5, QuotaKnown: true, ImageRoutes: []string{"legacy"}},
+		},
+	}
+
+	if err := writeJSONFile(filepath.Join(authDir, "first.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-first",
+		"email":        "first@example.com",
+	}); err != nil {
+		t.Fatalf("seed first auth file: %v", err)
+	}
+	if err := writeJSONFile(filepath.Join(authDir, "second.json"), map[string]any{
+		"type":         "codex",
+		"access_token": "token-second",
+		"email":        "second@example.com",
+	}); err != nil {
+		t.Fatalf("seed second auth file: %v", err)
+	}
+
+	auth, _, release, err := store.AcquireRandomImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(map[string]struct{}{"token-first": {}}, nil, false, "user-a", "conv-a", "legacy")
+	if err != nil {
+		t.Fatalf("AcquireRandomImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption() error = %v", err)
+	}
+	defer release()
+	if auth.AccessToken != "token-second" {
+		t.Fatalf("random retry token = %q, want token-second", auth.AccessToken)
+	}
+}
+
 func TestAcquireImageAuthLeaseForUserConversationKeepsRouteBindingsSeparate(t *testing.T) {
 	rootDir := t.TempDir()
 	authDir := filepath.Join(rootDir, "auths")

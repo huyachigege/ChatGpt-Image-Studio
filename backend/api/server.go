@@ -62,13 +62,28 @@ type Server struct {
 	imageConversationPromptMetadataCache   map[string]imageConversationPromptMetadataCacheEntry
 	imageDownloadLimitersMu                sync.Mutex
 	imageDownloadLimiters                  map[string]*rateLimiter
+	userStoreMu                            sync.Mutex
+	userStore                              *users.Store
 }
 
 func (s *Server) Close() error {
-	if s == nil || s.reqLogs == nil {
+	if s == nil {
 		return nil
 	}
-	return s.reqLogs.close()
+	var err error
+	if s.reqLogs != nil {
+		err = s.reqLogs.close()
+	}
+	s.userStoreMu.Lock()
+	userStore := s.userStore
+	s.userStore = nil
+	s.userStoreMu.Unlock()
+	if userStore != nil {
+		if closeErr := userStore.Close(); err == nil {
+			err = closeErr
+		}
+	}
+	return err
 }
 
 type requestError struct {
@@ -185,6 +200,23 @@ func NewServer(cfg *config.Config, store *accounts.Store, syncClient *cliproxy.C
 	server.imageTasks = newImageTaskManager(server)
 	server.initAnnouncementTable()
 	return server
+}
+
+func (s *Server) userDB() (*users.Store, error) {
+	if s == nil || s.cfg == nil {
+		return nil, fmt.Errorf("server config is required")
+	}
+	s.userStoreMu.Lock()
+	defer s.userStoreMu.Unlock()
+	if s.userStore != nil {
+		return s.userStore, nil
+	}
+	store, err := users.NewStore(s.cfg)
+	if err != nil {
+		return nil, err
+	}
+	s.userStore = store
+	return store, nil
 }
 
 func (s *Server) getStore() *accounts.Store {
@@ -599,12 +631,11 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	user, err := store.Authenticate(r.Context(), body.Username, body.Password)
 	if err != nil {
 		writeJSON(w, http.StatusUnauthorized, map[string]any{"error": err.Error()})
@@ -634,12 +665,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
 		return
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	user, err := store.RegisterWithInvite(r.Context(), body.Username, body.Password, body.Name, body.InviteCode)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -659,12 +689,11 @@ func (s *Server) handleRegister(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListInvites(w http.ResponseWriter, r *http.Request) {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	items, err := store.ListInvites(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -674,12 +703,11 @@ func (s *Server) handleListInvites(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	identity := identityFromContext(r.Context())
 	item, err := store.CreateInvite(r.Context(), firstNonEmpty(identity.Username, identity.UserID, identity.Name, "admin"))
 	if err != nil {
@@ -690,12 +718,11 @@ func (s *Server) handleCreateInvite(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleListUsers(w http.ResponseWriter, r *http.Request) {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	lastUsedByUser, err := store.LatestSessionCreatedAtByUser(r.Context())
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -746,12 +773,11 @@ func (s *Server) handleUpdateUser(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "disabled is required"})
 		return
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	if err := store.SetUserDisabled(r.Context(), r.PathValue("id"), *body.Disabled); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
@@ -772,12 +798,11 @@ func (s *Server) handleAdjustUserQuota(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "delta must be positive"})
 		return
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	quota, err := store.AdjustDailyImageQuota(r.Context(), r.PathValue("id"), body.Kind, body.Delta)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -799,12 +824,11 @@ func (s *Server) handleAdjustAllUsersQuota(w http.ResponseWriter, r *http.Reques
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "delta must not be zero"})
 		return
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	affected, err := store.AdjustAllUsersDailyImageQuota(r.Context(), body.Kind, body.Delta)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
@@ -818,12 +842,11 @@ func (s *Server) handleAdjustAllUsersQuota(w http.ResponseWriter, r *http.Reques
 }
 
 func (s *Server) handleDeleteUser(w http.ResponseWriter, r *http.Request) {
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	if err := store.DeleteUser(r.Context(), r.PathValue("id")); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 		return
@@ -1503,10 +1526,19 @@ func (s *Server) withImageResultsFilteredWithMetadata(
 			decision     accounts.ImageAccountRoutingDecision
 			err          error
 		)
+		randomRetry := len(attempted) > 0 || lastRetryableErr != nil
 		if policy != nil {
-			authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID, preferredRoute)
+			if randomRetry {
+				authFile, account, decision, releaseLease, err = store.AcquireRandomImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID, preferredRoute)
+			} else {
+				authFile, account, decision, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), policy, userID, conversationID, preferredRoute)
+			}
 		} else {
-			authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID, preferredRoute)
+			if randomRetry {
+				authFile, account, releaseLease, err = store.AcquireRandomImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID, preferredRoute)
+			} else {
+				authFile, account, releaseLease, err = store.AcquireImageAuthLeaseForUserConversationRouteFilteredWithDisabledOption(attempted, allowAccount, s.allowDisabledStudioImageAccounts(), userID, conversationID, preferredRoute)
+			}
 		}
 		if err != nil {
 			return nil, resolveImageAcquireError(mode, err, lastRetryableErr)
@@ -2382,11 +2414,10 @@ func (s *Server) identityFromRequest(r *http.Request) (authIdentity, bool) {
 	if strings.TrimSpace(s.cfg.App.AuthKey) != "" && token == strings.TrimSpace(s.cfg.App.AuthKey) {
 		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return authIdentity{}, false
 	}
-	defer store.Close()
 	user, err := store.UserBySession(r.Context(), token)
 	if err != nil || user == nil {
 		return authIdentity{}, false
@@ -2422,11 +2453,10 @@ func (s *Server) imageIdentityFromRequest(r *http.Request) (authIdentity, bool) 
 	if strings.TrimSpace(s.cfg.App.APIKey) != "" && token == strings.TrimSpace(s.cfg.App.APIKey) {
 		return authIdentity{UserID: "admin", Username: "admin", Email: "admin", Name: "管理员", Role: users.RoleAdmin, Token: token, ImageAPIKey: token}, true
 	}
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		return authIdentity{}, false
 	}
-	defer store.Close()
 	user, err := store.UserByImageAPIKey(r.Context(), token)
 	if err == nil && user != nil {
 		return authIdentity{UserID: user.ID, Username: user.Username, Email: user.Email, Name: user.Name, Role: user.Role, Token: token, ImageAPIKey: user.ImageAPIKey}, true

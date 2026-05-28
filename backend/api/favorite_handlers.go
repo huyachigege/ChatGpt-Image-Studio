@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-
-	"chatgpt2api/internal/users"
 )
 
 const (
@@ -35,12 +33,11 @@ func (s *Server) handleListFavorites(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	items, err := store.ListFavorites(r.Context(), identity.UserID, favoriteType)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
@@ -69,12 +66,11 @@ func (s *Server) handleSetFavorite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	identity := identityFromContext(r.Context())
-	store, err := users.NewStore(s.cfg)
+	store, err := s.userDB()
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	defer store.Close()
 	if err := store.SetFavorite(r.Context(), identity.UserID, favoriteType, key, body.Favorite); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
