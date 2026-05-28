@@ -208,6 +208,8 @@ function defaultConfigPayload(): ConfigPayload {
       apiKey: "",
       model: "gpt-5",
       requestTimeout: 300,
+      retryTimes: 3,
+      providers: [],
     },
     newapi: {
       baseUrl: "",

@@ -414,8 +414,8 @@ func TestCreateResponsesGenerateAndEditTasksRunConcurrentlyForSameUserOnBoundAcc
 		received = append(received, token)
 	default:
 	}
-	if len(received) == 0 || received[0] != "token-same-user-generate" {
-		t.Fatalf("started tokens = %v, want edit to use same bound account", received)
+	if len(received) == 0 || received[0] != externalResponsesAttemptToken("default") {
+		t.Fatalf("started tokens = %v, want edit to use external responses provider", received)
 	}
 
 	close(release)
@@ -771,11 +771,8 @@ func TestCreateImageTaskRetriesExternalResponsesForGenericEditError(t *testing.T
 
 	waitForTaskStatus(t, server, "turn-edit-retry-1", imageTaskStatusSucceeded)
 	joinedSequence := strings.Join(recorder.callSequence, ",")
-	if !strings.Contains(joinedSequence, "token-edit-transient") {
-		t.Fatalf("callSequence = %#v, want first account attempted", recorder.callSequence)
-	}
 	if !strings.Contains(joinedSequence, "external_responses") {
-		t.Fatalf("callSequence = %#v, want generic edit error to retry external_responses", recorder.callSequence)
+		t.Fatalf("callSequence = %#v, want generic edit error to use external_responses", recorder.callSequence)
 	}
 }
 
@@ -834,8 +831,8 @@ func TestCreateImageEditTaskHighResolutionUsesPaidAccount(t *testing.T) {
 		t.Fatal("callSequence = empty, want paid edit execution")
 	}
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
-	if !strings.Contains(lastCall, "token-paid-priority") {
-		t.Fatalf("callSequence = %#v, want paid account selected for high-resolution edit", recorder.callSequence)
+	if !strings.HasPrefix(lastCall, "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external_responses for high-resolution edit", recorder.callSequence)
 	}
 }
 
@@ -876,8 +873,8 @@ func TestCreateImageEditTaskWithMultipleImagesUsesResponsesThumbnails(t *testing
 		t.Fatal("callSequence = empty, want responses edit execution")
 	}
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
-	if !strings.HasPrefix(lastCall, "responses:") || !strings.Contains(lastCall, ":edit") {
-		t.Fatalf("callSequence = %#v, want responses edit", recorder.callSequence)
+	if !strings.HasPrefix(lastCall, "external_responses:") || !strings.Contains(lastCall, ":edit") {
+		t.Fatalf("callSequence = %#v, want external responses edit", recorder.callSequence)
 	}
 }
 
@@ -982,8 +979,8 @@ func TestCreateImageGenerateTaskAutoPaidUsesPaidAccount(t *testing.T) {
 		t.Fatal("callSequence = empty, want paid auto execution")
 	}
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
-	if !strings.Contains(lastCall, "token-paid-priority-auto-paid") {
-		t.Fatalf("callSequence = %#v, want paid account selected for auto-paid generate", recorder.callSequence)
+	if !strings.HasPrefix(lastCall, "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external_responses for auto-paid generate", recorder.callSequence)
 	}
 }
 
@@ -1036,14 +1033,14 @@ func TestCreateImageGenerateTaskDeletesAccountOnResponsesUnauthorized(t *testing
 	}
 
 	waitForTaskStatus(t, server, "turn-generate-unauthorized-delete-1", imageTaskStatusSucceeded)
-	if _, err := server.store.GetAccountByToken("token-paid-unauthorized-first"); err == nil {
-		t.Fatal("unauthorized account still exists, want deleted")
+	if _, err := server.store.GetAccountByToken("token-paid-unauthorized-first"); err != nil {
+		t.Fatalf("unauthorized account was deleted, want external route to avoid account mutation: %v", err)
 	}
 	if _, err := server.store.GetAccountByToken("token-paid-unauthorized-second"); err != nil {
 		t.Fatalf("fallback account missing: %v", err)
 	}
-	if len(recorder.callSequence) != 2 || !strings.HasPrefix(recorder.callSequence[0], "responses:token-paid-unauthorized-first:generate") || !strings.HasPrefix(recorder.callSequence[1], "responses:token-paid-unauthorized-second:generate") {
-		t.Fatalf("callSequence = %#v, want first account 401 then second account responses", recorder.callSequence)
+	if len(recorder.callSequence) != 1 || !strings.HasPrefix(recorder.callSequence[0], "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external_responses without official account mutation", recorder.callSequence)
 	}
 }
 
@@ -1091,34 +1088,20 @@ func TestCreateImageGenerateTaskUsesExternalResponsesWhenResponsesAccountBusy(t 
 	}
 	select {
 	case token := <-started:
-		if token != "token-paid-busy-external" {
-			t.Fatalf("started token = %q, want token-paid-busy-external", token)
+		if token != externalResponsesAttemptToken("default") {
+			t.Fatalf("started token = %q, want external responses provider", token)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("timed out waiting for holder task to occupy responses account")
 	}
 
-	if _, err := server.imageTasks.createTask(createImageTaskRequest{
-		ConversationID:   "conv-generate-busy-external-1",
-		TurnID:           "turn-generate-busy-external-1",
-		Mode:             "generate",
-		Prompt:           "use external while responses busy",
-		Model:            "gpt-image-2",
-		Count:            1,
-		ResolutionAccess: "paid",
-		Quality:          "high",
-	}); err != nil {
-		t.Fatalf("createTask(external) returned error: %v", err)
-	}
-
-	waitForTaskStatus(t, server, "turn-generate-busy-external-1", imageTaskStatusSucceeded)
 	close(release)
 	waitForTaskStatus(t, server, "turn-generate-busy-holder-1", imageTaskStatusSucceeded)
 	if recorder.externalCalls != 1 {
 		t.Fatalf("externalCalls = %d, want 1; sequence = %#v", recorder.externalCalls, recorder.callSequence)
 	}
-	if len(recorder.callSequence) < 2 || !strings.HasPrefix(recorder.callSequence[1], "external_responses:external_responses:generate") {
-		t.Fatalf("callSequence = %#v, want second task to use external_responses", recorder.callSequence)
+	if len(recorder.callSequence) != 1 || !strings.HasPrefix(recorder.callSequence[0], "external_responses:") {
+		t.Fatalf("callSequence = %#v, want holder task to use external_responses", recorder.callSequence)
 	}
 }
 
@@ -1167,11 +1150,11 @@ func TestCreateImageGenerateTaskFallsBackToExternalResponsesOnResponsesLimit(t *
 	if _, err := server.store.GetAccountByToken("token-paid-external-fallback"); err != nil {
 		t.Fatalf("limited account was deleted, want responses route disabled only: %v", err)
 	}
-	if recorder.responsesCalls != 1 || recorder.externalCalls != 1 {
-		t.Fatalf("responsesCalls/externalCalls = %d/%d, want 1/1; sequence = %#v", recorder.responsesCalls, recorder.externalCalls, recorder.callSequence)
+	if recorder.responsesCalls != 0 || recorder.externalCalls != 1 {
+		t.Fatalf("responsesCalls/externalCalls = %d/%d, want 0/1; sequence = %#v", recorder.responsesCalls, recorder.externalCalls, recorder.callSequence)
 	}
-	if len(recorder.callSequence) != 2 || !strings.HasPrefix(recorder.callSequence[0], "responses:token-paid-external-fallback:generate") || !strings.HasPrefix(recorder.callSequence[1], "external_responses:external_responses:generate") {
-		t.Fatalf("callSequence = %#v, want responses then external_responses", recorder.callSequence)
+	if len(recorder.callSequence) != 1 || !strings.HasPrefix(recorder.callSequence[0], "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external_responses only", recorder.callSequence)
 	}
 }
 
@@ -1268,8 +1251,9 @@ func TestCreateImageGenerateUsesPreviousResponseOnlyForSameResponsesAccount(t *t
 		Model:          "gpt-image-2",
 		Count:          1,
 		ContextReference: &imageTaskContextReferencePayload{
-			ResponseID:      "resp_123",
-			SourceAccountID: accountID,
+			ResponseID:         "resp_123",
+			ResponseProviderID: "default",
+			SourceAccountID:    accountID,
 		},
 	}); err != nil {
 		t.Fatalf("createTask() returned error: %v", err)
@@ -1316,8 +1300,9 @@ func TestCreateImageGenerateFallsBackToReferenceImageWhenPreviousResponseMissing
 			},
 		},
 		ContextReference: &imageTaskContextReferencePayload{
-			ResponseID:      "resp_missing",
-			SourceAccountID: accountID,
+			ResponseID:         "resp_missing",
+			ResponseProviderID: "default",
+			SourceAccountID:    accountID,
 		},
 	}); err != nil {
 		t.Fatalf("createTask() returned error: %v", err)
@@ -1327,8 +1312,8 @@ func TestCreateImageGenerateFallsBackToReferenceImageWhenPreviousResponseMissing
 	if len(recorder.callSequence) != 2 {
 		t.Fatalf("callSequence = %#v, want previous-response then reference fallback", recorder.callSequence)
 	}
-	if recorder.callSequence[0] != "responses:token-compat:previous-response" || recorder.callSequence[1] != "responses:token-compat:reference-generate" {
-		t.Fatalf("callSequence = %#v, want previous-response then reference fallback", recorder.callSequence)
+	if recorder.callSequence[0] != "external_responses:external_responses:default:previous-response" || recorder.callSequence[1] != "external_responses:external_responses:default:generate" {
+		t.Fatalf("callSequence = %#v, want previous-response then generate fallback", recorder.callSequence)
 	}
 }
 
@@ -1367,10 +1352,11 @@ func TestCreateImageGenerateFallsBackToLegacyWhenResponsesReferenceFails(t *test
 			},
 		},
 		ContextReference: &imageTaskContextReferencePayload{
-			ConversationID:  "conv-legacy-1",
-			ParentMessageID: "msg-legacy-1",
-			ResponseID:      "resp_missing",
-			SourceAccountID: accountID,
+			ConversationID:     "conv-legacy-1",
+			ParentMessageID:    "msg-legacy-1",
+			ResponseID:         "resp_missing",
+			ResponseProviderID: "default",
+			SourceAccountID:    accountID,
 		},
 	}); err != nil {
 		t.Fatalf("createTask() returned error: %v", err)
@@ -1378,9 +1364,8 @@ func TestCreateImageGenerateFallsBackToLegacyWhenResponsesReferenceFails(t *test
 
 	waitForTaskStatus(t, server, "turn-prev-response-legacy-fallback-1", imageTaskStatusSucceeded)
 	want := []string{
-		"responses:token-compat:previous-response",
-		"responses:token-compat:reference-generate",
-		"official:token-compat:reference-generate",
+		"external_responses:external_responses:default:previous-response",
+		"external_responses:external_responses:default:generate",
 	}
 	if len(recorder.callSequence) != len(want) {
 		t.Fatalf("callSequence = %#v, want %#v", recorder.callSequence, want)
@@ -1544,15 +1529,8 @@ func TestCreateImageGenerateTaskAutoPaidRequiresPaidAccount(t *testing.T) {
 		ResolutionAccess: "paid",
 		Quality:          "high",
 	})
-	if err == nil {
-		t.Fatal("createTask() returned nil error, want paid account validation failure")
-	}
-	var reqErr *requestError
-	if !errors.As(err, &reqErr) {
-		t.Fatalf("createTask() error = %T, want *requestError", err)
-	}
-	if reqErr.code != "paid_resolution_requires_paid_account" {
-		t.Fatalf("request error code = %q, want paid_resolution_requires_paid_account", reqErr.code)
+	if err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
 	}
 }
 
@@ -1818,9 +1796,9 @@ func TestCreateImageTaskDoesNotRetryPaidTransientResponsesSSEError(t *testing.T)
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	waitForTaskStatus(t, server, "turn-transient-1", imageTaskStatusFailed)
-	if got := atomic.LoadInt32(&transientCalls); got != 1 {
-		t.Fatalf("transientCalls = %d, want no paid same-account retry", got)
+	waitForTaskStatus(t, server, "turn-transient-1", imageTaskStatusSucceeded)
+	if got := atomic.LoadInt32(&transientCalls); got != 0 {
+		t.Fatalf("transientCalls = %d, want official responses bypassed", got)
 	}
 }
 

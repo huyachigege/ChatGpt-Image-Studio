@@ -47,6 +47,7 @@ type Server struct {
 	officialClientFactory                  func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
 	responsesClientFactory                 func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient
 	externalResponsesClientFactory         func(cfg config.ExternalResponsesConfig) imageWorkflowClient
+	externalResponsesProviderClientFactory func(provider config.ExternalResponsesProviderConfig) imageWorkflowClient
 	cpaClientFactory                       func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient
 	newAPIClientFactory                    func(cfg *config.Config) *newapi.Client
 	sub2apiClientFactory                   func(cfg *config.Config) *sub2api.Client
@@ -1561,6 +1562,49 @@ func (s *Server) newResponsesWorkflowClientForAccount(accessToken string, authDa
 	return newNamedFallbackResponsesClient(official, external, "official responses", "external responses")
 }
 
+func (s *Server) externalResponsesProviders() []config.ExternalResponsesProviderConfig {
+	if s == nil || s.cfg == nil {
+		return nil
+	}
+	return s.cfg.ExternalResponsesProviders()
+}
+
+func (s *Server) newExternalResponsesWorkflowClient(provider config.ExternalResponsesProviderConfig) imageWorkflowClient {
+	if s != nil && s.externalResponsesProviderClientFactory != nil {
+		return s.externalResponsesProviderClientFactory(provider)
+	}
+	if s != nil && s.externalResponsesClientFactory != nil {
+		cfg := s.cfg.ExternalResponsesConfig()
+		cfg.Enabled = provider.Enabled
+		cfg.BaseURL = provider.BaseURL
+		cfg.APIKey = provider.APIKey
+		cfg.Model = provider.Model
+		cfg.RequestTimeout = provider.RequestTimeout
+		cfg.Providers = []config.ExternalResponsesProviderConfig{provider}
+		return s.externalResponsesClientFactory(cfg)
+	}
+	return newExternalResponsesClientForProvider(provider)
+}
+
+func (s *Server) externalResponsesProviderForLease(authFile *accounts.LocalAuth) (config.ExternalResponsesProviderConfig, bool) {
+	providers := s.externalResponsesProviders()
+	if len(providers) == 0 {
+		return config.ExternalResponsesProviderConfig{}, false
+	}
+	if authFile != nil {
+		token := strings.TrimSpace(authFile.AccessToken)
+		for _, provider := range providers {
+			if token == externalResponsesAttemptToken(provider.ID) {
+				return provider, true
+			}
+		}
+		if isExternalResponsesAttemptToken(token) {
+			return config.ExternalResponsesProviderConfig{}, false
+		}
+	}
+	return providers[0], true
+}
+
 func (s *Server) newCPAWorkflowClient() cpaRouteAwareImageWorkflowClient {
 	timeout := time.Duration(max(10, s.cfg.CPAImageRequestTimeout())) * time.Second
 	if s != nil && s.cpaClientFactory != nil {
@@ -1780,6 +1824,7 @@ func (s *Server) runPureCPAImageRequest(
 	}
 	metadata.applyTo(&entry)
 	items := buildImageResponse(r, client, results, responseFormat, "", s.cfg.ResolvePath(s.cfg.Storage.ImageDir))
+	applyExternalResponseProviderToItems(items, client)
 	applyImageResponseLogFields(&entry, items)
 	s.logImageRequestWithContext(ctx, entry)
 	return items, nil
@@ -1800,7 +1845,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 	}
 	startedAt := time.Now()
 	forcedRoute = strings.ToLower(strings.TrimSpace(forcedRoute))
-	if forcedRoute == "" && authFile != nil && strings.EqualFold(strings.TrimSpace(authFile.AccessToken), "external_responses") {
+	if forcedRoute == "" && authFile != nil && isExternalResponsesAttemptToken(authFile.AccessToken) {
 		forcedRoute = "external_responses"
 	}
 	now := time.Now()
@@ -1945,16 +1990,17 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 		if forcedRoute != "" {
 			route = forcedRoute
 		}
+		effectiveRoute := route
+		if effectiveRoute == "responses" {
+			effectiveRoute = "external_responses"
+		}
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
 		direction = "official"
-		if forcedRoute == "" {
-			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
-		}
-		switch forcedRoute {
+		switch effectiveRoute {
 		case "external_responses":
-			externalConfig := s.cfg.ExternalResponsesConfig()
-			if !s.externalResponsesConfigured() {
-				err := newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置 base_url、api_key 与 model")
+			provider, ok := s.externalResponsesProviderForLease(authFile)
+			if !ok {
+				err := newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置至少一个可用 provider")
 				entry := imageRequestLogEntry{
 					StartedAt:            startedAt.Format(time.RFC3339Nano),
 					FinishedAt:           time.Now().Format(time.RFC3339Nano),
@@ -1962,7 +2008,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 					Operation:            operation,
 					ImageMode:            mode,
 					Direction:            "external",
-					Route:                route,
+					Route:                "external_responses",
 					AccountType:          account.Type,
 					AccountEmail:         account.Email,
 					AccountFile:          authFile.Name,
@@ -1977,22 +2023,16 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 				if requestErr, ok := err.(*requestError); ok {
 					entry.ErrorCode = requestErr.code
 				}
-				s.applyExternalResponsesLogAccount(route, &entry)
+				s.applyExternalResponsesLogAccount("external_responses", &entry)
 				applyImageRoutingLogFields(routingDecision, &entry)
 				metadata.applyTo(&entry)
 				s.logImageRequestWithContext(ctx, entry)
 				return nil, false, err
 			}
-			if s.externalResponsesClientFactory != nil {
-				client = s.externalResponsesClientFactory(externalConfig)
-			} else {
-				client = newExternalResponsesClient(externalConfig)
-			}
-			upstreamModel = externalConfig.Model
+			client = s.newExternalResponsesWorkflowClient(provider)
+			upstreamModel = provider.Model
+			route = "external_responses"
 			direction = "external"
-		case "responses":
-			client = s.newResponsesWorkflowClientForAccount(authFile.AccessToken, authFile.Data, account)
-			direction = "responses"
 		case "legacy":
 			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
@@ -2032,6 +2072,16 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 	}
 	if toolModelProvider, ok := client.(interface{ ImageToolModel() string }); ok {
 		imageToolModel = strings.TrimSpace(toolModelProvider.ImageToolModel())
+	}
+	if setter, ok := client.(interface{ SetSessionID(string) }); ok && responsesEligible {
+		scope := responsesSessionScopeFromContext(ctx)
+		sessionRoute := route
+		if provider, ok := client.(interface{ ExternalProviderID() string }); ok {
+			if providerID := strings.TrimSpace(provider.ExternalProviderID()); providerID != "" {
+				sessionRoute = route + ":" + providerID
+			}
+		}
+		setter.SetSessionID(s.responsesSessionID(scope.UserID, scope.ConversationID, sessionRoute))
 	}
 	results, err := run(client, upstreamModel)
 	if reqBodyProvider, ok := client.(interface{ LastRequestBody() string }); ok {
@@ -2192,6 +2242,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 	applyImageRoutingLogFields(routingDecision, &entry)
 	metadata.applyTo(&entry)
 	items := buildImageResponse(r, client, results, responseFormat, account.ID, s.cfg.ResolvePath(s.cfg.Storage.ImageDir))
+	applyExternalResponseProviderToItems(items, client)
 	applyImageResponseLogFields(&entry, items)
 	s.logImageRequestWithContext(ctx, entry)
 	return items, false, nil
@@ -2954,11 +3005,7 @@ func shouldUseOfficialResponses(preferredAccount bool, responsesEligible bool, c
 }
 
 func (s *Server) externalResponsesConfigured() bool {
-	if s == nil || s.cfg == nil {
-		return false
-	}
-	cfg := s.cfg.ExternalResponsesConfig()
-	return cfg.Enabled && cfg.BaseURL != "" && cfg.APIKey != "" && cfg.Model != ""
+	return len(s.externalResponsesProviders()) > 0
 }
 
 func (s *Server) configuredImageRoute(accountType string) string {
@@ -2981,11 +3028,7 @@ func (s *Server) configuredImageRouteForAccount(account accounts.PublicAccount) 
 	if s.allowDisabledStudioImageAccounts() && strings.TrimSpace(account.Status) == "禁用" {
 		return "legacy"
 	}
-	route := s.configuredImageRoute(account.Type)
-	if route == "responses" && !accounts.AccountSupportsImageRoute(account, "responses") {
-		return "legacy"
-	}
-	return route
+	return s.configuredImageRoute(account.Type)
 }
 
 func (s *Server) imageRequestConfig() handler.ImageRequestConfig {
@@ -3037,11 +3080,17 @@ func normalizeConfiguredImageRoute(value, fallback string) string {
 
 func resolveLoggedImageRoute(configuredRoute string, client any) string {
 	route := strings.TrimSpace(configuredRoute)
-	if !strings.EqualFold(route, "responses") {
+	if strings.EqualFold(route, "responses") {
+		route = "external_responses"
+	}
+	if !strings.EqualFold(route, "external_responses") {
 		return route
 	}
 	if routeAwareClient, ok := client.(interface{ LastRoute() string }); ok {
 		if actualRoute := strings.TrimSpace(routeAwareClient.LastRoute()); actualRoute != "" {
+			if strings.EqualFold(actualRoute, "responses") {
+				return "external_responses"
+			}
 			return actualRoute
 		}
 	}
@@ -3062,6 +3111,10 @@ func (s *Server) applyExternalResponsesLogAccount(route string, entry *imageRequ
 }
 
 func (s *Server) externalResponsesLogAccount() string {
+	providers := s.externalResponsesProviders()
+	if len(providers) > 0 {
+		return firstNonEmpty(strings.TrimSpace(providers[0].Name), strings.TrimSpace(providers[0].ID), strings.TrimSpace(providers[0].BaseURL))
+	}
 	if s != nil && s.cfg != nil {
 		if baseURL := strings.TrimSpace(s.cfg.ExternalResponsesConfig().BaseURL); baseURL != "" {
 			return baseURL
@@ -3078,6 +3131,20 @@ func resolveLoggedImageToolModel(requestedModel string) string {
 		return "gpt-image-2"
 	default:
 		return ""
+	}
+}
+
+func applyExternalResponseProviderToItems(items []map[string]any, client any) {
+	provider, ok := client.(interface{ ExternalProviderID() string })
+	if !ok {
+		return
+	}
+	providerID := strings.TrimSpace(provider.ExternalProviderID())
+	if providerID == "" {
+		return
+	}
+	for _, item := range items {
+		item["response_provider_id"] = providerID
 	}
 }
 

@@ -211,14 +211,17 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				}
 			}
 			if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
-				if editor, ok := client.(interface {
-					EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
-				}); ok {
-					results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, task.SourceReference.ResponseID)
-					if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
-						return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				previousResponseID := providerScopedPreviousResponseID(client, task.SourceReference.ResponseProviderID, task.SourceReference.ResponseID)
+				if previousResponseID != "" {
+					if editor, ok := client.(interface {
+						EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
+					}); ok {
+						results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, previousResponseID)
+						if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+							return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+						}
+						return results, err
 					}
-					return results, err
 				}
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			}
@@ -401,12 +404,12 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
 			if task.ContextReference != nil {
-				if sameSourceAccount && task.ContextReference.ResponseID != "" {
+				if previousResponseID := providerScopedPreviousResponseID(client, task.ContextReference.ResponseProviderID, task.ContextReference.ResponseID); previousResponseID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
 							GenerateImageWithPreviousResponse(context.Context, string, string, int, string, string, string, string) ([]handler.ImageResult, error)
 						}); ok {
-							results, err := generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, task.ContextReference.ResponseID)
+							results, err := generator.GenerateImageWithPreviousResponse(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, previousResponseID)
 							if err == nil || !isResponsesPreviousResponseContextError(err) {
 								return results, err
 							}
@@ -469,7 +472,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					task.ResponseFormat,
 					false,
 					requestedModel,
-					route == "responses",
+					route == "responses" || isExternalResponsesRoute(route),
 					metadata,
 					runGenerate,
 					fakeReq,
@@ -523,17 +526,23 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
 			}
 			retries := s.cfg.ExternalResponsesRetryTimes()
+			providerCount := len(s.externalResponsesProviders())
+			attemptLimit := max(1, retries) * max(1, providerCount)
 			var attemptItems []map[string]any
 			var attemptClass imageAttemptErrorClass
 			var attemptErr error
-			for attempt := 0; attempt < retries; attempt++ {
-				attemptItems, attemptClass, attemptErr = tryRoute(lease, "external_responses")
+			for attempt := 0; attempt < attemptLimit; attempt++ {
+				nextLease, _, acquireErr := s.imageTasks.externalResponsesLeaseForTask(task, unitIndex)
+				if acquireErr != nil {
+					return nil, imageAttemptRetryable, acquireErr
+				}
+				attemptItems, attemptClass, attemptErr = tryRoute(nextLease, "external_responses")
+				if attemptErr != nil {
+					rememberAttempt(nextLease)
+				}
 				if !shouldRetryExternalResponsesSameRoute(taskCtx, attemptErr, attemptClass) {
 					break
 				}
-			}
-			if attemptErr != nil {
-				rememberAttempt(lease)
 			}
 			return attemptItems, attemptClass, attemptErr
 		}
@@ -651,6 +660,24 @@ func isSelectionEditContextFallbackError(err error) bool {
 	return requestErrorCode(err) == "source_context_missing" || isConversationContextError(err) || isResponsesPreviousResponseContextError(err)
 }
 
+func providerScopedPreviousResponseID(client imageWorkflowClient, sourceProviderID, responseID string) string {
+	responseID = strings.TrimSpace(responseID)
+	if responseID == "" {
+		return ""
+	}
+	currentProviderID := ""
+	if provider, ok := client.(interface{ ExternalProviderID() string }); ok {
+		currentProviderID = strings.TrimSpace(provider.ExternalProviderID())
+	}
+	if currentProviderID == "" {
+		return responseID
+	}
+	if strings.EqualFold(currentProviderID, strings.TrimSpace(sourceProviderID)) {
+		return responseID
+	}
+	return ""
+}
+
 func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image {
 	images := make([]imagehistory.Image, 0, len(items))
 	for index, item := range items {
@@ -671,18 +698,19 @@ func historyImagesFromResponseItems(items []map[string]any) []imagehistory.Image
 			}
 		}
 		images = append(images, imagehistory.Image{
-			ID:              firstNonEmpty(stringValue(item["id"]), fmt.Sprintf("image-%d", index)),
-			Status:          firstNonEmpty(stringValue(item["status"]), "success"),
-			B64JSON:         stringValue(item["b64_json"]),
-			URL:             url,
-			RevisedPrompt:   stringValue(item["revised_prompt"]),
-			FileID:          stringValue(item["file_id"]),
-			GenID:           stringValue(item["gen_id"]),
-			ConversationID:  stringValue(item["conversation_id"]),
-			ParentMessageID: stringValue(item["parent_message_id"]),
-			ResponseID:      stringValue(item["response_id"]),
-			SourceAccountID: stringValue(item["source_account_id"]),
-			Error:           stringValue(item["error"]),
+			ID:                 firstNonEmpty(stringValue(item["id"]), fmt.Sprintf("image-%d", index)),
+			Status:             firstNonEmpty(stringValue(item["status"]), "success"),
+			B64JSON:            stringValue(item["b64_json"]),
+			URL:                url,
+			RevisedPrompt:      stringValue(item["revised_prompt"]),
+			FileID:             stringValue(item["file_id"]),
+			GenID:              stringValue(item["gen_id"]),
+			ConversationID:     stringValue(item["conversation_id"]),
+			ParentMessageID:    stringValue(item["parent_message_id"]),
+			ResponseID:         stringValue(item["response_id"]),
+			ResponseProviderID: stringValue(item["response_provider_id"]),
+			SourceAccountID:    stringValue(item["source_account_id"]),
+			Error:              stringValue(item["error"]),
 		})
 	}
 	return images

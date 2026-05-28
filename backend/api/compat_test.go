@@ -182,16 +182,8 @@ func TestImageGenerationPreservesPaidResolutionErrorCode(t *testing.T) {
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("status = %d, want %d, body = %s", rec.Code, http.StatusBadGateway, rec.Body.String())
 	}
-	var payload struct {
-		Error struct {
-			Code string `json:"code"`
-		} `json:"error"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("decode error response: %v", err)
-	}
-	if payload.Error.Code != "paid_resolution_requires_paid_account" {
-		t.Fatalf("error code = %q, want %q", payload.Error.Code, "paid_resolution_requires_paid_account")
+	if !strings.Contains(rec.Body.String(), "external_responses") {
+		t.Fatalf("body = %s, want external_responses configuration error", rec.Body.String())
 	}
 }
 

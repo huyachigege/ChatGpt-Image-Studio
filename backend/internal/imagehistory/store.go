@@ -35,19 +35,20 @@ type SourceImage struct {
 }
 
 type Image struct {
-	ID              string `json:"id"`
-	Status          string `json:"status,omitempty"`
-	B64JSON         string `json:"b64_json,omitempty"`
-	URL             string `json:"url,omitempty"`
-	Prompt          string `json:"prompt,omitempty"`
-	RevisedPrompt   string `json:"revised_prompt,omitempty"`
-	FileID          string `json:"file_id,omitempty"`
-	GenID           string `json:"gen_id,omitempty"`
-	ConversationID  string `json:"conversation_id,omitempty"`
-	ParentMessageID string `json:"parent_message_id,omitempty"`
-	ResponseID      string `json:"response_id,omitempty"`
-	SourceAccountID string `json:"source_account_id,omitempty"`
-	Error           string `json:"error,omitempty"`
+	ID                 string `json:"id"`
+	Status             string `json:"status,omitempty"`
+	B64JSON            string `json:"b64_json,omitempty"`
+	URL                string `json:"url,omitempty"`
+	Prompt             string `json:"prompt,omitempty"`
+	RevisedPrompt      string `json:"revised_prompt,omitempty"`
+	FileID             string `json:"file_id,omitempty"`
+	GenID              string `json:"gen_id,omitempty"`
+	ConversationID     string `json:"conversation_id,omitempty"`
+	ParentMessageID    string `json:"parent_message_id,omitempty"`
+	ResponseID         string `json:"response_id,omitempty"`
+	ResponseProviderID string `json:"response_provider_id,omitempty"`
+	SourceAccountID    string `json:"source_account_id,omitempty"`
+	Error              string `json:"error,omitempty"`
 }
 
 type Turn struct {

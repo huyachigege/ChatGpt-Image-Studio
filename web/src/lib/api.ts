@@ -327,6 +327,16 @@ type ImageTaskResponse = {
   snapshot: ImageTaskSnapshot;
 };
 
+export type ExternalResponsesProviderConfig = {
+  id: string;
+  name: string;
+  enabled: boolean;
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  requestTimeout: number;
+};
+
 export type ConfigPayload = {
   app: {
     name: string;
@@ -413,6 +423,8 @@ export type ConfigPayload = {
     apiKey: string;
     model: string;
     requestTimeout: number;
+    retryTimes: number;
+    providers: ExternalResponsesProviderConfig[];
   };
   newapi: {
     baseUrl: string;

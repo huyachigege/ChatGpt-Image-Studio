@@ -75,6 +75,24 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
     config.storage.imageConversationStorage === "server" ? "server" : "browser";
   const imageDataStorage =
     config.storage.imageDataStorage === "server" ? "server" : "browser";
+  const externalResponsesProviders = config.externalResponses.providers?.length
+    ? config.externalResponses.providers
+    : [
+        {
+          id: "default",
+          name: "Default",
+          enabled: config.externalResponses.enabled,
+          baseUrl: config.externalResponses.baseUrl,
+          apiKey: config.externalResponses.apiKey,
+          model: config.externalResponses.model,
+          requestTimeout: config.externalResponses.requestTimeout,
+        },
+      ];
+  const externalResponsesDuplicateIDs = new Set(
+    externalResponsesProviders
+      .map((provider) => provider.id.trim())
+      .filter((id, index, ids) => id && ids.indexOf(id) !== index),
+  );
   const serverConversationStorageLabel =
     config.storage.backend === "sqlite"
       ? "SQLite 数据库"
@@ -285,11 +303,11 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
 
       <ConfigSection
         title="外部 Responses"
-        description="启用后，图片 responses 链路会优先请求你配置的外部 /v1/responses 接口；如果外部接口失败，会自动回退到标准账号官网 responses。"
+        description="图片 responses 链路统一请求外部 /v1/responses provider；多个 provider 会在后台随机起点轮换重试，不再回退账号内置 responses。"
       >
         <ToggleField
-          label="启用外部 Responses 优先"
-          hint="关闭时保持现有官网账号 responses 行为；开启时需要填写 API 地址、API Key 和模型。"
+          label="启用外部 Responses"
+          hint="paid/auto 图片链路依赖这里；未配置可用 provider 时会直接报错。"
           checked={config.externalResponses.enabled}
           onCheckedChange={(checked) =>
             setSection("externalResponses", {
@@ -299,59 +317,151 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
           }
         />
 
-        <Field label="API 地址" hint="填写支持 OpenAI-compatible /v1/responses 的服务根地址，例如 https://api.example.com。">
-          <Input
-            value={config.externalResponses.baseUrl}
-            onChange={(event) =>
-              setSection("externalResponses", {
-                ...config.externalResponses,
-                baseUrl: event.target.value,
-              })
-            }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
-          />
-        </Field>
-
-        <Field label="API Key" hint="请求外部 /v1/responses 时会作为 Authorization: Bearer 使用。">
-          <Input
-            type="password"
-            value={config.externalResponses.apiKey}
-            onChange={(event) =>
-              setSection("externalResponses", {
-                ...config.externalResponses,
-                apiKey: event.target.value,
-              })
-            }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
-          />
-        </Field>
-
-        <Field label="Responses 模型" hint="外部 /v1/responses payload 中的 model，例如 gpt-5 或供应商提供的兼容模型名。">
-          <Input
-            value={config.externalResponses.model}
-            onChange={(event) =>
-              setSection("externalResponses", {
-                ...config.externalResponses,
-                model: event.target.value,
-              })
-            }
-            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
-          />
-        </Field>
-
-        <Field label="请求超时（秒）" hint="仅用于外部 /v1/responses 请求；超时或报错后会回退官网 responses。">
+        <Field label="重试轮数" hint="每轮会按 provider 列表顺序尝试一遍；任务首次 provider 起点会随机选择。">
           <Input
             type="number"
-            value={String(config.externalResponses.requestTimeout)}
+            value={String(config.externalResponses.retryTimes || 3)}
             onChange={(event) =>
               setSection("externalResponses", {
                 ...config.externalResponses,
-                requestTimeout: Number(event.target.value || 0),
+                retryTimes: Number(event.target.value || 0),
               })
             }
             className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
           />
         </Field>
+
+        <div className="col-span-full space-y-3">
+          {externalResponsesProviders.map((provider, index) => (
+            <div key={`${provider.id || "provider"}-${index}`} className="rounded-3xl border border-stone-200 bg-stone-50/60 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold text-stone-900">Provider {index + 1}</div>
+                  <div className="text-xs text-stone-500">ID 用于隔离 response 上下文，保存后不要随意改名。</div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9 rounded-full border-stone-200 bg-white px-3 text-xs text-stone-600 shadow-none"
+                  onClick={() => {
+                    const providers = [...externalResponsesProviders];
+                    providers.splice(index, 1);
+                    setSection("externalResponses", { ...config.externalResponses, providers });
+                  }}
+                >
+                  删除
+                </Button>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <ToggleField
+                  label="启用"
+                  hint="关闭后不会参与轮换。"
+                  checked={provider.enabled}
+                  onCheckedChange={(checked) => {
+                    const providers = [...externalResponsesProviders];
+                    providers[index] = { ...provider, enabled: checked };
+                    setSection("externalResponses", { ...config.externalResponses, providers });
+                  }}
+                />
+                <Field
+                  label="Provider ID"
+                  hint={externalResponsesDuplicateIDs.has(provider.id.trim()) ? "Provider ID 重复，请改成唯一值。" : "稳定唯一 ID，例如 primary、backup-us。"}
+                >
+                  <Input
+                    value={provider.id}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, id: event.target.value };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+                <Field label="显示名称" hint="日志和界面展示用，可选。">
+                  <Input
+                    value={provider.name}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, name: event.target.value };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+                <Field label="API 地址" hint="支持 OpenAI-compatible /v1/responses 的服务根地址。">
+                  <Input
+                    value={provider.baseUrl}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, baseUrl: event.target.value };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+                <Field label="API Key" hint="请求该 provider 时作为 Authorization: Bearer 使用。">
+                  <Input
+                    type="password"
+                    value={provider.apiKey}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, apiKey: event.target.value };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+                <Field label="Responses 模型" hint="该 provider /v1/responses payload 中的 model。">
+                  <Input
+                    value={provider.model}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, model: event.target.value };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+                <Field label="请求超时（秒）" hint="该 provider 的 /v1/responses 请求超时。">
+                  <Input
+                    type="number"
+                    value={String(provider.requestTimeout || 300)}
+                    onChange={(event) => {
+                      const providers = [...externalResponsesProviders];
+                      providers[index] = { ...provider, requestTimeout: Number(event.target.value || 0) };
+                      setSection("externalResponses", { ...config.externalResponses, providers });
+                    }}
+                    className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+                  />
+                </Field>
+              </div>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+            onClick={() =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                providers: [
+                  ...externalResponsesProviders,
+                  {
+                    id: `provider-${externalResponsesProviders.length + 1}`,
+                    name: "",
+                    enabled: true,
+                    baseUrl: "",
+                    apiKey: "",
+                    model: "",
+                    requestTimeout: config.externalResponses.requestTimeout || 300,
+                  },
+                ],
+              })
+            }
+          >
+            添加 Provider
+          </Button>
+        </div>
       </ConfigSection>
 
       <ConfigSection

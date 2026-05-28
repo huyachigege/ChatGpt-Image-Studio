@@ -99,8 +99,8 @@ func TestResolveLoggedImageRouteUsesActualClientRoute(t *testing.T) {
 	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "conversation"}); got != "conversation" {
 		t.Fatalf("resolveLoggedImageRoute(responses, conversation) = %q, want %q", got, "conversation")
 	}
-	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "responses"}); got != "responses" {
-		t.Fatalf("resolveLoggedImageRoute(responses, responses) = %q, want %q", got, "responses")
+	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "responses"}); got != "external_responses" {
+		t.Fatalf("resolveLoggedImageRoute(responses, responses) = %q, want %q", got, "external_responses")
 	}
 	if got := resolveLoggedImageRoute("responses", loggedRouteStub{route: "external_responses"}); got != "external_responses" {
 		t.Fatalf("resolveLoggedImageRoute(responses, external_responses) = %q, want %q", got, "external_responses")
@@ -181,8 +181,8 @@ func TestConfiguredImageRouteForAccountFallsBackWhenResponsesCapabilityRemoved(t
 	}
 
 	account := accounts.PublicAccount{Type: "Plus", Status: "正常", ImageRoutes: []string{"legacy"}}
-	if got := server.configuredImageRouteForAccount(account); got != "legacy" {
-		t.Fatalf("configuredImageRouteForAccount(without responses capability) = %q, want %q", got, "legacy")
+	if got := server.configuredImageRouteForAccount(account); got != "responses" {
+		t.Fatalf("configuredImageRouteForAccount(without responses capability) = %q, want %q", got, "responses")
 	}
 }
 
@@ -690,8 +690,8 @@ func TestStudioPaidResolutionUsesPaidAccount(t *testing.T) {
 		t.Fatalf("log entries = %d, want 1", len(entries))
 	}
 	entry := entries[0]
-	if entry.AccountType != "Plus" {
-		t.Fatalf("account type = %q, want %q", entry.AccountType, "Plus")
+	if entry.AccountType != "External Responses" {
+		t.Fatalf("account type = %q, want %q", entry.AccountType, "External Responses")
 	}
 	if entry.Size != "2560x1440" {
 		t.Fatalf("log size = %q, want %q", entry.Size, "2560x1440")
@@ -699,17 +699,17 @@ func TestStudioPaidResolutionUsesPaidAccount(t *testing.T) {
 	if entry.Quality != "high" {
 		t.Fatalf("log quality = %q, want %q", entry.Quality, "high")
 	}
-	if entry.ImageToolModel != "gpt-5.4-mini" {
-		t.Fatalf("log image tool model = %q, want %q", entry.ImageToolModel, "gpt-5.4-mini")
+	if entry.ImageToolModel != "gpt-image-2" {
+		t.Fatalf("log image tool model = %q, want %q", entry.ImageToolModel, "gpt-image-2")
 	}
 	if entry.PromptLength != 11 {
 		t.Fatalf("log prompt length = %d, want 11", entry.PromptLength)
 	}
-	if recorder.lastFactory != "responses" {
-		t.Fatalf("last factory = %q, want %q", recorder.lastFactory, "responses")
+	if recorder.lastFactory != "external_responses" {
+		t.Fatalf("last factory = %q, want %q", recorder.lastFactory, "external_responses")
 	}
-	if got := recorder.callSequence[len(recorder.callSequence)-1]; !strings.Contains(got, "token-paid") {
-		t.Fatalf("call sequence = %v, want paid token selected", recorder.callSequence)
+	if got := recorder.callSequence[len(recorder.callSequence)-1]; !strings.Contains(got, externalResponsesAttemptToken("default")) {
+		t.Fatalf("call sequence = %v, want external responses selected", recorder.callSequence)
 	}
 }
 
@@ -808,9 +808,7 @@ func TestStudioResponses403DoesNotRetryWithNextAccount(t *testing.T) {
 			},
 		},
 		behavior: compatClientBehavior{
-			responsesGenerateErrors: map[string]error{
-				"token-limited-paid": errors.New("responses failed: HTTP 403 forbidden"),
-			},
+			externalGenerateErr: errors.New("responses failed: HTTP 403 forbidden"),
 		},
 	})
 
@@ -825,14 +823,14 @@ func TestStudioResponses403DoesNotRetryWithNextAccount(t *testing.T) {
 		t.Fatalf("status = %d, want 502, body = %s", rec.Code, rec.Body.String())
 	}
 
-	if recorder.lastFactory != "responses" {
-		t.Fatalf("last factory = %q, want %q", recorder.lastFactory, "responses")
+	if recorder.lastFactory != "external_responses" {
+		t.Fatalf("last factory = %q, want %q", recorder.lastFactory, "external_responses")
 	}
 	if len(recorder.callSequence) != 1 {
 		t.Fatalf("call sequence = %v, want one non-retried 403 attempt", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-limited-paid") {
-		t.Fatalf("call sequence = %v, want limited account attempted", recorder.callSequence)
+	if !strings.Contains(recorder.callSequence[0], externalResponsesAttemptToken("default")) {
+		t.Fatalf("call sequence = %v, want external responses provider attempted", recorder.callSequence)
 	}
 
 	limitedAccount, err := server.getStore().GetAccountByToken("token-limited-paid")
@@ -907,11 +905,11 @@ func TestStudioPaidResolutionFallsBackOutsideSelectedFreeOnlyGroup(t *testing.T)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
-	if recorder.lastFactory != "responses" {
-		t.Fatalf("last factory = %q, want responses", recorder.lastFactory)
+	if recorder.lastFactory != "external_responses" {
+		t.Fatalf("last factory = %q, want external_responses", recorder.lastFactory)
 	}
-	if got := recorder.callSequence[len(recorder.callSequence)-1]; !strings.Contains(got, "token-paid-1") {
-		t.Fatalf("call sequence = %v, want paid fallback selected", recorder.callSequence)
+	if got := recorder.callSequence[len(recorder.callSequence)-1]; !strings.Contains(got, externalResponsesAttemptToken("default")) {
+		t.Fatalf("call sequence = %v, want external responses selected", recorder.callSequence)
 	}
 	entries := server.reqLogs.list(1)
 	if len(entries) != 1 {

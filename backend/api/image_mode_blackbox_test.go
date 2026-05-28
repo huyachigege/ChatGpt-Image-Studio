@@ -79,7 +79,7 @@ func (c *compatStubWorkflowClient) record(operation, model string) {
 	c.recorder.lastFactory = c.factory
 	c.recorder.lastModel = model
 	c.recorder.callSequence = append(c.recorder.callSequence, fmt.Sprintf("%s:%s:%s", c.factory, c.token, operation))
-	if c.factory == "responses" && c.sessionID != "" {
+	if (c.factory == "responses" || c.factory == "external_responses") && c.sessionID != "" {
 		c.recorder.sessionIDs = append(c.recorder.sessionIDs, c.sessionID)
 	}
 }
@@ -94,7 +94,14 @@ func (c *compatStubWorkflowClient) DownloadAsBase64(ctx context.Context, url str
 }
 
 func (c *compatStubWorkflowClient) UsesResponsesAPI() bool {
-	return c != nil && c.factory == "responses"
+	return c != nil && (c.factory == "responses" || c.factory == "external_responses")
+}
+
+func (c *compatStubWorkflowClient) ExternalProviderID() string {
+	if c != nil && c.factory == "external_responses" {
+		return strings.TrimPrefix(c.token, "external_responses:")
+	}
+	return ""
 }
 
 func (c *compatStubWorkflowClient) SetSessionID(sessionID string) {
@@ -872,6 +879,7 @@ type compatClientBehavior struct {
 	cpaEditErrors            map[string]error
 	cpaInpaintErr            error
 	externalGenerateErr      error
+	externalEditErr          error
 	generateStarted          chan string
 	generateRelease          <-chan struct{}
 }
@@ -908,6 +916,12 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 	cfg.CPA.APIKey = "test-cpa-key"
 	cfg.CPA.RequestTimeout = 60
 	cfg.CPA.RouteStrategy = scenario.cpaRouteStrategy
+	if scenario.paidRoute == "responses" {
+		cfg.ExternalResponses.Enabled = true
+		cfg.ExternalResponses.BaseURL = "https://external.example"
+		cfg.ExternalResponses.APIKey = "external-key"
+		cfg.ExternalResponses.Model = "external-model"
+	}
 	if options.externalResponsesEnabled {
 		cfg.ExternalResponses.Enabled = true
 		cfg.ExternalResponses.BaseURL = "https://external.example"
@@ -967,16 +981,28 @@ func newImageModeCompatTestServerWithOptions(t *testing.T, scenario imageModeCom
 		}
 	}
 	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
-		_ = cfg
+		token := "external_responses"
+		providerID := ""
+		if len(cfg.Providers) > 0 && strings.TrimSpace(cfg.Providers[0].ID) != "" {
+			providerID = strings.TrimSpace(cfg.Providers[0].ID)
+			token = externalResponsesAttemptToken(providerID)
+		}
 		recorder.mu.Lock()
 		recorder.externalCalls++
 		recorder.mu.Unlock()
-		return &compatStubWorkflowClient{
-			factory:     "external_responses",
-			token:       "external_responses",
-			recorder:    recorder,
-			generateErr: options.behavior.externalGenerateErr,
+		client := &compatStubWorkflowClient{
+			factory:         "external_responses",
+			token:           token,
+			recorder:        recorder,
+			generateErr:     options.behavior.externalGenerateErr,
+			editErr:         options.behavior.externalEditErr,
+			generateStarted: options.behavior.generateStarted,
+			generateRelease: options.behavior.generateRelease,
 		}
+		if providerID != "" {
+			client.SetSessionID(server.responsesSessionID("test", "external", "external_responses:"+providerID))
+		}
+		return client
 	}
 	server.cpaClientFactory = func(baseURL, apiKey string, timeout time.Duration, routeStrategy string) cpaRouteAwareImageWorkflowClient {
 		_ = baseURL

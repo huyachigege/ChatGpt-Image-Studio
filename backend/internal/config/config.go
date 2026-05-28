@@ -122,13 +122,24 @@ type CPAConfig struct {
 	RouteStrategy  string `toml:"route_strategy"`
 }
 
-type ExternalResponsesConfig struct {
+type ExternalResponsesProviderConfig struct {
+	ID             string `toml:"id"`
+	Name           string `toml:"name"`
 	Enabled        bool   `toml:"enabled"`
 	BaseURL        string `toml:"base_url"`
 	APIKey         string `toml:"api_key"`
 	Model          string `toml:"model"`
 	RequestTimeout int    `toml:"request_timeout"`
-	RetryTimes     int    `toml:"retry_times"`
+}
+
+type ExternalResponsesConfig struct {
+	Enabled        bool                              `toml:"enabled"`
+	BaseURL        string                            `toml:"base_url"`
+	APIKey         string                            `toml:"api_key"`
+	Model          string                            `toml:"model"`
+	RequestTimeout int                               `toml:"request_timeout"`
+	RetryTimes     int                               `toml:"retry_times"`
+	Providers      []ExternalResponsesProviderConfig `toml:"providers"`
 }
 
 type NewAPIConfig struct {
@@ -514,6 +525,12 @@ func (c *Config) ExternalResponsesConfig() ExternalResponsesConfig {
 	return c.ExternalResponses
 }
 
+func (c *Config) ExternalResponsesProviders() []ExternalResponsesProviderConfig {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return externalResponsesProviders(c.ExternalResponses)
+}
+
 func (c *Config) ExternalResponsesRetryTimes() int {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -668,28 +685,8 @@ func (c *Config) validate() error {
 	c.ChatGPT.PaidImageModel = normalizeConfiguredImageRouteModel(c.ChatGPT.PaidImageRoute, c.ChatGPT.PaidImageModel, "gpt-5.4-mini", false)
 
 	c.CPA.RouteStrategy = normalizeCPAImageRouteStrategy(c.CPA.RouteStrategy)
-	c.ExternalResponses.BaseURL = strings.TrimRight(strings.TrimSpace(c.ExternalResponses.BaseURL), "/")
-	c.ExternalResponses.APIKey = strings.TrimSpace(c.ExternalResponses.APIKey)
-	c.ExternalResponses.Model = strings.TrimSpace(c.ExternalResponses.Model)
-	if c.ExternalResponses.RequestTimeout <= 0 {
-		c.ExternalResponses.RequestTimeout = 300
-	}
-	if c.ExternalResponses.RetryTimes <= 0 {
-		c.ExternalResponses.RetryTimes = 3
-	}
-	if c.ExternalResponses.RetryTimes > 10 {
-		c.ExternalResponses.RetryTimes = 10
-	}
-	if c.ExternalResponses.Enabled {
-		if c.ExternalResponses.BaseURL == "" {
-			return fmt.Errorf("external_responses.base_url is required when external_responses.enabled = true")
-		}
-		if c.ExternalResponses.APIKey == "" {
-			return fmt.Errorf("external_responses.api_key is required when external_responses.enabled = true")
-		}
-		if c.ExternalResponses.Model == "" {
-			return fmt.Errorf("external_responses.model is required when external_responses.enabled = true")
-		}
+	if err := normalizeExternalResponsesConfig(&c.ExternalResponses); err != nil {
+		return err
 	}
 	c.Storage.Backend = normalizeStorageBackend(c.Storage.Backend)
 	c.Storage.ConfigBackend = normalizeConfigBackend(c.Storage.ConfigBackend)
@@ -825,6 +822,98 @@ func NormalizeImageModeForAPI(mode string) (string, bool) {
 	return normalizeImageMode(mode)
 }
 
+func normalizeExternalResponsesConfig(cfg *ExternalResponsesConfig) error {
+	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
+	cfg.APIKey = strings.TrimSpace(cfg.APIKey)
+	cfg.Model = strings.TrimSpace(cfg.Model)
+	if cfg.RequestTimeout <= 0 {
+		cfg.RequestTimeout = 300
+	}
+	if cfg.RetryTimes <= 0 {
+		cfg.RetryTimes = 3
+	}
+	if cfg.RetryTimes > 10 {
+		cfg.RetryTimes = 10
+	}
+
+	seen := map[string]struct{}{}
+	for index := range cfg.Providers {
+		provider := &cfg.Providers[index]
+		provider.ID = strings.TrimSpace(provider.ID)
+		provider.Name = strings.TrimSpace(provider.Name)
+		provider.BaseURL = strings.TrimRight(strings.TrimSpace(provider.BaseURL), "/")
+		provider.APIKey = strings.TrimSpace(provider.APIKey)
+		provider.Model = strings.TrimSpace(provider.Model)
+		if provider.RequestTimeout <= 0 {
+			provider.RequestTimeout = cfg.RequestTimeout
+		}
+		if provider.ID == "" {
+			return fmt.Errorf("external_responses.providers[%d].id is required", index)
+		}
+		if _, ok := seen[provider.ID]; ok {
+			return fmt.Errorf("external_responses.providers[%d].id %q is duplicated", index, provider.ID)
+		}
+		seen[provider.ID] = struct{}{}
+		if provider.Enabled {
+			if provider.BaseURL == "" {
+				return fmt.Errorf("external_responses.providers[%d].base_url is required when provider is enabled", index)
+			}
+			if provider.APIKey == "" {
+				return fmt.Errorf("external_responses.providers[%d].api_key is required when provider is enabled", index)
+			}
+			if provider.Model == "" {
+				return fmt.Errorf("external_responses.providers[%d].model is required when provider is enabled", index)
+			}
+		}
+	}
+
+	if cfg.Enabled && len(cfg.Providers) == 0 {
+		if cfg.BaseURL == "" {
+			return fmt.Errorf("external_responses.base_url is required when external_responses.enabled = true")
+		}
+		if cfg.APIKey == "" {
+			return fmt.Errorf("external_responses.api_key is required when external_responses.enabled = true")
+		}
+		if cfg.Model == "" {
+			return fmt.Errorf("external_responses.model is required when external_responses.enabled = true")
+		}
+	}
+	return nil
+}
+
+func externalResponsesProviders(cfg ExternalResponsesConfig) []ExternalResponsesProviderConfig {
+	providers := make([]ExternalResponsesProviderConfig, 0, len(cfg.Providers))
+	for _, provider := range cfg.Providers {
+		provider.ID = strings.TrimSpace(provider.ID)
+		provider.Name = strings.TrimSpace(provider.Name)
+		provider.BaseURL = strings.TrimRight(strings.TrimSpace(provider.BaseURL), "/")
+		provider.APIKey = strings.TrimSpace(provider.APIKey)
+		provider.Model = strings.TrimSpace(provider.Model)
+		if provider.RequestTimeout <= 0 {
+			provider.RequestTimeout = cfg.RequestTimeout
+		}
+		if !provider.Enabled || provider.ID == "" || provider.BaseURL == "" || provider.APIKey == "" || provider.Model == "" {
+			continue
+		}
+		providers = append(providers, provider)
+	}
+	if len(providers) > 0 {
+		return providers
+	}
+	if cfg.Enabled && strings.TrimSpace(cfg.BaseURL) != "" && strings.TrimSpace(cfg.APIKey) != "" && strings.TrimSpace(cfg.Model) != "" {
+		return []ExternalResponsesProviderConfig{{
+			ID:             "default",
+			Name:           "Default",
+			Enabled:        true,
+			BaseURL:        strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/"),
+			APIKey:         strings.TrimSpace(cfg.APIKey),
+			Model:          strings.TrimSpace(cfg.Model),
+			RequestTimeout: cfg.RequestTimeout,
+		}}
+	}
+	return nil
+}
+
 func decodeOverrideFile(path string, target *Config) error {
 	raw, err := loadOverrideMap(path)
 	if err != nil {
@@ -944,6 +1033,25 @@ func setOverrideValue(dst reflect.Value, raw any) error {
 			return fmt.Errorf("expected table, got %T", raw)
 		}
 		return applyOverrideMap(dst, nested)
+	case reflect.Slice:
+		value := reflect.ValueOf(raw)
+		if value.IsValid() && value.Type().AssignableTo(dst.Type()) {
+			dst.Set(value)
+			return nil
+		}
+		items, ok := raw.([]map[string]any)
+		if !ok {
+			return fmt.Errorf("expected array table, got %T", raw)
+		}
+		slice := reflect.MakeSlice(dst.Type(), 0, len(items))
+		for _, item := range items {
+			elem := reflect.New(dst.Type().Elem()).Elem()
+			if err := setOverrideValue(elem, item); err != nil {
+				return err
+			}
+			slice = reflect.Append(slice, elem)
+		}
+		dst.Set(slice)
 	case reflect.String:
 		text, ok := raw.(string)
 		if !ok {

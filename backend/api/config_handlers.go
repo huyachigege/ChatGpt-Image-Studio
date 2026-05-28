@@ -11,6 +11,16 @@ import (
 	"chatgpt2api/internal/configstore"
 )
 
+type externalResponsesProviderPayload struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Enabled        bool   `json:"enabled"`
+	BaseURL        string `json:"baseUrl"`
+	APIKey         string `json:"apiKey"`
+	Model          string `json:"model"`
+	RequestTimeout int    `json:"requestTimeout"`
+}
+
 type configPayload struct {
 	App struct {
 		Name            string `json:"name"`
@@ -92,12 +102,13 @@ type configPayload struct {
 		RouteStrategy  string `json:"routeStrategy"`
 	} `json:"cpa"`
 	ExternalResponses struct {
-		Enabled        bool   `json:"enabled"`
-		BaseURL        string `json:"baseUrl"`
-		APIKey         string `json:"apiKey"`
-		Model          string `json:"model"`
-		RequestTimeout int    `json:"requestTimeout"`
-		RetryTimes     int    `json:"retryTimes"`
+		Enabled        bool                               `json:"enabled"`
+		BaseURL        string                             `json:"baseUrl"`
+		APIKey         string                             `json:"apiKey"`
+		Model          string                             `json:"model"`
+		RequestTimeout int                                `json:"requestTimeout"`
+		RetryTimes     int                                `json:"retryTimes"`
+		Providers      []externalResponsesProviderPayload `json:"providers"`
 	} `json:"externalResponses"`
 	NewAPI struct {
 		BaseURL        string `json:"baseUrl"`
@@ -128,6 +139,33 @@ type configSaveTarget struct {
 	RedisPassword string
 	RedisDB       int
 	RedisPrefix   string
+}
+
+func buildExternalResponsesOverrides(enabled bool, baseURL, apiKey, model string, requestTimeout, retryTimes int, providers []externalResponsesProviderPayload) map[string]any {
+	section := map[string]any{
+		"enabled":         enabled,
+		"base_url":        baseURL,
+		"api_key":         apiKey,
+		"model":           model,
+		"request_timeout": requestTimeout,
+		"retry_times":     retryTimes,
+	}
+	if providers != nil {
+		items := make([]map[string]any, 0, len(providers))
+		for _, provider := range providers {
+			items = append(items, map[string]any{
+				"id":              strings.TrimSpace(provider.ID),
+				"name":            strings.TrimSpace(provider.Name),
+				"enabled":         provider.Enabled,
+				"base_url":        strings.TrimSpace(provider.BaseURL),
+				"api_key":         strings.TrimSpace(provider.APIKey),
+				"model":           strings.TrimSpace(provider.Model),
+				"request_timeout": provider.RequestTimeout,
+			})
+		}
+		section["providers"] = items
+	}
+	return section
 }
 
 func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
@@ -232,14 +270,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"request_timeout": payload.CPA.RequestTimeout,
 			"route_strategy":  payload.CPA.RouteStrategy,
 		},
-		"external_responses": {
-			"enabled":         payload.ExternalResponses.Enabled,
-			"base_url":        payload.ExternalResponses.BaseURL,
-			"api_key":         payload.ExternalResponses.APIKey,
-			"model":           payload.ExternalResponses.Model,
-			"request_timeout": payload.ExternalResponses.RequestTimeout,
-			"retry_times":     payload.ExternalResponses.RetryTimes,
-		},
+		"external_responses": buildExternalResponsesOverrides(payload.ExternalResponses.Enabled, payload.ExternalResponses.BaseURL, payload.ExternalResponses.APIKey, payload.ExternalResponses.Model, payload.ExternalResponses.RequestTimeout, payload.ExternalResponses.RetryTimes, payload.ExternalResponses.Providers),
 		"newapi": {
 			"base_url":        payload.NewAPI.BaseURL,
 			"username":        payload.NewAPI.Username,
@@ -472,6 +503,27 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ExternalResponses.Model = cfg.ExternalResponses.Model
 	payload.ExternalResponses.RequestTimeout = cfg.ExternalResponses.RequestTimeout
 	payload.ExternalResponses.RetryTimes = cfg.ExternalResponses.RetryTimes
+	providers := cfg.ExternalResponsesProviders()
+	payload.ExternalResponses.Providers = make([]externalResponsesProviderPayload, 0, len(providers))
+	for _, provider := range providers {
+		payload.ExternalResponses.Providers = append(payload.ExternalResponses.Providers, externalResponsesProviderPayload{
+			ID:             provider.ID,
+			Name:           provider.Name,
+			Enabled:        provider.Enabled,
+			BaseURL:        provider.BaseURL,
+			APIKey:         provider.APIKey,
+			Model:          provider.Model,
+			RequestTimeout: provider.RequestTimeout,
+		})
+	}
+	if len(providers) > 0 {
+		first := providers[0]
+		payload.ExternalResponses.Enabled = true
+		payload.ExternalResponses.BaseURL = first.BaseURL
+		payload.ExternalResponses.APIKey = first.APIKey
+		payload.ExternalResponses.Model = first.Model
+		payload.ExternalResponses.RequestTimeout = first.RequestTimeout
+	}
 
 	payload.NewAPI.BaseURL = cfg.NewAPI.BaseURL
 	payload.NewAPI.Username = cfg.NewAPI.Username

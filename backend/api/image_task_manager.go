@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"chatgpt2api/internal/accounts"
+	"chatgpt2api/internal/config"
 	"chatgpt2api/internal/imagehistory"
 )
 
@@ -23,11 +25,13 @@ var (
 )
 
 type imageTaskLease struct {
-	auth       *accounts.LocalAuth
-	account    accounts.PublicAccount
-	decision   accounts.ImageAccountRoutingDecision
-	release    func()
-	forceRoute string
+	auth                 *accounts.LocalAuth
+	account              accounts.PublicAccount
+	decision             accounts.ImageAccountRoutingDecision
+	release              func()
+	forceRoute           string
+	externalProviderID   string
+	externalProviderName string
 }
 
 type imageTaskManager struct {
@@ -725,8 +729,8 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 		}
 	}
 
-	if isExternalResponsesRoute(preferredRoute) {
-		return m.externalResponsesLease(), imageTaskBlocker{}, nil
+	if preferredRoute == "responses" || isExternalResponsesRoute(preferredRoute) {
+		return m.externalResponsesLeaseForTaskLocked(task, unitIndex)
 	}
 
 	allowAccount := m.allowAccountFn(task)
@@ -761,7 +765,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 				}
 			}
 			if !isFreeResolution && m.server.externalResponsesConfigured() {
-				return m.externalResponsesLease(), imageTaskBlocker{}, nil
+				return m.externalResponsesLeaseForTask(task, unitIndex)
 			}
 			if len(excluded) > 0 {
 				imageTaskUnitClearAttempts(task, unitIndex)
@@ -799,7 +803,7 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 			}
 		}
 		if !isFreeResolution && m.server.externalResponsesConfigured() {
-			return m.externalResponsesLease(), imageTaskBlocker{}, nil
+			return m.externalResponsesLeaseForTask(task, unitIndex)
 		}
 		if len(excluded) > 0 {
 			imageTaskUnitClearAttempts(task, unitIndex)
@@ -810,12 +814,76 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 	return nil, imageTaskBlocker{}, err
 }
 
-func (m *imageTaskManager) externalResponsesLease() *imageTaskLease {
-	return &imageTaskLease{
-		auth:       &accounts.LocalAuth{AccessToken: "external_responses", Name: "external_responses"},
-		account:    accounts.PublicAccount{Type: "External Responses", Email: m.server.externalResponsesLogAccount(), Status: "正常"},
-		forceRoute: "external_responses",
+func (m *imageTaskManager) externalResponsesLeaseForTask(task *imageTask, unitIndex int) (*imageTaskLease, imageTaskBlocker, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.externalResponsesLeaseForTaskLocked(task, unitIndex)
+}
+
+func (m *imageTaskManager) externalResponsesLeaseForTaskLocked(task *imageTask, unitIndex int) (*imageTaskLease, imageTaskBlocker, error) {
+	providers := m.server.externalResponsesProviders()
+	if len(providers) == 0 {
+		return nil, imageTaskBlocker{}, newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置至少一个可用 provider")
 	}
+	attempted := imageTaskUnitAttemptedTokens(task, unitIndex)
+	start := m.ensureExternalProviderStart(task, unitIndex, len(providers))
+	for offset := 0; offset < len(providers); offset++ {
+		provider := providers[(start+offset)%len(providers)]
+		if _, ok := attempted[externalResponsesAttemptToken(provider.ID)]; ok {
+			continue
+		}
+		return m.externalResponsesLease(provider), imageTaskBlocker{}, nil
+	}
+	if len(attempted) > 0 {
+		m.clearExternalProviderAttemptsLocked(task, unitIndex)
+		return m.externalResponsesLeaseForTaskLocked(task, unitIndex)
+	}
+	return nil, m.busyBlocker(task), nil
+}
+
+func (m *imageTaskManager) clearExternalProviderAttemptsLocked(task *imageTask, unitIndex int) {
+	imageTaskUnitClearAttempts(task, unitIndex)
+	if current := m.tasks[task.ID]; current != nil {
+		imageTaskUnitClearAttempts(current, unitIndex)
+	}
+}
+
+func (m *imageTaskManager) ensureExternalProviderStart(task *imageTask, unitIndex int, providerCount int) int {
+	if task == nil || unitIndex < 0 || unitIndex >= len(task.Units) || providerCount <= 1 {
+		return 0
+	}
+	if task.Units[unitIndex].ExternalStartInit {
+		return task.Units[unitIndex].ExternalStart % providerCount
+	}
+	start := rand.Intn(providerCount)
+	task.Units[unitIndex].ExternalStart = start
+	task.Units[unitIndex].ExternalStartInit = true
+	if current := m.tasks[task.ID]; current != nil && unitIndex < len(current.Units) {
+		current.Units[unitIndex].ExternalStart = start
+		current.Units[unitIndex].ExternalStartInit = true
+	}
+	return start
+}
+
+func (m *imageTaskManager) externalResponsesLease(provider config.ExternalResponsesProviderConfig) *imageTaskLease {
+	providerID := strings.TrimSpace(provider.ID)
+	providerName := firstNonEmpty(strings.TrimSpace(provider.Name), providerID, strings.TrimSpace(provider.BaseURL))
+	return &imageTaskLease{
+		auth:                 &accounts.LocalAuth{AccessToken: externalResponsesAttemptToken(providerID), Name: providerName},
+		account:              accounts.PublicAccount{Type: "External Responses", Email: providerName, Status: "正常"},
+		forceRoute:           "external_responses",
+		externalProviderID:   providerID,
+		externalProviderName: providerName,
+	}
+}
+
+func externalResponsesAttemptToken(providerID string) string {
+	return "external_responses:" + strings.TrimSpace(providerID)
+}
+
+func isExternalResponsesAttemptToken(token string) bool {
+	token = strings.TrimSpace(token)
+	return token == "external_responses" || strings.HasPrefix(token, "external_responses:")
 }
 
 func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicAccount) bool {
@@ -827,6 +895,9 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ..
 		return "legacy"
 	}
 	if task.Requirement.SourceAccountID != "" || strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "free") {
+		return "legacy"
+	}
+	if !task.Requirement.NeedPaid && strings.TrimSpace(task.ResolutionAccess) == "" && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 {
 		return "legacy"
 	}
 	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 && len(unitIndexes) > 0 {
@@ -911,22 +982,24 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	var sourceReference *imageTaskSourceReference
 	if req.SourceReference != nil {
 		sourceReference = &imageTaskSourceReference{
-			OriginalFileID:  strings.TrimSpace(req.SourceReference.OriginalFileID),
-			OriginalGenID:   strings.TrimSpace(req.SourceReference.OriginalGenID),
-			ConversationID:  strings.TrimSpace(req.SourceReference.ConversationID),
-			ParentMessageID: strings.TrimSpace(req.SourceReference.ParentMessageID),
-			ResponseID:      strings.TrimSpace(req.SourceReference.ResponseID),
-			SourceAccountID: strings.TrimSpace(req.SourceReference.SourceAccountID),
+			OriginalFileID:     strings.TrimSpace(req.SourceReference.OriginalFileID),
+			OriginalGenID:      strings.TrimSpace(req.SourceReference.OriginalGenID),
+			ConversationID:     strings.TrimSpace(req.SourceReference.ConversationID),
+			ParentMessageID:    strings.TrimSpace(req.SourceReference.ParentMessageID),
+			ResponseID:         strings.TrimSpace(req.SourceReference.ResponseID),
+			ResponseProviderID: strings.TrimSpace(req.SourceReference.ResponseProviderID),
+			SourceAccountID:    strings.TrimSpace(req.SourceReference.SourceAccountID),
 		}
 	}
 
 	var contextReference *imageTaskContextReference
 	if req.ContextReference != nil {
 		contextReference = &imageTaskContextReference{
-			ConversationID:  strings.TrimSpace(req.ContextReference.ConversationID),
-			ParentMessageID: strings.TrimSpace(req.ContextReference.ParentMessageID),
-			ResponseID:      strings.TrimSpace(req.ContextReference.ResponseID),
-			SourceAccountID: strings.TrimSpace(req.ContextReference.SourceAccountID),
+			ConversationID:     strings.TrimSpace(req.ContextReference.ConversationID),
+			ParentMessageID:    strings.TrimSpace(req.ContextReference.ParentMessageID),
+			ResponseID:         strings.TrimSpace(req.ContextReference.ResponseID),
+			ResponseProviderID: strings.TrimSpace(req.ContextReference.ResponseProviderID),
+			SourceAccountID:    strings.TrimSpace(req.ContextReference.SourceAccountID),
 		}
 	}
 

@@ -277,6 +277,81 @@ func TestValidateExternalResponsesRequiresFieldsWhenEnabled(t *testing.T) {
 	}
 }
 
+func TestExternalResponsesProvidersFromLegacyConfig(t *testing.T) {
+	cfg := &Config{
+		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{
+			Enabled: true, BaseURL: " https://api.example.com/ ", APIKey: " key ", Model: " model-x ",
+		},
+	}
+	if err := cfg.validate(); err != nil {
+		t.Fatalf("validate() returned error: %v", err)
+	}
+	providers := cfg.ExternalResponsesProviders()
+	if len(providers) != 1 {
+		t.Fatalf("providers len = %d, want 1", len(providers))
+	}
+	if providers[0].ID != "default" || providers[0].BaseURL != "https://api.example.com" || providers[0].APIKey != "key" || providers[0].Model != "model-x" {
+		t.Fatalf("provider = %+v, want normalized default provider", providers[0])
+	}
+}
+
+func TestExternalResponsesProvidersMultipleEnabled(t *testing.T) {
+	cfg := &Config{
+		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{
+			Enabled: true, RetryTimes: 2,
+			Providers: []ExternalResponsesProviderConfig{
+				{ID: " a ", Name: " A ", Enabled: true, BaseURL: " https://a.example.com/ ", APIKey: " key-a ", Model: " model-a "},
+				{ID: "b", Enabled: false, BaseURL: "https://b.example.com", APIKey: "key-b", Model: "model-b"},
+				{ID: "c", Enabled: true, BaseURL: "https://c.example.com/", APIKey: "key-c", Model: "model-c", RequestTimeout: 12},
+			},
+		},
+	}
+	if err := cfg.validate(); err != nil {
+		t.Fatalf("validate() returned error: %v", err)
+	}
+	providers := cfg.ExternalResponsesProviders()
+	if len(providers) != 2 {
+		t.Fatalf("providers len = %d, want 2", len(providers))
+	}
+	if providers[0].ID != "a" || providers[0].Name != "A" || providers[0].BaseURL != "https://a.example.com" {
+		t.Fatalf("providers[0] = %+v, want normalized provider a", providers[0])
+	}
+	if providers[1].ID != "c" || providers[1].RequestTimeout != 12 {
+		t.Fatalf("providers[1] = %+v, want provider c", providers[1])
+	}
+}
+
+func TestValidateExternalResponsesRejectsDuplicateProviderID(t *testing.T) {
+	cfg := &Config{
+		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{
+			Enabled: true,
+			Providers: []ExternalResponsesProviderConfig{
+				{ID: "dup", Enabled: true, BaseURL: "https://a.example.com", APIKey: "key-a", Model: "model-a"},
+				{ID: "dup", Enabled: true, BaseURL: "https://b.example.com", APIKey: "key-b", Model: "model-b"},
+			},
+		},
+	}
+	if err := cfg.validate(); err == nil || !strings.Contains(err.Error(), "duplicated") {
+		t.Fatalf("validate() error = %v, want duplicated provider id", err)
+	}
+}
+
+func TestValidateExternalResponsesRequiresEnabledProviderFields(t *testing.T) {
+	cfg := &Config{
+		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
+		ExternalResponses: ExternalResponsesConfig{
+			Enabled:   true,
+			Providers: []ExternalResponsesProviderConfig{{ID: "provider-a", Enabled: true, BaseURL: "https://a.example.com", APIKey: "key-a"}},
+		},
+	}
+	if err := cfg.validate(); err == nil || !strings.Contains(err.Error(), "model") {
+		t.Fatalf("validate() error = %v, want model requirement", err)
+	}
+}
+
 func TestValidatePreservesLegacyImageModels(t *testing.T) {
 	cfg := &Config{
 		ChatGPT: ChatGPTConfig{

@@ -47,19 +47,21 @@ type imageTaskReferenceImagePayload struct {
 }
 
 type imageTaskSourceReferencePayload struct {
-	OriginalFileID  string `json:"original_file_id"`
-	OriginalGenID   string `json:"original_gen_id"`
-	ConversationID  string `json:"conversation_id,omitempty"`
-	ParentMessageID string `json:"parent_message_id,omitempty"`
-	ResponseID      string `json:"response_id,omitempty"`
-	SourceAccountID string `json:"source_account_id"`
+	OriginalFileID     string `json:"original_file_id"`
+	OriginalGenID      string `json:"original_gen_id"`
+	ConversationID     string `json:"conversation_id,omitempty"`
+	ParentMessageID    string `json:"parent_message_id,omitempty"`
+	ResponseID         string `json:"response_id,omitempty"`
+	ResponseProviderID string `json:"response_provider_id,omitempty"`
+	SourceAccountID    string `json:"source_account_id"`
 }
 
 type imageTaskContextReferencePayload struct {
-	ConversationID  string `json:"conversation_id,omitempty"`
-	ParentMessageID string `json:"parent_message_id,omitempty"`
-	ResponseID      string `json:"response_id,omitempty"`
-	SourceAccountID string `json:"source_account_id"`
+	ConversationID     string `json:"conversation_id,omitempty"`
+	ParentMessageID    string `json:"parent_message_id,omitempty"`
+	ResponseID         string `json:"response_id,omitempty"`
+	ResponseProviderID string `json:"response_provider_id,omitempty"`
+	SourceAccountID    string `json:"source_account_id"`
 }
 
 type createImageTaskRequest struct {
@@ -161,31 +163,35 @@ type imageTaskSourceImage struct {
 }
 
 type imageTaskSourceReference struct {
-	OriginalFileID  string
-	OriginalGenID   string
-	ConversationID  string
-	ParentMessageID string
-	ResponseID      string
-	SourceAccountID string
+	OriginalFileID     string
+	OriginalGenID      string
+	ConversationID     string
+	ParentMessageID    string
+	ResponseID         string
+	ResponseProviderID string
+	SourceAccountID    string
 }
 
 type imageTaskContextReference struct {
-	ConversationID  string
-	ParentMessageID string
-	ResponseID      string
-	SourceAccountID string
+	ConversationID     string
+	ParentMessageID    string
+	ResponseID         string
+	ResponseProviderID string
+	SourceAccountID    string
 }
 
 type imageTaskUnit struct {
-	Index         int
-	Status        imageTaskStatus
-	StartedAt     time.Time
-	FinishedAt    time.Time
-	Error         string
-	DeferredCount int
-	NextAttemptAt time.Time
-	Cancel        context.CancelFunc
-	Attempted     map[string]struct{}
+	Index             int
+	Status            imageTaskStatus
+	StartedAt         time.Time
+	FinishedAt        time.Time
+	Error             string
+	DeferredCount     int
+	NextAttemptAt     time.Time
+	Cancel            context.CancelFunc
+	Attempted         map[string]struct{}
+	ExternalStart     int
+	ExternalStartInit bool
 }
 
 type imageTask struct {

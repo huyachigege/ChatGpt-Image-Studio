@@ -22,6 +22,8 @@ var claudeResponsesUserAgent = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.2620
 const maxExternalResponsesSSELineBytes = 128 << 20
 
 type externalResponsesClient struct {
+	providerID          string
+	providerName        string
 	baseURL             string
 	apiKey              string
 	model               string
@@ -35,18 +37,69 @@ type externalResponsesClient struct {
 }
 
 func newExternalResponsesClient(cfg config.ExternalResponsesConfig) *externalResponsesClient {
-	timeout := time.Duration(cfg.RequestTimeout) * time.Second
+	providers := externalResponsesProvidersFromConfig(cfg)
+	if len(providers) == 0 {
+		providers = []config.ExternalResponsesProviderConfig{{
+			ID:             "default",
+			Name:           "Default",
+			Enabled:        true,
+			BaseURL:        cfg.BaseURL,
+			APIKey:         cfg.APIKey,
+			Model:          cfg.Model,
+			RequestTimeout: cfg.RequestTimeout,
+		}}
+	}
+	return newExternalResponsesClientForProvider(providers[0])
+}
+
+func newExternalResponsesClientForProvider(provider config.ExternalResponsesProviderConfig) *externalResponsesClient {
+	timeout := time.Duration(provider.RequestTimeout) * time.Second
 	if timeout <= 0 {
 		timeout = 300 * time.Second
 	}
 	return &externalResponsesClient{
-		baseURL: strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/"),
-		apiKey:  strings.TrimSpace(cfg.APIKey),
-		model:   strings.TrimSpace(cfg.Model),
+		providerID:   strings.TrimSpace(provider.ID),
+		providerName: strings.TrimSpace(provider.Name),
+		baseURL:      strings.TrimRight(strings.TrimSpace(provider.BaseURL), "/"),
+		apiKey:       strings.TrimSpace(provider.APIKey),
+		model:        strings.TrimSpace(provider.Model),
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
 	}
+}
+
+func externalResponsesProvidersFromConfig(cfg config.ExternalResponsesConfig) []config.ExternalResponsesProviderConfig {
+	providers := make([]config.ExternalResponsesProviderConfig, 0, len(cfg.Providers))
+	for _, provider := range cfg.Providers {
+		provider.ID = strings.TrimSpace(provider.ID)
+		provider.Name = strings.TrimSpace(provider.Name)
+		provider.BaseURL = strings.TrimRight(strings.TrimSpace(provider.BaseURL), "/")
+		provider.APIKey = strings.TrimSpace(provider.APIKey)
+		provider.Model = strings.TrimSpace(provider.Model)
+		if provider.RequestTimeout <= 0 {
+			provider.RequestTimeout = cfg.RequestTimeout
+		}
+		if !provider.Enabled || provider.ID == "" || provider.BaseURL == "" || provider.APIKey == "" || provider.Model == "" {
+			continue
+		}
+		providers = append(providers, provider)
+	}
+	if len(providers) > 0 {
+		return providers
+	}
+	if cfg.Enabled && strings.TrimSpace(cfg.BaseURL) != "" && strings.TrimSpace(cfg.APIKey) != "" && strings.TrimSpace(cfg.Model) != "" {
+		return []config.ExternalResponsesProviderConfig{{
+			ID:             "default",
+			Name:           "Default",
+			Enabled:        true,
+			BaseURL:        strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/"),
+			APIKey:         strings.TrimSpace(cfg.APIKey),
+			Model:          strings.TrimSpace(cfg.Model),
+			RequestTimeout: cfg.RequestTimeout,
+		}}
+	}
+	return nil
 }
 
 func (c *externalResponsesClient) DownloadBytes(url string) ([]byte, error) {
@@ -134,6 +187,20 @@ func (c *externalResponsesClient) LastRoute() string {
 		return ""
 	}
 	return strings.TrimSpace(c.lastRoute)
+}
+
+func (c *externalResponsesClient) ExternalProviderID() string {
+	if c == nil {
+		return ""
+	}
+	return strings.TrimSpace(c.providerID)
+}
+
+func (c *externalResponsesClient) ExternalProviderLabel() string {
+	if c == nil {
+		return ""
+	}
+	return firstNonEmpty(strings.TrimSpace(c.providerName), strings.TrimSpace(c.providerID), strings.TrimSpace(c.baseURL))
 }
 
 func (c *externalResponsesClient) LastModelLabel() string {
