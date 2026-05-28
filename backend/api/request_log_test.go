@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"chatgpt2api/internal/config"
 )
@@ -92,5 +93,37 @@ func TestImageRequestLogStoreMigratesSummariesAndDeletesFailed(t *testing.T) {
 	items, total = store.listPage(imageRequestLogQuery{Page: 1, PageSize: 20})
 	if total != 1 || len(items) != 1 || items[0].ID != "success-1" {
 		t.Fatalf("after delete total=%d items=%#v, want only success-1", total, items)
+	}
+}
+
+func TestImageRequestLogStoreDeletesBeforeCutoff(t *testing.T) {
+	rootDir := t.TempDir()
+	cfg := config.New(rootDir)
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	store := newImageRequestLogStore(cfg)
+	defer store.close()
+
+	base := time.Date(2026, 5, 28, 12, 0, 0, 0, time.UTC)
+	store.add(imageRequestLogEntry{ID: "old-1", StartedAt: base.AddDate(0, -2, 0).Format(time.RFC3339Nano), Success: true})
+	store.add(imageRequestLogEntry{ID: "cutoff", StartedAt: base.AddDate(0, -1, 0).Format(time.RFC3339Nano), Success: true})
+	store.add(imageRequestLogEntry{ID: "new-1", StartedAt: base.AddDate(0, 0, -7).Format(time.RFC3339Nano), Success: true})
+
+	deleted, err := store.deleteBefore(base.AddDate(0, -1, 0))
+	if err != nil {
+		t.Fatalf("deleteBefore() returned error: %v", err)
+	}
+	if deleted != 1 {
+		t.Fatalf("deleteBefore() = %d, want 1", deleted)
+	}
+	items, total := store.listPage(imageRequestLogQuery{Page: 1, PageSize: 20})
+	if total != 2 || len(items) != 2 {
+		t.Fatalf("after delete total=%d len=%d, want 2/2", total, len(items))
+	}
+	for _, item := range items {
+		if item.ID == "old-1" {
+			t.Fatalf("old item still present after delete: %#v", items)
+		}
 	}
 }

@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteFailedRequestLogs, deleteRequestLogs, fetchRequestLogDetail, fetchRequestLogFilters, fetchRequestLogs, type RequestLogDetail, type RequestLogFilterOptions, type RequestLogItem } from "@/lib/api";
+import { deleteFailedRequestLogs, deleteRequestLogs, deleteRequestLogsBefore, fetchRequestLogDetail, fetchRequestLogFilters, fetchRequestLogs, type RequestLogDetail, type RequestLogFilterOptions, type RequestLogItem, type RetentionMonths } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 function formatTime(value: string) {
@@ -217,6 +217,29 @@ export default function RequestsPage() {
     }
   };
 
+  const handleDeleteBefore = async (months: RetentionMonths) => {
+    if (isDeleting) {
+      return;
+    }
+    const label = months === 1 ? "一个月" : "三个月";
+    if (!window.confirm(`确定删除${label}前的调用请求记录吗？该操作不可恢复。`)) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const result = await deleteRequestLogsBefore(months);
+      setSelectedIds([]);
+      setPage(1);
+      toast.success(`已删除 ${result.deletedCount || 0} 条${label}前记录`);
+      await loadItems(1);
+      fetchRequestLogFilters().then((data) => setFilterOptions(data)).catch(() => {});
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : `删除${label}前调用请求失败`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <section className="h-full">
       <div className="hide-scrollbar h-full min-h-0 overflow-y-auto rounded-[30px] border border-stone-200 bg-[#fcfcfb] px-4 py-5 shadow-[0_14px_40px_rgba(15,23,42,0.05)] transition-colors duration-200 dark:border-[var(--studio-border)] dark:bg-[var(--studio-panel)] sm:px-5 sm:py-6 lg:flex lg:min-h-0 lg:flex-col lg:px-6 lg:py-7">
@@ -264,6 +287,12 @@ export default function RequestsPage() {
             ) : null}
             <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteFailed()} disabled={isDeleting || isLoading || total === 0}>
               <Trash2 className="size-4" />删除失败日志
+            </Button>
+            <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteBefore(1)} disabled={isDeleting || isLoading || total === 0}>
+              <Trash2 className="size-4" />删除一个月前
+            </Button>
+            <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteBefore(3)} disabled={isDeleting || isLoading || total === 0}>
+              <Trash2 className="size-4" />删除三个月前
             </Button>
             <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none" onClick={() => void loadItems()} disabled={isLoading}>
               {isLoading ? <RefreshCw className="size-4 animate-spin" /> : <RefreshCw className="size-4" />}

@@ -520,6 +520,7 @@ export type RequestLogDetail = {
   preferred: boolean;
   success: boolean;
   error?: string;
+  upstreamRequest?: string;
 };
 
 export type VersionInfo = {
@@ -716,6 +717,8 @@ export type AuthResponse = {
   user: AuthUser;
 };
 
+export type RetentionMonths = 1 | 3;
+
 export type ImageGalleryItem = {
   id: string;
   name: string;
@@ -873,6 +876,16 @@ export async function deleteImageGalleryItems(names: string[]) {
     {
       method: "POST",
       body: { names },
+    },
+  );
+}
+
+export async function deleteImageGalleryItemsBefore(months: RetentionMonths) {
+  return httpRequest<{ ok: boolean; deleted: string[]; deletedCount: number }>(
+    "/api/image/gallery/delete-before",
+    {
+      method: "POST",
+      body: { months },
     },
   );
 }
@@ -1196,6 +1209,16 @@ export async function deleteFailedRequestLogs() {
     "/api/requests/delete-failed",
     {
       method: "POST",
+    },
+  );
+}
+
+export async function deleteRequestLogsBefore(months: RetentionMonths) {
+  return httpRequest<{ ok: boolean; deletedCount: number }>(
+    "/api/requests/delete-before",
+    {
+      method: "POST",
+      body: { months },
     },
   );
 }

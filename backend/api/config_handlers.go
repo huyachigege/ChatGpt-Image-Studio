@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"chatgpt2api/internal/config"
 	"chatgpt2api/internal/configstore"
@@ -404,6 +405,19 @@ func (s *Server) handleDeleteFailedRequestLogs(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deletedCount": deleted})
 }
 
+func (s *Server) handleDeleteRequestLogsBefore(w http.ResponseWriter, r *http.Request) {
+	months, ok := parseRetentionMonths(w, r)
+	if !ok {
+		return
+	}
+	deleted, err := s.reqLogs.deleteBefore(time.Now().AddDate(0, -months, 0))
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deletedCount": deleted})
+}
+
 func (s *Server) handleDeleteRequestLogs(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		IDs []string `json:"ids"`
@@ -418,6 +432,21 @@ func (s *Server) handleDeleteRequestLogs(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": deleted})
+}
+
+func parseRetentionMonths(w http.ResponseWriter, r *http.Request) (int, bool) {
+	var payload struct {
+		Months int `json:"months"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return 0, false
+	}
+	if payload.Months != 1 && payload.Months != 3 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "months must be 1 or 3"})
+		return 0, false
+	}
+	return payload.Months, true
 }
 
 func (s *Server) buildConfigPayload() configPayload {

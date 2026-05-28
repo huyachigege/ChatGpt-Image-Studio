@@ -449,6 +449,35 @@ func (s *imageRequestLogStore) deleteFailed() (int64, error) {
 	return affected, nil
 }
 
+func (s *imageRequestLogStore) deleteBefore(cutoff time.Time) (int64, error) {
+	if s == nil || s.db == nil {
+		return 0, nil
+	}
+	cutoffValue := cutoff.UTC().Format(time.RFC3339Nano)
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	res, err := s.db.Exec(`DELETE FROM image_request_logs WHERE started_at < ?`, cutoffValue)
+	if err != nil {
+		return 0, err
+	}
+	affected, _ := res.RowsAffected()
+	if affected == 0 {
+		return 0, nil
+	}
+	next := make([]imageRequestLogEntry, 0, len(s.items))
+	for _, item := range s.items {
+		if strings.TrimSpace(item.StartedAt) != "" && strings.TrimSpace(item.StartedAt) < cutoffValue {
+			continue
+		}
+		next = append(next, item)
+	}
+	s.items = next
+	s.rebuildImagePromptMetadataLocked()
+	return affected, nil
+}
+
 func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 	if s == nil || s.db == nil {
 		return nil, nil

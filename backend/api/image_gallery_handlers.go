@@ -124,6 +124,10 @@ func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handleDeleteImageGalleryItem(w http.ResponseWriter, r *http.Request) {
 	identity := identityFromContext(r.Context())
 	name := strings.TrimSpace(r.PathValue("name"))
+	if name == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "image names are required"})
+		return
+	}
 	deleted, err := s.deleteImageGalleryNames(identity, []string{name})
 	if err != nil {
 		status := http.StatusBadRequest
@@ -144,6 +148,10 @@ func (s *Server) handleBatchDeleteImageGallery(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
 		return
 	}
+	if len(body.Names) == 0 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "image names are required"})
+		return
+	}
 	identity := identityFromContext(r.Context())
 	deleted, err := s.deleteImageGalleryNames(identity, body.Names)
 	if err != nil {
@@ -151,6 +159,36 @@ func (s *Server) handleBatchDeleteImageGallery(w http.ResponseWriter, r *http.Re
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": deleted})
+}
+
+func (s *Server) handleDeleteImageGalleryBefore(w http.ResponseWriter, r *http.Request) {
+	months, ok := parseRetentionMonths(w, r)
+	if !ok {
+		return
+	}
+	identity := identityFromContext(r.Context())
+	items, err := s.listImageGalleryItems(r.Context(), identity)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	cutoff := time.Now().AddDate(0, -months, 0).UTC()
+	names := make([]string, 0)
+	for _, item := range items {
+		createdAt, err := time.Parse(time.RFC3339Nano, strings.TrimSpace(item.CreatedAt))
+		if err != nil || createdAt.IsZero() {
+			continue
+		}
+		if createdAt.UTC().Before(cutoff) {
+			names = append(names, item.Name)
+		}
+	}
+	deleted, err := s.deleteImageGalleryNames(identity, names)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deleted": deleted, "deletedCount": len(deleted)})
 }
 
 func parsePositiveQueryInt(r *http.Request, key string, fallback int) int {
@@ -226,7 +264,7 @@ func collectImageGalleryFolders(items []imageGalleryItem) []imageGalleryFolderOp
 
 func (s *Server) deleteImageGalleryNames(identity authIdentity, names []string) ([]string, error) {
 	if len(names) == 0 {
-		return nil, errBadRequest("image names are required")
+		return []string{}, nil
 	}
 	deleted := make([]string, 0, len(names))
 	for _, name := range names {

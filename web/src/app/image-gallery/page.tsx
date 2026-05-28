@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { deleteImageGalleryItems, listFavorites, listImageGallery, setFavorite, type ImageGalleryItem } from "@/lib/api";
+import { deleteImageGalleryItems, deleteImageGalleryItemsBefore, listFavorites, listImageGallery, setFavorite, type ImageGalleryItem, type RetentionMonths } from "@/lib/api";
 import {
   exportLocalImageConversationsSnapshot,
   exportServerImageConversationsSnapshot,
@@ -358,6 +358,25 @@ export default function ImageGalleryPage() {
     }
   };
 
+  const handleDeleteBefore = async (months: RetentionMonths) => {
+    if (isBatchDeleting) return;
+    const label = months === 1 ? "一个月" : "三个月";
+    if (!window.confirm(`确定删除当前账号可删除范围内${label}前的历史图片吗？该操作不可恢复。`)) {
+      return;
+    }
+    setIsBatchDeleting(true);
+    try {
+      const payload = await deleteImageGalleryItemsBefore(months);
+      toast.success(`已删除 ${payload.deletedCount || payload.deleted?.length || 0} 张${label}前图片`);
+      setSelectedNames([]);
+      void loadItems(page, searchQuery, pageSize, folderFilter, groupMode, favoriteOnly);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : `删除${label}前历史图片失败`);
+    } finally {
+      setIsBatchDeleting(false);
+    }
+  };
+
   const galleryRows = useMemo(() => {
     const rows: { groupItems: ImageGalleryItem[]; label: string; rowItems: ImageGalleryItem[] }[] = [];
     const minRowCount = Math.max(1, Math.ceil(pageSize / Math.max(1, columnCount)));
@@ -445,6 +464,12 @@ export default function ImageGalleryPage() {
               <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-[13px] text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleBatchDelete()} disabled={selectedNames.length === 0 || isBatchDeleting}>
                 {isBatchDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                 删除选中 {selectedNames.length > 0 ? selectedNames.length : ""}
+              </Button>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-[13px] text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteBefore(1)} disabled={isBatchDeleting || isLoading || total === 0}>
+                <Trash2 className="size-4" />删除一个月前
+              </Button>
+              <Button type="button" variant="outline" className="h-10 rounded-full border-red-200 bg-white px-4 text-[13px] text-red-600 shadow-none hover:bg-red-50" onClick={() => void handleDeleteBefore(3)} disabled={isBatchDeleting || isLoading || total === 0}>
+                <Trash2 className="size-4" />删除三个月前
               </Button>
               <Button type="button" variant="outline" className="h-10 rounded-full border-stone-200 bg-white px-4 text-[13px] text-stone-700 shadow-none" onClick={() => { setFavoriteOnly((current) => !current); setPage(1); }}>
                 <Heart className={`size-4 ${favoriteOnly ? "fill-current text-rose-500" : ""}`} />收藏
