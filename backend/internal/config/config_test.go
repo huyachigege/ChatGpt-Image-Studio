@@ -241,11 +241,13 @@ func TestValidateExternalResponsesConfig(t *testing.T) {
 	cfg := &Config{
 		ChatGPT: ChatGPTConfig{ImageMode: "studio", FreeImageRoute: "legacy", PaidImageRoute: "responses"},
 		ExternalResponses: ExternalResponsesConfig{
-			Enabled:        true,
-			BaseURL:        " https://api.example.com/ ",
-			APIKey:         " key ",
-			Model:          " model-x ",
-			RequestTimeout: 0,
+			Enabled:               true,
+			BaseURL:               " https://api.example.com/ ",
+			APIKey:                " key ",
+			Model:                 " model-x ",
+			RequestTimeout:        0,
+			ReferenceImageMode:    " data-url ",
+			ReferenceImageBaseURL: " https://proxy.example/http://origin.example/ ",
 		},
 	}
 
@@ -263,6 +265,12 @@ func TestValidateExternalResponsesConfig(t *testing.T) {
 	}
 	if cfg.ExternalResponses.RequestTimeout != 300 {
 		t.Fatalf("RequestTimeout = %d, want 300", cfg.ExternalResponses.RequestTimeout)
+	}
+	if cfg.ExternalResponses.ReferenceImageMode != "base64" {
+		t.Fatalf("ReferenceImageMode = %q, want base64", cfg.ExternalResponses.ReferenceImageMode)
+	}
+	if cfg.ExternalResponses.ReferenceImageBaseURL != "https://proxy.example/http://origin.example" {
+		t.Fatalf("ReferenceImageBaseURL = %q, want trimmed proxy URL", cfg.ExternalResponses.ReferenceImageBaseURL)
 	}
 }
 

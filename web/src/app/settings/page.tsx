@@ -209,6 +209,8 @@ function defaultConfigPayload(): ConfigPayload {
       model: "gpt-5",
       requestTimeout: 300,
       retryTimes: 3,
+      referenceImageMode: "url",
+      referenceImageBaseUrl: "",
       providers: [],
     },
     newapi: {
@@ -288,6 +290,13 @@ function normalizeConfigPayload(
     ...defaults.storage,
     ...next.storage,
   };
+  const externalResponses = {
+    ...defaults.externalResponses,
+    ...next.externalResponses,
+  };
+  if (externalResponses.referenceImageMode !== "base64") {
+    externalResponses.referenceImageMode = "url";
+  }
   if (chatgpt.imageMode !== "studio" && chatgpt.imageMode !== "cpa") {
     chatgpt.imageMode = "studio";
   }
@@ -314,10 +323,7 @@ function normalizeConfigPayload(
     sync: { ...defaults.sync, ...next.sync },
     proxy: { ...defaults.proxy, ...next.proxy },
     cpa: { ...defaults.cpa, ...next.cpa },
-    externalResponses: {
-      ...defaults.externalResponses,
-      ...next.externalResponses,
-    },
+    externalResponses,
     newapi: { ...defaults.newapi, ...next.newapi },
     sub2api: { ...defaults.sub2api, ...next.sub2api },
     log: { ...defaults.log, ...next.log },

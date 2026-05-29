@@ -420,7 +420,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					}
 				}
 			}
-			if len(referenceImageURLs) > 0 && strings.TrimSpace(task.RequestBaseURL) != "" {
+			if len(referenceImageURLs) > 0 {
 				if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 					if generator, ok := client.(interface {
 						GenerateImageWithReferenceImageURLs(context.Context, string, string, int, string, string, string, []string) ([]handler.ImageResult, error)
@@ -715,7 +715,6 @@ func isResponsesURLReferenceFallbackError(err error) bool {
 
 func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix string) ([]string, error) {
 	_ = baseURL
-	baseURL = externalResponsesPublicImageBaseURL
 	if len(images) == 0 {
 		return nil, nil
 	}
@@ -724,11 +723,11 @@ func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix str
 		if len(image) == 0 {
 			continue
 		}
-		name, err := s.saveImageBytesForURL(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
+		url, err := s.buildExternalResponsesImageReference(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
 		if err != nil {
 			return nil, err
 		}
-		if url := absoluteImageFileURL(baseURL, name); url != "" {
+		if strings.TrimSpace(url) != "" {
 			urls = append(urls, url)
 		}
 	}

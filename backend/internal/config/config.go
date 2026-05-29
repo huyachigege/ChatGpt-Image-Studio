@@ -133,13 +133,15 @@ type ExternalResponsesProviderConfig struct {
 }
 
 type ExternalResponsesConfig struct {
-	Enabled        bool                              `toml:"enabled"`
-	BaseURL        string                            `toml:"base_url"`
-	APIKey         string                            `toml:"api_key"`
-	Model          string                            `toml:"model"`
-	RequestTimeout int                               `toml:"request_timeout"`
-	RetryTimes     int                               `toml:"retry_times"`
-	Providers      []ExternalResponsesProviderConfig `toml:"providers"`
+	Enabled               bool                              `toml:"enabled"`
+	BaseURL               string                            `toml:"base_url"`
+	APIKey                string                            `toml:"api_key"`
+	Model                 string                            `toml:"model"`
+	RequestTimeout        int                               `toml:"request_timeout"`
+	RetryTimes            int                               `toml:"retry_times"`
+	ReferenceImageMode    string                            `toml:"reference_image_mode"`
+	ReferenceImageBaseURL string                            `toml:"reference_image_base_url"`
+	Providers             []ExternalResponsesProviderConfig `toml:"providers"`
 }
 
 type NewAPIConfig struct {
@@ -545,6 +547,18 @@ func (c *Config) ExternalResponsesRetryTimes() int {
 	return retries
 }
 
+func (c *Config) ExternalResponsesImageReferenceMode() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return normalizeExternalResponsesReferenceImageMode(c.ExternalResponses.ReferenceImageMode)
+}
+
+func (c *Config) ExternalResponsesImageReferenceBaseURL() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return strings.TrimRight(strings.TrimSpace(c.ExternalResponses.ReferenceImageBaseURL), "/")
+}
+
 func (c *Config) ImageQueueConfig() (int, int, time.Duration) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -824,6 +838,8 @@ func normalizeExternalResponsesConfig(cfg *ExternalResponsesConfig) error {
 	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
 	cfg.APIKey = strings.TrimSpace(cfg.APIKey)
 	cfg.Model = strings.TrimSpace(cfg.Model)
+	cfg.ReferenceImageMode = normalizeExternalResponsesReferenceImageMode(cfg.ReferenceImageMode)
+	cfg.ReferenceImageBaseURL = strings.TrimRight(strings.TrimSpace(cfg.ReferenceImageBaseURL), "/")
 	if cfg.RequestTimeout <= 0 {
 		cfg.RequestTimeout = 300
 	}
@@ -877,6 +893,15 @@ func normalizeExternalResponsesConfig(cfg *ExternalResponsesConfig) error {
 		}
 	}
 	return nil
+}
+
+func normalizeExternalResponsesReferenceImageMode(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "base64", "data_url", "data-url", "dataurl":
+		return "base64"
+	default:
+		return "url"
+	}
 }
 
 func externalResponsesProviders(cfg ExternalResponsesConfig) []ExternalResponsesProviderConfig {

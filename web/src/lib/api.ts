@@ -346,6 +346,15 @@ export type ExternalResponsesProviderConfig = {
   requestTimeout: number;
 };
 
+export type ExternalResponsesReferenceTestResult = {
+  ok: boolean;
+  message: string;
+  latency: number;
+  referenceImageMode: "url" | "base64" | string;
+  referenceImagePreview?: string;
+  prompt?: string;
+};
+
 export type ConfigPayload = {
   app: {
     name: string;
@@ -433,6 +442,8 @@ export type ConfigPayload = {
     model: string;
     requestTimeout: number;
     retryTimes: number;
+    referenceImageMode: "url" | "base64" | string;
+    referenceImageBaseUrl: string;
     providers: ExternalResponsesProviderConfig[];
   };
   newapi: {
@@ -1150,6 +1161,18 @@ export async function fetchSub2APIGroups(sub2api: ConfigPayload["sub2api"]) {
     method: "POST",
     body: { sub2api },
   });
+}
+
+export async function testExternalResponsesReference(
+  externalResponses: ConfigPayload["externalResponses"],
+) {
+  return httpRequest<ExternalResponsesReferenceTestResult>(
+    "/api/integration/external-responses/reference-test",
+    {
+      method: "POST",
+      body: { externalResponses },
+    },
+  );
 }
 
 export async function fetchDefaultConfig() {

@@ -111,6 +111,15 @@ request_timeout = 300
 # external_responses 遇到 5xx 时的无感重试次数，默认 3，最大 10。
 retry_times = 3
 
+# 提交给 external_responses 的参考图引用方式：url 或 base64。
+# url 会把图片临时保存到本服务，再用 reference_image_base_url + /v1/files/image/... 传给上游。
+# base64 会直接传 data:image/jpeg;base64,...，不依赖公网图片地址。
+reference_image_mode = "url"
+
+# url 引用方式的公开访问根地址；为空时使用内置默认图片域名。
+# 如需走代理，可填写类似 https://proxy.example/http://origin.example。
+reference_image_base_url = ""
+
 [newapi]
 base_url = ""
 username = ""

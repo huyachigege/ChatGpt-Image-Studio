@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"image"
 	_ "image/gif"
@@ -97,6 +98,37 @@ func absoluteImageFileURL(baseURL, name string) string {
 		return ""
 	}
 	return baseURL + "/v1/files/image/" + name
+}
+
+func (s *Server) buildExternalResponsesImageReference(data []byte, userID, prefix string) (string, error) {
+	return s.buildExternalResponsesImageReferenceWithConfig(data, userID, prefix, s.cfg.ExternalResponsesImageReferenceMode(), s.cfg.ExternalResponsesImageReferenceBaseURL())
+}
+
+func (s *Server) buildExternalResponsesImageReferenceWithConfig(data []byte, userID, prefix, mode, baseURL string) (string, error) {
+	if strings.EqualFold(strings.TrimSpace(mode), "base64") {
+		return encodeJPEGReferenceImageDataURL(data)
+	}
+	name, err := s.saveImageBytesForURL(data, userID, prefix)
+	if err != nil {
+		return "", err
+	}
+	baseURL = firstNonEmpty(strings.TrimRight(strings.TrimSpace(baseURL), "/"), externalResponsesPublicImageBaseURL)
+	return absoluteImageFileURL(baseURL, name), nil
+}
+
+func encodeJPEGReferenceImageDataURL(data []byte) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("image is empty")
+	}
+	src, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("decode image: %w", err)
+	}
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, src, &jpeg.Options{Quality: 90}); err != nil {
+		return "", fmt.Errorf("encode jpeg reference image: %w", err)
+	}
+	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
 func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (string, error) {

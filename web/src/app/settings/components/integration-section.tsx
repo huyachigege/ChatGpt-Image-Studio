@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import {
   fetchSub2APIGroups,
+  testExternalResponsesReference,
   testIntegration,
   type ConfigPayload,
   type IntegrationTestResult,
@@ -64,7 +65,7 @@ function buildSub2APIGroupLabel(group: Sub2APIGroupOption) {
 }
 
 export function IntegrationSection({ config, setSection }: IntegrationSectionProps) {
-  const [testingSource, setTestingSource] = useState<"newapi" | "sub2api" | null>(null);
+  const [testingSource, setTestingSource] = useState<"newapi" | "sub2api" | "externalResponsesReference" | null>(null);
   const [isLoadingSub2APIGroups, setIsLoadingSub2APIGroups] = useState(false);
   const [sub2apiGroups, setSub2apiGroups] = useState<Sub2APIGroupOption[]>([]);
   const usesSQLiteStorage = config.storage.backend === "sqlite";
@@ -161,6 +162,25 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Sub2API 测试失败");
+    } finally {
+      setTestingSource(null);
+    }
+  };
+
+  const handleTestExternalResponsesReference = async () => {
+    setTestingSource("externalResponsesReference");
+    try {
+      const result = await testExternalResponsesReference(config.externalResponses);
+      const message = [result.message, result.latency >= 0 ? `${result.latency} ms` : ""]
+        .filter(Boolean)
+        .join(" / ");
+      if (result.ok) {
+        toast.success(message);
+      } else {
+        toast.error(message || "图片引用测试失败");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "图片引用测试失败");
     } finally {
       setTestingSource(null);
     }
@@ -304,6 +324,18 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
       <ConfigSection
         title="外部 Responses"
         description="图片 responses 链路统一请求外部 /v1/responses provider；多个 provider 会在后台随机起点轮换重试，不再回退账号内置 responses。"
+        actions={
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-full border-stone-200 bg-white px-4 text-stone-700 shadow-none"
+            onClick={() => void handleTestExternalResponsesReference()}
+            disabled={testingSource === "externalResponsesReference"}
+          >
+            {testingSource === "externalResponsesReference" ? <LoaderCircle className="size-4 animate-spin" /> : <Link2 className="size-4" />}
+            检测图片引用
+          </Button>
+        }
       >
         <ToggleField
           label="启用外部 Responses"
@@ -327,6 +359,45 @@ export function IntegrationSection({ config, setSection }: IntegrationSectionPro
                 retryTimes: Number(event.target.value || 0),
               })
             }
+            className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
+          />
+        </Field>
+
+        <Field label="参考图引用方式" hint="url 适合上游可访问本服务图片地址的场景；base64 会直接传 data:image/jpeg;base64,...。">
+          <Select
+            value={config.externalResponses.referenceImageMode || "url"}
+            onValueChange={(value) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                referenceImageMode: value,
+              })
+            }
+          >
+            <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="url">URL 引用</SelectItem>
+              <SelectItem value="base64">Base64 data URL</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <Field
+          label="参考图 URL 根地址"
+          hint="仅 url 方式使用。最终会拼成：这里的地址 + /v1/files/image/...；代理可填 https://proxy.example/http://origin.example。"
+          fullWidth
+        >
+          <Input
+            value={config.externalResponses.referenceImageBaseUrl || ""}
+            onChange={(event) =>
+              setSection("externalResponses", {
+                ...config.externalResponses,
+                referenceImageBaseUrl: event.target.value,
+              })
+            }
+            placeholder="https://proxy.example/http://origin.example"
+            disabled={(config.externalResponses.referenceImageMode || "url") === "base64"}
             className="h-11 rounded-2xl border-stone-200 bg-white shadow-none"
           />
         </Field>

@@ -103,13 +103,15 @@ type configPayload struct {
 		RouteStrategy  string `json:"routeStrategy"`
 	} `json:"cpa"`
 	ExternalResponses struct {
-		Enabled        bool                               `json:"enabled"`
-		BaseURL        string                             `json:"baseUrl"`
-		APIKey         string                             `json:"apiKey"`
-		Model          string                             `json:"model"`
-		RequestTimeout int                                `json:"requestTimeout"`
-		RetryTimes     int                                `json:"retryTimes"`
-		Providers      []externalResponsesProviderPayload `json:"providers"`
+		Enabled               bool                               `json:"enabled"`
+		BaseURL               string                             `json:"baseUrl"`
+		APIKey                string                             `json:"apiKey"`
+		Model                 string                             `json:"model"`
+		RequestTimeout        int                                `json:"requestTimeout"`
+		RetryTimes            int                                `json:"retryTimes"`
+		ReferenceImageMode    string                             `json:"referenceImageMode"`
+		ReferenceImageBaseURL string                             `json:"referenceImageBaseUrl"`
+		Providers             []externalResponsesProviderPayload `json:"providers"`
 	} `json:"externalResponses"`
 	NewAPI struct {
 		BaseURL        string `json:"baseUrl"`
@@ -142,14 +144,22 @@ type configSaveTarget struct {
 	RedisPrefix   string
 }
 
-func buildExternalResponsesOverrides(enabled bool, baseURL, apiKey, model string, requestTimeout, retryTimes int, providers []externalResponsesProviderPayload) map[string]any {
+func buildExternalResponsesOverrides(
+	enabled bool,
+	baseURL, apiKey, model string,
+	requestTimeout, retryTimes int,
+	referenceImageMode, referenceImageBaseURL string,
+	providers []externalResponsesProviderPayload,
+) map[string]any {
 	section := map[string]any{
-		"enabled":         enabled,
-		"base_url":        baseURL,
-		"api_key":         apiKey,
-		"model":           model,
-		"request_timeout": requestTimeout,
-		"retry_times":     retryTimes,
+		"enabled":                  enabled,
+		"base_url":                 baseURL,
+		"api_key":                  apiKey,
+		"model":                    model,
+		"request_timeout":          requestTimeout,
+		"retry_times":              retryTimes,
+		"reference_image_mode":     strings.TrimSpace(referenceImageMode),
+		"reference_image_base_url": strings.TrimSpace(referenceImageBaseURL),
 	}
 	if providers != nil {
 		items := make([]map[string]any, 0, len(providers))
@@ -271,7 +281,17 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"request_timeout": payload.CPA.RequestTimeout,
 			"route_strategy":  payload.CPA.RouteStrategy,
 		},
-		"external_responses": buildExternalResponsesOverrides(payload.ExternalResponses.Enabled, payload.ExternalResponses.BaseURL, payload.ExternalResponses.APIKey, payload.ExternalResponses.Model, payload.ExternalResponses.RequestTimeout, payload.ExternalResponses.RetryTimes, payload.ExternalResponses.Providers),
+		"external_responses": buildExternalResponsesOverrides(
+			payload.ExternalResponses.Enabled,
+			payload.ExternalResponses.BaseURL,
+			payload.ExternalResponses.APIKey,
+			payload.ExternalResponses.Model,
+			payload.ExternalResponses.RequestTimeout,
+			payload.ExternalResponses.RetryTimes,
+			payload.ExternalResponses.ReferenceImageMode,
+			payload.ExternalResponses.ReferenceImageBaseURL,
+			payload.ExternalResponses.Providers,
+		),
 		"newapi": {
 			"base_url":        payload.NewAPI.BaseURL,
 			"username":        payload.NewAPI.Username,
@@ -532,6 +552,8 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ExternalResponses.Model = cfg.ExternalResponses.Model
 	payload.ExternalResponses.RequestTimeout = cfg.ExternalResponses.RequestTimeout
 	payload.ExternalResponses.RetryTimes = cfg.ExternalResponses.RetryTimes
+	payload.ExternalResponses.ReferenceImageMode = cfg.ExternalResponsesImageReferenceMode()
+	payload.ExternalResponses.ReferenceImageBaseURL = cfg.ExternalResponsesImageReferenceBaseURL()
 	providers := cfg.ExternalResponsesProviders()
 	payload.ExternalResponses.Providers = make([]externalResponsesProviderPayload, 0, len(providers))
 	for _, provider := range providers {

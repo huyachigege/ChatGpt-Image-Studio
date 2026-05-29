@@ -91,6 +91,80 @@ func TestHandleEnhanceImagePromptUsesFixedImageURL(t *testing.T) {
 	}
 }
 
+func TestHandleEnhanceImagePromptUsesConfiguredReferenceImageBaseURL(t *testing.T) {
+	var imageURL string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var requestBody map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		input := requestBody["input"].([]any)[0].(map[string]any)
+		content := input["content"].([]any)
+		for _, item := range content {
+			part := item.(map[string]any)
+			if part["type"] == "input_image" {
+				imageURL = part["image_url"].(string)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"output_text":"{\"prompts\":[\"ok\"]}"}`)
+	}))
+	defer upstream.Close()
+
+	server := newPromptEnhanceTestServer(t, upstream, func(cfg *config.Config) {
+		cfg.ExternalResponses.ReferenceImageBaseURL = "https://proxy.example/http://origin.example"
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"}]}`))
+	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.HasPrefix(imageURL, "https://proxy.example/http://origin.example/v1/files/image/.thumbs/prompt-reference-") {
+		t.Fatalf("image url = %q, want configured reference image base url", imageURL)
+	}
+}
+
+func TestHandleEnhanceImagePromptUsesBase64ReferenceImage(t *testing.T) {
+	var imageURL string
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var requestBody map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		input := requestBody["input"].([]any)[0].(map[string]any)
+		content := input["content"].([]any)
+		for _, item := range content {
+			part := item.(map[string]any)
+			if part["type"] == "input_image" {
+				imageURL = part["image_url"].(string)
+			}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprint(w, `{"output_text":"{\"prompts\":[\"ok\"]}"}`)
+	}))
+	defer upstream.Close()
+
+	server := newPromptEnhanceTestServer(t, upstream, func(cfg *config.Config) {
+		cfg.ExternalResponses.ReferenceImageMode = "base64"
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"}]}`))
+	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	server.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	if !strings.HasPrefix(imageURL, "data:image/jpeg;base64,") {
+		t.Fatalf("image url = %q, want jpeg data url", imageURL)
+	}
+}
+
 func TestHandleEnhanceImagePromptReturnsUpstreamEmptyError(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

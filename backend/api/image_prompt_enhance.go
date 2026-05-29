@@ -89,11 +89,11 @@ func (s *Server) buildPromptEnhanceImageURLs(sources []imageTaskSourceImagePaylo
 		if err != nil {
 			return nil, err
 		}
-		name, err := s.saveImageBytesForURL(data, userID, "prompt-reference")
+		url, err := s.buildExternalResponsesImageReference(data, userID, "prompt-reference")
 		if err != nil {
 			return nil, err
 		}
-		if url := absoluteImageFileURL(externalResponsesPublicImageBaseURL, name); url != "" {
+		if strings.TrimSpace(url) != "" {
 			urls = append(urls, url)
 		}
 		if len(urls) >= maxPromptEnhanceReferenceImages {

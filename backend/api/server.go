@@ -547,6 +547,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/config/image-system-hint", s.requireAdminAuth(http.HandlerFunc(s.handleSetImageSystemHint)))
 	mux.Handle("POST /api/proxy/test", s.requireAdminAuth(http.HandlerFunc(s.handleProxyTest)))
 	mux.Handle("POST /api/integration/test", s.requireAdminAuth(http.HandlerFunc(s.handleIntegrationTest)))
+	mux.Handle("POST /api/integration/external-responses/reference-test", s.requireAdminAuth(http.HandlerFunc(s.handleExternalResponsesReferenceTest)))
 	mux.Handle("POST /api/integration/newapi/token", s.requireAdminAuth(http.HandlerFunc(s.handleNewAPITokenDiscover)))
 	mux.Handle("POST /api/integration/sub2api/groups", s.requireAdminAuth(http.HandlerFunc(s.handleSub2APIGroups)))
 	mux.Handle("GET /api/requests", s.requireAdminAuth(http.HandlerFunc(s.handleListRequestLogs)))
