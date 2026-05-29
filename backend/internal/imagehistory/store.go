@@ -61,6 +61,7 @@ type Turn struct {
 	Model                string          `json:"model"`
 	Count                int             `json:"count"`
 	Size                 string          `json:"size,omitempty"`
+	ResolutionAccess     string          `json:"resolutionAccess,omitempty"`
 	Quality              string          `json:"quality,omitempty"`
 	Scale                string          `json:"scale,omitempty"`
 	SourceImages         []SourceImage   `json:"sourceImages,omitempty"`
@@ -78,22 +79,23 @@ type Turn struct {
 }
 
 type Conversation struct {
-	ID           string        `json:"id"`
-	UserID       string        `json:"userId,omitempty"`
-	Title        string        `json:"title"`
-	Mode         string        `json:"mode"`
-	Prompt       string        `json:"prompt"`
-	Model        string        `json:"model"`
-	Count        int           `json:"count"`
-	Size         string        `json:"size,omitempty"`
-	Quality      string        `json:"quality,omitempty"`
-	Scale        string        `json:"scale,omitempty"`
-	SourceImages []SourceImage `json:"sourceImages,omitempty"`
-	Images       []Image       `json:"images"`
-	CreatedAt    string        `json:"createdAt"`
-	Status       string        `json:"status"`
-	Error        string        `json:"error,omitempty"`
-	Turns        []Turn        `json:"turns,omitempty"`
+	ID               string        `json:"id"`
+	UserID           string        `json:"userId,omitempty"`
+	Title            string        `json:"title"`
+	Mode             string        `json:"mode"`
+	Prompt           string        `json:"prompt"`
+	Model            string        `json:"model"`
+	Count            int           `json:"count"`
+	Size             string        `json:"size,omitempty"`
+	ResolutionAccess string        `json:"resolutionAccess,omitempty"`
+	Quality          string        `json:"quality,omitempty"`
+	Scale            string        `json:"scale,omitempty"`
+	SourceImages     []SourceImage `json:"sourceImages,omitempty"`
+	Images           []Image       `json:"images"`
+	CreatedAt        string        `json:"createdAt"`
+	Status           string        `json:"status"`
+	Error            string        `json:"error,omitempty"`
+	Turns            []Turn        `json:"turns,omitempty"`
 }
 
 type Store struct {
@@ -223,6 +225,15 @@ func (s *Store) Clear(ctx context.Context) error {
 	return s.cleanupCandidateFiles(ctx, candidateFiles)
 }
 
+func normalizeResolutionAccess(value string) string {
+	switch strings.TrimSpace(value) {
+	case "free", "paid":
+		return strings.TrimSpace(value)
+	default:
+		return ""
+	}
+}
+
 func normalizePromptEnhanceStatus(value string) string {
 	switch strings.TrimSpace(value) {
 	case "thinking", "selecting", "failed":
@@ -261,26 +272,28 @@ func (s *Store) normalizeConversation(conversation Conversation) (Conversation, 
 	}
 	if len(conversation.Turns) == 0 {
 		conversation.Turns = []Turn{{
-			ID:           conversation.ID + "-legacy",
-			Title:        conversation.Title,
-			Mode:         conversation.Mode,
-			Prompt:       conversation.Prompt,
-			Model:        conversation.Model,
-			Count:        conversation.Count,
-			Size:         conversation.Size,
-			Quality:      conversation.Quality,
-			Scale:        conversation.Scale,
-			SourceImages: conversation.SourceImages,
-			Images:       conversation.Images,
-			CreatedAt:    conversation.CreatedAt,
-			Status:       conversation.Status,
-			Error:        conversation.Error,
+			ID:               conversation.ID + "-legacy",
+			Title:            conversation.Title,
+			Mode:             conversation.Mode,
+			Prompt:           conversation.Prompt,
+			Model:            conversation.Model,
+			Count:            conversation.Count,
+			Size:             conversation.Size,
+			ResolutionAccess: conversation.ResolutionAccess,
+			Quality:          conversation.Quality,
+			Scale:            conversation.Scale,
+			SourceImages:     conversation.SourceImages,
+			Images:           conversation.Images,
+			CreatedAt:        conversation.CreatedAt,
+			Status:           conversation.Status,
+			Error:            conversation.Error,
 		}}
 	}
 	for turnIndex := range conversation.Turns {
 		turn := &conversation.Turns[turnIndex]
 		turn.OriginalPrompt = strings.TrimSpace(turn.OriginalPrompt)
 		turn.EnhancedPrompt = strings.TrimSpace(turn.EnhancedPrompt)
+		turn.ResolutionAccess = normalizeResolutionAccess(turn.ResolutionAccess)
 		turn.PromptEnhanceStatus = normalizePromptEnhanceStatus(turn.PromptEnhanceStatus)
 		turn.PromptEnhanceOptions = normalizePromptEnhanceOptions(turn.PromptEnhanceOptions)
 		turn.PromptEnhanceError = strings.TrimSpace(turn.PromptEnhanceError)
@@ -336,6 +349,7 @@ func (s *Store) normalizeConversation(conversation Conversation) (Conversation, 
 	conversation.Model = latest.Model
 	conversation.Count = latest.Count
 	conversation.Size = latest.Size
+	conversation.ResolutionAccess = latest.ResolutionAccess
 	conversation.Quality = latest.Quality
 	conversation.Scale = latest.Scale
 	conversation.SourceImages = latest.SourceImages

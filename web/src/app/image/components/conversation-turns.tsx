@@ -411,7 +411,7 @@ export const ConversationTurns = memo(function ConversationTurns({
                     {turn.promptEnhanceStatus === "thinking"
                       ? `思考中${waitingDots}`
                       : turn.promptEnhanceStatus === "selecting"
-                      ? "选择更符合意图的提示词"
+                      ? "选择或编辑一个提示词后生成"
                       : "思考失败"}
                   </div>
                   {turn.promptEnhanceStatus === "thinking" ? (
@@ -426,12 +426,15 @@ export const ConversationTurns = memo(function ConversationTurns({
                   ) : null}
                   {turn.promptEnhanceStatus === "selecting" && turn.promptEnhanceOptions?.length ? (
                     <div className="mt-3 grid gap-2">
+                      <p className="rounded-2xl bg-white/70 px-3 py-2 text-xs leading-5 text-sky-700">
+                        下面每个候选都可以直接编辑：你可以先在文本框里修改细节、比例或风格，再点击「使用此提示词生成」。
+                      </p>
                       {turn.promptEnhanceOptions.map((option, optionIndex) => (
                         <div
                           key={`${turn.id}-enhanced-${optionIndex}`}
                           className="rounded-2xl border border-sky-200 bg-white p-3 text-left text-xs leading-5 text-stone-700"
                         >
-                          <div className="mb-2 font-semibold text-sky-700">方案 {optionIndex + 1}</div>
+                          <div className="mb-2 font-semibold text-sky-700">方案 {optionIndex + 1} · 可编辑</div>
                           <textarea
                             value={option}
                             onChange={(event) => onUpdateEnhancedPrompt?.(conversationId, turn, optionIndex, event.target.value)}

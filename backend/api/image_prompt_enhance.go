@@ -200,6 +200,7 @@ func buildImagePromptEnhancePrompt(req imagePromptEnhanceRequest, imageCount int
 - 如果全自动模式为 false，至少返回 1 个候选；如果存在关键歧义，返回 2 到 4 个互斥候选，每个候选都应完整可用，并明确体现不同方向。
 - 有参考图时，提炼安全的主体特征、风格、构图、材质、光线、色彩、背景与镜头语言。
 - 补充具体可视约束：主体、场景、构图、视角、光线、色彩、细节、风格、画质、尺寸/比例建议。
+- 每个候选提示词都尽量明确画幅比例/构图比例建议，例如“建议画幅比例 2:3 竖版”“16:9 横版宽屏”“1:1 方图”；如用户或设置已有明确尺寸/比例，以现有设置为准，不要冲突。
 - 不编造品牌、人物身份、商标、敏感文字，不改变用户核心设定。
 - 只输出 JSON：{"prompts":["提示词1","提示词2"]}。`, strings.TrimSpace(req.ConversationContext), strings.TrimSpace(req.Prompt), strings.TrimSpace(req.Mode), strings.TrimSpace(req.Size), strings.TrimSpace(req.Quality), imageCount, req.Auto)
 }
