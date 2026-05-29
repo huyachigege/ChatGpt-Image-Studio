@@ -54,6 +54,8 @@ export type ImageConversationTurn = {
   title: string;
   mode: ImageMode;
   prompt: string;
+  originalPrompt?: string;
+  enhancedPrompt?: string;
   model: ImageModel;
   count: number;
   size?: string;
@@ -79,6 +81,9 @@ export type ImageConversationTurn = {
   diagnosticStatus?: "running" | "succeeded" | "failed";
   diagnosticError?: string;
   diagnosticUpdatedAt?: string;
+  promptEnhanceStatus?: "thinking" | "selecting" | "failed";
+  promptEnhanceOptions?: string[];
+  promptEnhanceError?: string;
 };
 
 export type ImageConversation = {
@@ -336,6 +341,8 @@ function normalizeImageMode(value: unknown): ImageMode {
 function normalizeTurn(turn: ImageConversationTurn): ImageConversationTurn {
   return {
     ...turn,
+    originalPrompt: String(turn.originalPrompt || "").trim() || undefined,
+    enhancedPrompt: String(turn.enhancedPrompt || "").trim() || undefined,
     mode: normalizeImageMode(turn.mode),
     resolutionAccess: normalizeResolutionAccess(turn.resolutionAccess),
     quality: normalizeImageQuality(turn.quality),
@@ -351,6 +358,16 @@ function normalizeTurn(turn: ImageConversationTurn): ImageConversationTurn {
       turn.status === "cancelled"
         ? turn.status
         : "success",
+    promptEnhanceStatus:
+      turn.promptEnhanceStatus === "thinking" ||
+      turn.promptEnhanceStatus === "selecting" ||
+      turn.promptEnhanceStatus === "failed"
+        ? turn.promptEnhanceStatus
+        : undefined,
+    promptEnhanceOptions: Array.isArray(turn.promptEnhanceOptions)
+      ? turn.promptEnhanceOptions.filter((item) => String(item || "").trim())
+      : undefined,
+    promptEnhanceError: turn.promptEnhanceError,
   };
 }
 

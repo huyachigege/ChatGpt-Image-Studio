@@ -169,7 +169,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 	metadata := newImageRequestMetadata(task.Prompt, task.Size, task.Quality)
 	requestedModel := normalizeRequestedImageModel(task.Model, s.cfg.ChatGPT.Model)
 
-	effectivePrompt := buildImageTaskEffectivePrompt(task.Prompt, task.ConversationContext)
+	effectivePrompt := buildImageTaskEffectivePrompt(task.Prompt, task.ConversationContext, task.ConversationInput)
 	instructions := buildImageTaskInstructions(task)
 
 	applySystemHint := func(client imageWorkflowClient) {
@@ -592,8 +592,21 @@ func (s *Server) runImageTaskGenerateExternalResponses(ctx context.Context, task
 	)
 }
 
-func buildImageTaskEffectivePrompt(prompt string, conversationContext string) string {
+func buildImageTaskEffectivePrompt(prompt string, conversationContext string, conversationInput []imageConversationInputItem) string {
 	prompt = strings.TrimSpace(prompt)
+	items := normalizeImageConversationInput(conversationInput)
+	if len(items) > 0 {
+		items = append(items, imageConversationInputItem{
+			Role: "user",
+			Content: []imageConversationInputContent{{
+				Type: "input_text",
+				Text: prompt,
+			}},
+		})
+		if encoded := encodeImageConversationInput(items); encoded != "" {
+			return encoded
+		}
+	}
 	conversationContext = strings.TrimSpace(conversationContext)
 	if conversationContext == "" {
 		return prompt

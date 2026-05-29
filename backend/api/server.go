@@ -575,6 +575,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("PUT /api/image/conversations/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleSaveImageConversation)))
 	mux.Handle("DELETE /api/image/conversations/{id}", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDeleteImageConversation)))
 	mux.Handle("POST /api/image/tasks", s.requireWorkspaceAuth(http.HandlerFunc(s.handleCreateImageTask)))
+	mux.Handle("POST /api/image/prompt-enhance", s.requireWorkspaceAuth(http.HandlerFunc(s.handleEnhanceImagePrompt)))
 	mux.Handle("POST /api/image/diagnose-rejection", s.requireWorkspaceAuth(http.HandlerFunc(s.handleDiagnoseImageRejection)))
 	mux.Handle("GET /api/image/tasks", s.requireWorkspaceAuth(http.HandlerFunc(s.handleListImageTasks)))
 	mux.Handle("GET /api/image/tasks/snapshot", s.requireWorkspaceAuth(http.HandlerFunc(s.handleImageTaskSnapshot)))

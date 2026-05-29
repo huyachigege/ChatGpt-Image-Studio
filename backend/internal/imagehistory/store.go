@@ -52,24 +52,29 @@ type Image struct {
 }
 
 type Turn struct {
-	ID                  string          `json:"id"`
-	Title               string          `json:"title"`
-	Mode                string          `json:"mode"`
-	Prompt              string          `json:"prompt"`
-	Model               string          `json:"model"`
-	Count               int             `json:"count"`
-	Size                string          `json:"size,omitempty"`
-	Quality             string          `json:"quality,omitempty"`
-	Scale               string          `json:"scale,omitempty"`
-	SourceImages        []SourceImage   `json:"sourceImages,omitempty"`
-	Images              []Image         `json:"images"`
-	CreatedAt           string          `json:"createdAt"`
-	Status              string          `json:"status"`
-	Error               string          `json:"error,omitempty"`
-	Diagnostic          json.RawMessage `json:"diagnostic,omitempty"`
-	DiagnosticStatus    string          `json:"diagnosticStatus,omitempty"`
-	DiagnosticError     string          `json:"diagnosticError,omitempty"`
-	DiagnosticUpdatedAt string          `json:"diagnosticUpdatedAt,omitempty"`
+	ID                   string          `json:"id"`
+	Title                string          `json:"title"`
+	Mode                 string          `json:"mode"`
+	Prompt               string          `json:"prompt"`
+	OriginalPrompt       string          `json:"originalPrompt,omitempty"`
+	EnhancedPrompt       string          `json:"enhancedPrompt,omitempty"`
+	Model                string          `json:"model"`
+	Count                int             `json:"count"`
+	Size                 string          `json:"size,omitempty"`
+	Quality              string          `json:"quality,omitempty"`
+	Scale                string          `json:"scale,omitempty"`
+	SourceImages         []SourceImage   `json:"sourceImages,omitempty"`
+	Images               []Image         `json:"images"`
+	CreatedAt            string          `json:"createdAt"`
+	Status               string          `json:"status"`
+	Error                string          `json:"error,omitempty"`
+	Diagnostic           json.RawMessage `json:"diagnostic,omitempty"`
+	DiagnosticStatus     string          `json:"diagnosticStatus,omitempty"`
+	DiagnosticError      string          `json:"diagnosticError,omitempty"`
+	DiagnosticUpdatedAt  string          `json:"diagnosticUpdatedAt,omitempty"`
+	PromptEnhanceStatus  string          `json:"promptEnhanceStatus,omitempty"`
+	PromptEnhanceOptions []string        `json:"promptEnhanceOptions,omitempty"`
+	PromptEnhanceError   string          `json:"promptEnhanceError,omitempty"`
 }
 
 type Conversation struct {
@@ -218,6 +223,31 @@ func (s *Store) Clear(ctx context.Context) error {
 	return s.cleanupCandidateFiles(ctx, candidateFiles)
 }
 
+func normalizePromptEnhanceStatus(value string) string {
+	switch strings.TrimSpace(value) {
+	case "thinking", "selecting", "failed":
+		return strings.TrimSpace(value)
+	default:
+		return ""
+	}
+}
+
+func normalizePromptEnhanceOptions(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
 func (s *Store) normalizeConversation(conversation Conversation) (Conversation, error) {
 	conversation.ID = cleanID(conversation.ID)
 	if s.userID != "" {
@@ -249,6 +279,11 @@ func (s *Store) normalizeConversation(conversation Conversation) (Conversation, 
 	}
 	for turnIndex := range conversation.Turns {
 		turn := &conversation.Turns[turnIndex]
+		turn.OriginalPrompt = strings.TrimSpace(turn.OriginalPrompt)
+		turn.EnhancedPrompt = strings.TrimSpace(turn.EnhancedPrompt)
+		turn.PromptEnhanceStatus = normalizePromptEnhanceStatus(turn.PromptEnhanceStatus)
+		turn.PromptEnhanceOptions = normalizePromptEnhanceOptions(turn.PromptEnhanceOptions)
+		turn.PromptEnhanceError = strings.TrimSpace(turn.PromptEnhanceError)
 		if turn.ID == "" {
 			turn.ID = fmt.Sprintf("%s-%d", conversation.ID, turnIndex)
 		}

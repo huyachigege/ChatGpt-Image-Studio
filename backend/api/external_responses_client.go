@@ -265,27 +265,25 @@ func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prom
 }
 
 func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string) (map[string]any, error) {
-	content := make([]map[string]any, 0, 1+len(images)+len(imageURLs))
-	content = append(content, map[string]any{
-		"type": "input_text",
-		"text": strings.TrimSpace(prompt),
-	})
+	imageParts := make([]map[string]any, 0, len(images)+len(imageURLs))
 	for _, image := range images {
 		if len(image) == 0 {
 			continue
 		}
-		content = append(content, map[string]any{
+		imageParts = append(imageParts, map[string]any{
 			"type":      "input_image",
 			"image_url": handler.EncodeResponsesImageDataURL(image),
+			"detail":    "high",
 		})
 	}
 	for _, imageURL := range imageURLs {
 		if imageURL = strings.TrimSpace(imageURL); imageURL == "" {
 			continue
 		}
-		content = append(content, map[string]any{
+		imageParts = append(imageParts, map[string]any{
 			"type":      "input_image",
 			"image_url": imageURL,
+			"detail":    "high",
 		})
 	}
 
@@ -314,11 +312,12 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 	}
 	payload := map[string]any{
 		"model":               c.model,
-		"input":               []any{map[string]any{"role": "user", "content": content}},
+		"input":               buildResponsesInputItemsFromPrompt(prompt, imageParts),
 		"tools":               []any{tool},
 		"tool_choice":         map[string]any{"type": "image_generation"},
 		"instructions":        instructions,
 		"stream":              true,
+		"reasoning":           map[string]any{"effort": "xhigh"},
 		"store":               false,
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},

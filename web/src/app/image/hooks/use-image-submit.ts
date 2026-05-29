@@ -22,6 +22,7 @@ import type { EditorTarget } from "./use-image-source-inputs";
 import {
   buildConversationTitle,
   buildImageConversationContext,
+  buildImageConversationInput,
   buildInpaintSourceReference,
   buildLatestImageContextReference,
   buildLatestImageReferenceImage,
@@ -196,6 +197,7 @@ export function useImageSubmit({
         editorTarget.conversationId ?? selectedConversationId;
       const conversationId = targetConversationId ?? makeId();
       const conversationContext = buildImageConversationContext(conversationTurns);
+    const conversationInput = buildImageConversationInput(conversationTurns);
       const nextQuality = normalizeImageQuality(overrideQuality, imageQuality);
       const useSourceContextEdit = editResolutionAccess === "free" && Boolean(sourceReference?.source_account_id);
       const turnId = makeId();
@@ -266,6 +268,7 @@ export function useImageSubmit({
           sourceImages: draftTurn.sourceImages,
           sourceReference: useSourceContextEdit ? sourceReference : undefined,
           conversationContext,
+          conversationInput,
           privatePhotoMode,
           systemHint,
         });
@@ -387,6 +390,9 @@ export function useImageSubmit({
       const conversationContext = buildImageConversationContext(conversationTurns, {
         excludeTurnId: turn.id,
       });
+      const conversationInput = buildImageConversationInput(conversationTurns, {
+        excludeTurnId: turn.id,
+      });
       const referenceImage = omitOriginalReferences
         ? null
         : buildLatestImageReferenceImage(
@@ -444,6 +450,7 @@ export function useImageSubmit({
           sourceReference: omitOriginalReferences ? undefined : retrySourceReference,
           contextReference: omitOriginalReferences ? undefined : retryContextReference,
           conversationContext,
+          conversationInput,
           privatePhotoMode,
           systemHint,
         });
@@ -608,6 +615,135 @@ export function useImageSubmit({
     [handleRetryTurn],
   );
 
+  const handlePreparedSubmit = useCallback(async (
+    conversationId: string,
+    turn: ImageConversationTurn,
+    enhancedPrompt: string,
+  ) => {
+    const prompt = enhancedPrompt.trim();
+    if (!prompt || isSubmitDispatchingRef.current) {
+      return;
+    }
+    isSubmitDispatchingRef.current = true;
+
+    const turnSourceImages = Array.isArray(turn.sourceImages) ? turn.sourceImages : [];
+    const turnImageSources = turnSourceImages.filter((item) => item.role === "image");
+    const expectedCount = turn.mode === "generate" ? Math.max(1, turn.count || 1) : 1;
+    const hasUserUploadedImages = turnSourceImages.length > 0;
+    const contextReference = selectedConversationId
+      ? buildLatestImageContextReference(conversationTurns)
+      : undefined;
+    const conversationContext = buildImageConversationContext(conversationTurns, {
+      excludeTurnId: turn.id,
+    });
+    const conversationInput = buildImageConversationInput(conversationTurns, {
+      excludeTurnId: turn.id,
+    });
+    const referenceImage =
+      !hasUserUploadedImages && selectedConversationId
+        ? buildLatestImageReferenceImage(conversationTurns, buildImageDataUrl, {
+            excludeTurnId: turn.id,
+          })
+        : undefined;
+    const referenceImages = referenceImage ? [referenceImage] : undefined;
+    const draftTurn = createConversationTurn({
+      turnId: turn.id,
+      title: buildConversationTitle(turn.mode, prompt),
+      mode: turn.mode,
+      prompt,
+      originalPrompt: turn.originalPrompt || turn.prompt,
+      enhancedPrompt: prompt,
+      model: turn.model,
+      count: expectedCount,
+      size: turn.mode === "generate" ? turn.size : undefined,
+      resolutionAccess: turn.resolutionAccess,
+      quality: turn.quality,
+      sourceImages: turnSourceImages,
+      contextReference,
+      images: createLoadingImages(expectedCount, turn.id),
+      createdAt: turn.createdAt || new Date().toISOString(),
+      status: "queued",
+    });
+
+    setSubmitElapsedSeconds(0);
+    focusConversation(conversationId);
+
+    try {
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? buildConversationBase(conversationId, draftTurn)),
+        turns: (current?.turns ?? [draftTurn]).map((item) =>
+          item.id === turn.id ? draftTurn : item,
+        ),
+      }));
+
+      const result = await createImageTask({
+        conversationId,
+        turnId: turn.id,
+        mode: turn.mode,
+        prompt,
+        model: turn.model,
+        count: expectedCount,
+        size: turn.mode === "generate" ? turn.size : undefined,
+        resolutionAccess: turn.resolutionAccess,
+        quality: turn.quality,
+        sourceImages: turnSourceImages,
+        referenceImages: turnImageSources.length > 0 ? undefined : referenceImages,
+        contextReference,
+        conversationContext,
+        conversationInput,
+        privatePhotoMode,
+        systemHint,
+      });
+
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? buildConversationBase(conversationId, draftTurn)),
+        turns: (current?.turns ?? [draftTurn]).map((item) =>
+          item.id === turn.id
+            ? {
+                ...item,
+                taskId: result.task.id,
+                queuePosition: result.task.queuePosition,
+                waitingReason: result.task.waitingReason,
+                waitingDetail: result.task.blockers?.[0]?.detail,
+              }
+            : item,
+        ),
+      }));
+      toast.success("图片任务已加入队列");
+    } catch (error) {
+      const message =
+        error instanceof Error ? formatImageError(error) : "提交任务失败";
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? buildConversationBase(conversationId, draftTurn)),
+        turns: (current?.turns ?? [draftTurn]).map((item) =>
+          item.id === turn.id
+            ? {
+                ...item,
+                status: "error",
+                error: message,
+                images: item.images.map((image) => ({
+                  ...image,
+                  status: "error" as const,
+                  error: message,
+                })),
+              }
+            : item,
+        ),
+      }));
+      toast.error(message);
+    } finally {
+      isSubmitDispatchingRef.current = false;
+    }
+  }, [
+    conversationTurns,
+    focusConversation,
+    privatePhotoMode,
+    selectedConversationId,
+    setSubmitElapsedSeconds,
+    systemHint,
+    updateConversation,
+  ]);
+
   const handleSubmit = useCallback(async () => {
     if (isSubmitDispatchingRef.current) {
       return;
@@ -635,6 +771,7 @@ export function useImageSubmit({
       ? buildLatestImageContextReference(conversationTurns)
       : undefined;
     const conversationContext = buildImageConversationContext(conversationTurns);
+    const conversationInput = buildImageConversationInput(conversationTurns);
     const referenceImage =
       !hasUserUploadedImages && selectedConversationId
         ? buildLatestImageReferenceImage(conversationTurns, buildImageDataUrl)
@@ -688,6 +825,7 @@ export function useImageSubmit({
         referenceImages,
         contextReference,
         conversationContext,
+        conversationInput,
         privatePhotoMode,
         systemHint,
       });
@@ -762,6 +900,7 @@ export function useImageSubmit({
     handleRetryTurn,
     handleDiagnoseTurn,
     handleRetryWithDiagnostic,
+    handlePreparedSubmit,
     handleSubmit,
   };
 }

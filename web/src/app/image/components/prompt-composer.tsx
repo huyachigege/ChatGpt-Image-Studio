@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ClipboardEvent as ReactClipboardEvent, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { ArrowUp, Brush, ChevronDown, Heart, ImagePlus, Sparkles, Trash2 } from "lucide-react";
+import { ArrowUp, Brain, Brush, ChevronDown, Heart, ImagePlus, Sparkles, Trash2 } from "lucide-react";
 
 import { AppImage as Image } from "@/components/app-image";
 import { OriginalImagePreview } from "@/components/original-image-preview";
@@ -50,6 +50,12 @@ type PromptComposerProps = {
   onImageQualityChange: (value: string) => void;
   onPromptChange: (value: string) => void;
   onPromptPaste: (event: ReactClipboardEvent<Element>) => void;
+  isEnhancingPrompt?: boolean;
+  promptEnhanceError?: string;
+  thinkingModeEnabled?: boolean;
+  autoThinkingEnabled?: boolean;
+  onThinkingModeChange?: (enabled: boolean) => void;
+  onAutoThinkingChange?: (enabled: boolean) => void;
   onApplyPromptPreset?: (preset: ImagePromptPreset) => void;
   onTogglePromptPresetFavorite?: (preset: ImagePromptPreset) => void;
   onRemoveSourceImage: (id: string) => void;
@@ -88,6 +94,12 @@ export function PromptComposer({
   onImageQualityChange,
   onPromptChange,
   onPromptPaste,
+  isEnhancingPrompt = false,
+  promptEnhanceError = "",
+  thinkingModeEnabled = false,
+  autoThinkingEnabled = false,
+  onThinkingModeChange,
+  onAutoThinkingChange,
   onApplyPromptPreset,
   onTogglePromptPresetFavorite,
   onRemoveSourceImage,
@@ -573,6 +585,50 @@ export function PromptComposer({
                   type="button"
                   variant="outline"
                   size="sm"
+                  className={cn(
+                    "h-7 rounded-full border-stone-200 bg-white px-2 text-[11px] font-medium shadow-none sm:h-8 sm:px-2.5 sm:text-xs",
+                    thinkingModeEnabled
+                      ? "border-sky-200 bg-sky-50 text-sky-700"
+                      : "text-stone-700",
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    const nextEnabled = !thinkingModeEnabled;
+                    onThinkingModeChange?.(nextEnabled);
+                    if (!nextEnabled) {
+                      onAutoThinkingChange?.(false);
+                    }
+                  }}
+                  title="思考模式：提交前先用 xhigh 思考强度理解上下文、参考图和本轮意图，生成增强提示词。"
+                >
+                  <Brain className="size-3.5" />
+                  {thinkingModeEnabled ? "思考模式开" : "思考模式"}
+                </Button>
+                {thinkingModeEnabled ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-7 rounded-full border-stone-200 bg-white px-2 text-[11px] font-medium shadow-none sm:h-8 sm:px-2.5 sm:text-xs",
+                      autoThinkingEnabled
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "text-stone-700",
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAutoThinkingChange?.(!autoThinkingEnabled);
+                    }}
+                    title="全自动：增强时只让模型返回最符合意图的一条提示词并自动执行；关闭后会展示候选，支持选择和二次编辑。"
+                  >
+                    <Sparkles className="size-3.5" />
+                    {autoThinkingEnabled ? "全自动开" : "全自动关"}
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   className="h-7 rounded-full border-stone-200 bg-white px-2 text-[11px] font-medium text-stone-700 shadow-none sm:h-8 sm:px-2.5 sm:text-xs"
                   onClick={(event) => {
                     event.stopPropagation();
@@ -590,6 +646,7 @@ export function PromptComposer({
               <button
                 type="button"
                 onClick={() => void onSubmit()}
+                disabled={isEnhancingPrompt}
                 className={cn(
                   "inline-flex size-8 shrink-0 items-center justify-center rounded-full text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:bg-stone-300 dark:disabled:bg-[var(--studio-panel-muted)] dark:disabled:text-[var(--studio-text-muted)] sm:size-9",
                   !privatePhotoMode && "bg-stone-950 hover:bg-stone-800 dark:bg-[var(--studio-accent-strong)] dark:text-[var(--studio-accent-foreground)] dark:hover:bg-[var(--studio-accent)]",
@@ -600,6 +657,9 @@ export function PromptComposer({
                 <ArrowUp className="size-4" />
               </button>
             </div>
+            {promptEnhanceError ? (
+              <p className="mt-2 text-xs text-red-500 dark:text-red-300">{promptEnhanceError}</p>
+            ) : null}
           </div>
 
           <input

@@ -1045,6 +1045,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		PrivateSystemHint:   privateSystemHint,
 		SystemHint:          privateSystemHint,
 		ConversationContext: normalizeImageConversationContext(req.ConversationContext),
+		ConversationInput:   normalizeImageConversationInput(req.ConversationInput),
 		RequestBaseURL:      strings.TrimRight(strings.TrimSpace(req.RequestBaseURL), "/"),
 		SourceImages:        sourceImages,
 		ReferenceImages:     referenceImages,

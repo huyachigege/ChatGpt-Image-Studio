@@ -151,6 +151,17 @@ type ConversationTurnsProps = {
     conversationId: string,
     turn: ImageConversationTurn,
   ) => Promise<void>;
+  onSelectEnhancedPrompt?: (
+    conversationId: string,
+    turn: ImageConversationTurn,
+    prompt: string,
+  ) => Promise<void>;
+  onUpdateEnhancedPrompt?: (
+    conversationId: string,
+    turn: ImageConversationTurn,
+    index: number,
+    prompt: string,
+  ) => void;
 };
 
 export const ConversationTurns = memo(function ConversationTurns({
@@ -171,6 +182,8 @@ export const ConversationTurns = memo(function ConversationTurns({
   onDiagnoseTurn,
   onRetryWithDiagnostic,
   onCancelTurn,
+  onSelectEnhancedPrompt,
+  onUpdateEnhancedPrompt,
 }: ConversationTurnsProps) {
   const [diagnosingTurnIds, setDiagnosingTurnIds] = useState<string[]>([]);
   const [diagnosticRetryingTurnIds, setDiagnosticRetryingTurnIds] = useState<string[]>([]);
@@ -294,7 +307,20 @@ export const ConversationTurns = memo(function ConversationTurns({
                 ) : null}
                 <div className="group flex max-w-full flex-col items-start gap-1.5">
                   <div className="min-w-0 whitespace-pre-wrap break-words rounded-[28px] bg-[#f2f2f1] px-5 py-4 text-[15px] leading-7 text-stone-800 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-                    {turn.prompt || "无额外提示词"}
+                    {turn.originalPrompt && turn.enhancedPrompt ? (
+                      <div className="space-y-3">
+                        <div>
+                          <div className="mb-1 text-xs font-semibold text-stone-500">原始提示词</div>
+                          <div>{turn.originalPrompt}</div>
+                        </div>
+                        <div className="border-t border-stone-200 pt-3">
+                          <div className="mb-1 text-xs font-semibold text-sky-600">增强后提示词</div>
+                          <div>{turn.enhancedPrompt}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      turn.prompt || "无额外提示词"
+                    )}
                   </div>
                   <button
                     type="button"
@@ -374,7 +400,59 @@ export const ConversationTurns = memo(function ConversationTurns({
                 </span>
               </div>
 
-              {turn.images.length > 0 ? (
+              {turn.promptEnhanceStatus ? (
+                <div className="rounded-[22px] border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 shadow-sm">
+                  <div className="flex items-center gap-2 font-semibold">
+                    {turn.promptEnhanceStatus === "thinking" ? (
+                      <LoaderCircle className="size-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-4" />
+                    )}
+                    {turn.promptEnhanceStatus === "thinking"
+                      ? `思考中${waitingDots}`
+                      : turn.promptEnhanceStatus === "selecting"
+                      ? "选择更符合意图的提示词"
+                      : "思考失败"}
+                  </div>
+                  {turn.promptEnhanceStatus === "thinking" ? (
+                    <p className="mt-2 text-xs leading-6 text-sky-700">
+                      正在结合历史上下文、当前提示词和参考图理解意图，并使用 xhigh 思考强度生成增强提示词。
+                    </p>
+                  ) : null}
+                  {turn.promptEnhanceStatus === "failed" ? (
+                    <p className="mt-2 text-xs leading-6 text-rose-600">
+                      {turn.promptEnhanceError || "生成增强提示词失败，请重试。"}
+                    </p>
+                  ) : null}
+                  {turn.promptEnhanceStatus === "selecting" && turn.promptEnhanceOptions?.length ? (
+                    <div className="mt-3 grid gap-2">
+                      {turn.promptEnhanceOptions.map((option, optionIndex) => (
+                        <div
+                          key={`${turn.id}-enhanced-${optionIndex}`}
+                          className="rounded-2xl border border-sky-200 bg-white p-3 text-left text-xs leading-5 text-stone-700"
+                        >
+                          <div className="mb-2 font-semibold text-sky-700">方案 {optionIndex + 1}</div>
+                          <textarea
+                            value={option}
+                            onChange={(event) => onUpdateEnhancedPrompt?.(conversationId, turn, optionIndex, event.target.value)}
+                            className="min-h-24 w-full resize-y rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs leading-5 text-stone-700 outline-none transition focus:border-sky-300 focus:bg-white"
+                          />
+                          <button
+                            type="button"
+                            className="mt-2 inline-flex h-8 items-center rounded-full bg-sky-600 px-3 text-xs font-semibold text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            onClick={() => void onSelectEnhancedPrompt?.(conversationId, turn, option)}
+                            disabled={!onSelectEnhancedPrompt || !option.trim()}
+                          >
+                            使用此提示词生成
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {turn.images.length > 0 && (!turn.promptEnhanceStatus || turn.promptEnhanceStatus === "thinking") ? (
                 <div
                   className={cn(
                     "grid gap-4",
@@ -583,7 +661,9 @@ export const ConversationTurns = memo(function ConversationTurns({
                               <LoaderCircle className="size-5 animate-spin" />
                             </div>
                             <p className="text-sm font-medium text-stone-700">
-                              {cancelRequested
+                              {turn.promptEnhanceStatus === "thinking"
+                                ? `思考中${waitingDots}`
+                                : cancelRequested
                                 ? "正在取消任务"
                                 : showQueuedState
                                 ? "已加入等候队列"
@@ -592,7 +672,9 @@ export const ConversationTurns = memo(function ConversationTurns({
                                 : "正在处理图片..."}
                             </p>
                             <p className="text-xs leading-6 text-stone-400">
-                              {cancelRequested
+                              {turn.promptEnhanceStatus === "thinking"
+                                ? "正在结合上下文和参考图生成增强提示词，完成后会自动提交或让你选择方案"
+                                : cancelRequested
                                 ? "正在等待当前请求结束，取消后将丢弃本次结果"
                                 : showQueuedState
                                 ? `${turn.waitingDetail || formatWaitingReason(turn.waitingReason)}${(turn.queuePosition ?? 0) > 1 ? ` · 前面还有 ${turn.queuePosition! - 1} 个` : ""}`

@@ -89,6 +89,7 @@ type createImageTaskRequest struct {
 	SourceReference     *imageTaskSourceReferencePayload    `json:"sourceReference,omitempty"`
 	ContextReference    *imageTaskContextReferencePayload   `json:"contextReference,omitempty"`
 	ConversationContext string                              `json:"conversationContext,omitempty"`
+	ConversationInput   []imageConversationInputItem        `json:"conversationInput,omitempty"`
 	Policy              *accounts.ImageAccountRoutingPolicy `json:"policy,omitempty"`
 	SystemHint          string                              `json:"systemHint,omitempty"`
 	RequestBaseURL      string                              `json:"-"`
@@ -216,6 +217,7 @@ type imageTask struct {
 	PrivateSystemHint   string
 	SystemHint          string
 	ConversationContext string
+	ConversationInput   []imageConversationInputItem
 	RequestBaseURL      string
 	SourceImages        []imageTaskSourceImage
 	ReferenceImages     []imageTaskSourceImage

@@ -128,6 +128,15 @@ export type ImageReferenceImage = {
   url?: string;
 };
 
+export type ImageConversationInputContent =
+  | { type: "input_text" | "output_text"; text: string }
+  | { type: "input_image"; image_url: string; detail?: "high" | "low" | "auto" | string };
+
+export type ImageConversationInputItem = {
+  role: "user" | "assistant" | "system";
+  content: ImageConversationInputContent[];
+};
+
 export type ImageDiagnosticReferenceImage = {
   id: string;
   name: string;
@@ -1348,6 +1357,7 @@ export async function createImageTask(payload: {
   sourceReference?: InpaintSourceReference;
   contextReference?: ImageContextReference;
   conversationContext?: string;
+  conversationInput?: ImageConversationInputItem[];
   policy?: StoredImageAccountPolicy;
   privatePhotoMode?: boolean;
   systemHint?: string;
@@ -1375,10 +1385,43 @@ export async function createImageTask(payload: {
       sourceReference: payload.sourceReference,
       contextReference: payload.contextReference,
       conversationContext: payload.conversationContext?.trim() || undefined,
+      conversationInput: payload.conversationInput,
       policy: normalizeImageAccountPolicy(policy),
       privatePhotoMode: payload.privatePhotoMode || undefined,
       systemHint: payload.systemHint || undefined,
     },
+  });
+}
+
+export async function enhanceImagePrompt(payload: {
+  prompt: string;
+  mode?: "generate" | "edit" | string;
+  size?: string;
+  quality?: ImageQuality;
+  conversationContext?: string;
+  conversationInput?: ImageConversationInputItem[];
+  auto?: boolean;
+  sourceImages?: Array<{
+    id: string;
+    role: "image" | "mask";
+    name: string;
+    dataUrl?: string;
+    url?: string;
+  }>;
+}) {
+  return httpRequest<{ prompt: string; prompts?: string[] }>("/api/image/prompt-enhance", {
+    method: "POST",
+    body: {
+      prompt: payload.prompt,
+      mode: payload.mode,
+      size: payload.size,
+      quality: payload.quality,
+      conversationContext: payload.conversationContext,
+      conversationInput: payload.conversationInput,
+      auto: payload.auto || undefined,
+      sourceImages: payload.sourceImages ?? [],
+    },
+    timeoutMs: 360_000,
   });
 }
 

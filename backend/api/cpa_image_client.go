@@ -436,18 +436,15 @@ func (c *cpaImageClient) editViaResponses(ctx context.Context, prompt string, im
 }
 
 func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, size, quality, background string) map[string]any {
-	content := make([]map[string]any, 0, 1+len(images))
-	content = append(content, map[string]any{
-		"type": "input_text",
-		"text": strings.TrimSpace(prompt),
-	})
+	imageParts := make([]map[string]any, 0, len(images))
 	for _, image := range images {
 		if len(image) == 0 {
 			continue
 		}
-		content = append(content, map[string]any{
+		imageParts = append(imageParts, map[string]any{
 			"type":      "input_image",
 			"image_url": encodeCPAImageDataURL(image, detectCPAImageMIME(image)),
+			"detail":    "high",
 		})
 	}
 
@@ -479,20 +476,14 @@ func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, m
 	return map[string]any{
 		"instructions":        "",
 		"stream":              true,
-		"reasoning":           map[string]any{"effort": "medium", "summary": "auto"},
+		"reasoning":           map[string]any{"effort": "xhigh", "summary": "auto"},
 		"parallel_tool_calls": true,
 		"include":             []string{"reasoning.encrypted_content"},
 		"model":               cpaResponsesMainModel,
 		"store":               false,
 		"tool_choice":         map[string]any{"type": "image_generation"},
-		"input": []map[string]any{
-			{
-				"type":    "message",
-				"role":    "user",
-				"content": content,
-			},
-		},
-		"tools": []any{tool},
+		"input":               buildResponsesInputItemsFromPrompt(prompt, imageParts),
+		"tools":               []any{tool},
 	}
 }
 

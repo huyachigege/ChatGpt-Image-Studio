@@ -2,6 +2,7 @@
 
 import type {
   ImageContextReference,
+  ImageConversationInputItem,
   ImageReferenceImage,
   InpaintSourceReference,
   ImageModel,
@@ -39,6 +40,8 @@ export function createConversationTurn(payload: {
   title: string;
   mode: ImageMode;
   prompt: string;
+  originalPrompt?: string;
+  enhancedPrompt?: string;
   model: ImageModel;
   count: number;
   size?: string;
@@ -58,6 +61,8 @@ export function createConversationTurn(payload: {
     title: payload.title,
     mode: payload.mode,
     prompt: payload.prompt,
+    originalPrompt: payload.originalPrompt?.trim() || undefined,
+    enhancedPrompt: payload.enhancedPrompt?.trim() || undefined,
     model: payload.model,
     count: payload.count,
     size: payload.size,
@@ -314,15 +319,22 @@ function summarizeTurnForImageContext(turn: ImageConversationTurn, index: number
   ].filter(Boolean).join("\n");
 }
 
-export function buildImageConversationContext(
+function selectCompletedTurnsForImageContext(
   turns: ImageConversationTurn[],
   options: { excludeTurnId?: string } = {},
 ) {
-  const completedTurns = turns
+  return turns
     .filter((turn) => turn.id !== options.excludeTurnId)
     .filter((turn) => turn.prompt.trim())
     .filter((turn) => turn.status === "success" || turn.images?.some((image) => !image.status || image.status === "success"))
     .slice(-6);
+}
+
+export function buildImageConversationContext(
+  turns: ImageConversationTurn[],
+  options: { excludeTurnId?: string } = {},
+) {
+  const completedTurns = selectCompletedTurnsForImageContext(turns, options);
 
   if (completedTurns.length === 0) {
     return undefined;
@@ -332,6 +344,47 @@ export function buildImageConversationContext(
     "这是同一个图片创作会话的历史上下文。请延续用户之前确认的主体、风格、构图、角色/物体关系与已完成修改；如果本轮提示与历史冲突，以本轮提示为准。",
     ...completedTurns.map((turn, index) => summarizeTurnForImageContext(turn, index + 1)),
   ].join("\n");
+}
+
+export function buildImageConversationInput(
+  turns: ImageConversationTurn[],
+  options: { excludeTurnId?: string } = {},
+): ImageConversationInputItem[] | undefined {
+  const completedTurns = selectCompletedTurnsForImageContext(turns, options);
+  if (completedTurns.length === 0) {
+    return undefined;
+  }
+  return completedTurns.flatMap((turn, index): ImageConversationInputItem[] => {
+    const successfulImages = (turn.images || []).filter(
+      (image) => !image.status || image.status === "success",
+    );
+    const revisedPrompt = successfulImages
+      .map((image) => image.revised_prompt?.trim())
+      .find(Boolean);
+    const imageSummary = successfulImages.length
+      ? `产出 ${successfulImages.length} 张图`
+      : "未产出成功图片";
+    return [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text: `${index + 1}. ${turn.mode === "edit" ? "编辑" : "生成"}: ${turn.prompt.trim()}`,
+          },
+        ],
+      },
+      {
+        role: "assistant",
+        content: [
+          {
+            type: "output_text",
+            text: [revisedPrompt ? `上游修订提示: ${revisedPrompt}` : "", `结果: ${imageSummary}`].filter(Boolean).join("\n"),
+          },
+        ],
+      },
+    ];
+  });
 }
 
 function extractErrorCode(error: unknown) {

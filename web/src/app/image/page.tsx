@@ -9,6 +9,7 @@ import { ImageEditModal } from "@/components/image-edit-modal";
 import {
   cancelImageTask,
   consumeImageTaskStream,
+  enhanceImagePrompt,
   fetchImageQuota,
   listFavorites,
   listImageTasks,
@@ -48,6 +49,13 @@ import { useImageHistory } from "./hooks/use-image-history";
 import { useImageSourceInputs } from "./hooks/use-image-source-inputs";
 import { useImageSubmit } from "./hooks/use-image-submit";
 import { buildConversationPreviewSource } from "./view-utils";
+import {
+  buildConversationTitle,
+  buildImageConversationContext,
+  buildImageConversationInput,
+  createConversationTurn,
+  createLoadingImages,
+} from "./submit-utils";
 
 type ImageAspectRatio = "auto" | "1:1" | "4:3" | "3:2" | "16:9" | "21:9" | "9:16";
 type ImageResolutionTier = "auto-free" | "auto-paid" | "sd" | "2k" | "4k";
@@ -456,6 +464,10 @@ export default function ImagePage() {
   const [editResolutionAccess, setEditResolutionAccess] =
     useState<ImageResolutionAccess>("paid");
   const [imageQuality, setImageQuality] = useState<ImageQuality>("high");
+  const [isEnhancingPrompt, setIsEnhancingPrompt] = useState(false);
+  const [promptEnhanceError, setPromptEnhanceError] = useState("");
+  const [thinkingModeEnabled, setThinkingModeEnabled] = useState(true);
+  const [autoThinkingEnabled, setAutoThinkingEnabled] = useState(false);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [isDesktopLayout, setIsDesktopLayout] = useState(() =>
     typeof window !== "undefined"
@@ -731,6 +743,40 @@ export default function ImagePage() {
     () => sourceImages.find((item) => item.role === "mask") ?? null,
     [sourceImages],
   );
+  const handleEnhancePrompt = useCallback(async () => {
+    const trimmedPrompt = imagePrompt.trim();
+    const referenceSources = sourceImages.filter((item) => item.role !== "mask");
+    if (!trimmedPrompt && referenceSources.length === 0) {
+      setPromptEnhanceError("请输入一句需求或先上传参考图");
+      return;
+    }
+    setIsEnhancingPrompt(true);
+    setPromptEnhanceError("");
+    try {
+      const result = await enhanceImagePrompt({
+        prompt: trimmedPrompt,
+        mode,
+        size: selectedResolutionPreset?.value,
+        quality: imageQuality,
+        conversationContext: buildImageConversationContext(selectedConversationTurns),
+        conversationInput: buildImageConversationInput(selectedConversationTurns),
+        auto: autoThinkingEnabled,
+        sourceImages,
+      });
+      const nextPrompt = result.prompt.trim();
+      if (!nextPrompt) {
+        throw new Error("模型没有返回提示词");
+      }
+      setImagePrompt(nextPrompt);
+      textareaRef.current?.focus();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "生成详细提示词失败";
+      setPromptEnhanceError(message);
+      toast.error(message);
+    } finally {
+      setIsEnhancingPrompt(false);
+    }
+  }, [imagePrompt, imageQuality, mode, selectedConversationTurns, selectedResolutionPreset?.value, sourceImages]);
   const processingStatus = useMemo(
     () =>
       activeRequest
@@ -1294,6 +1340,7 @@ export default function ImagePage() {
     handleRetryTurn,
     handleDiagnoseTurn,
     handleRetryWithDiagnostic,
+    handlePreparedSubmit,
     handleSubmit: rawHandleSubmit,
   } = useImageSubmit({
       mode,
@@ -1322,7 +1369,190 @@ export default function ImagePage() {
       privatePhotoMode,
     });
 
-  const handleSubmit = rawHandleSubmit;
+  const handleThinkingSubmit = useCallback(async () => {
+    const prompt = imagePrompt.trim();
+    const referenceSources = sourceImages.filter((item) => item.role !== "mask");
+    if (mode === "generate" && !prompt) {
+      toast.error("请输入提示词");
+      return;
+    }
+    if (mode === "edit" && referenceSources.length === 0) {
+      toast.error("编辑模式至少需要一张源图");
+      return;
+    }
+    if (mode === "edit" && !prompt) {
+      toast.error("编辑模式需要提示词");
+      return;
+    }
+
+    const conversationId = selectedConversationId ?? makeId();
+    const turnId = makeId();
+    const expectedCount = mode === "generate" ? parsedCount : 1;
+    const now = new Date().toISOString();
+    const thinkingTurn = createConversationTurn({
+      turnId,
+      title: buildConversationTitle(mode, prompt),
+      mode,
+      prompt,
+      originalPrompt: prompt,
+      model: "gpt-image-2",
+      count: expectedCount,
+      size: mode === "generate" ? imageSize : undefined,
+      resolutionAccess: mode === "generate" ? imageResolutionAccess : editResolutionAccess,
+      quality: imageQuality,
+      sourceImages,
+      images: createLoadingImages(expectedCount, turnId),
+      createdAt: now,
+      status: "generating",
+    });
+    const thinkingConversation = normalizeConversation({
+      id: conversationId,
+      title: thinkingTurn.title,
+      mode: thinkingTurn.mode,
+      prompt: thinkingTurn.prompt,
+      model: thinkingTurn.model,
+      count: thinkingTurn.count,
+      size: thinkingTurn.size,
+      resolutionAccess: thinkingTurn.resolutionAccess,
+      quality: thinkingTurn.quality,
+      sourceImages: thinkingTurn.sourceImages,
+      images: thinkingTurn.images,
+      createdAt: thinkingTurn.createdAt,
+      status: thinkingTurn.status,
+      turns: [{ ...thinkingTurn, promptEnhanceStatus: "thinking" }],
+    });
+
+    setSubmitElapsedSeconds(0);
+    focusConversation(conversationId);
+    setImagePrompt("");
+    setSourceImages([]);
+
+    try {
+      if (selectedConversationId) {
+        await updateConversation(conversationId, (current) => ({
+          ...(current ?? thinkingConversation),
+          turns: [...(current?.turns ?? []), thinkingConversation.turns![0]],
+        }));
+      } else {
+        await persistConversation(thinkingConversation);
+      }
+
+      const result = await enhanceImagePrompt({
+        prompt,
+        mode,
+        size: selectedResolutionPreset?.value,
+        quality: imageQuality,
+        conversationContext: buildImageConversationContext(selectedConversationTurns),
+        conversationInput: buildImageConversationInput(selectedConversationTurns),
+        auto: autoThinkingEnabled,
+        sourceImages,
+      });
+      const prompts = (result.prompts?.length ? result.prompts : [result.prompt])
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (prompts.length === 0) {
+        throw new Error("模型没有返回提示词");
+      }
+      if (autoThinkingEnabled) {
+        await handlePreparedSubmit(conversationId, thinkingConversation.turns![0], prompts[0]);
+        return;
+      }
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? thinkingConversation),
+        turns: (current?.turns ?? thinkingConversation.turns ?? []).map((turn) =>
+          turn.id === turnId
+            ? {
+                ...turn,
+                promptEnhanceStatus: "selecting" as const,
+                promptEnhanceOptions: prompts,
+                images: [],
+              }
+            : turn,
+        ),
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "思考模式生成提示词失败";
+      await updateConversation(conversationId, (current) => ({
+        ...(current ?? thinkingConversation),
+        turns: (current?.turns ?? thinkingConversation.turns ?? []).map((turn) =>
+          turn.id === turnId
+            ? {
+                ...turn,
+                promptEnhanceStatus: "failed" as const,
+                promptEnhanceError: message,
+                images: [],
+              }
+            : turn,
+        ),
+      }));
+      toast.error(message);
+    }
+  }, [
+    editResolutionAccess,
+    focusConversation,
+    handlePreparedSubmit,
+    imagePrompt,
+    imageQuality,
+    imageResolutionAccess,
+    imageSize,
+    mode,
+    parsedCount,
+    persistConversation,
+    selectedConversationId,
+    selectedConversationTurns,
+    selectedResolutionPreset?.value,
+    setSourceImages,
+    sourceImages,
+    updateConversation,
+    autoThinkingEnabled,
+  ]);
+
+  const handleSubmit = thinkingModeEnabled ? handleThinkingSubmit : rawHandleSubmit;
+
+  const handleUpdateEnhancedPrompt = useCallback((
+    conversationId: string,
+    turn: ImageConversationTurn,
+    index: number,
+    prompt: string,
+  ) => {
+    void updateConversation(conversationId, (current) => ({
+      ...(current ?? normalizeConversation({
+        id: conversationId,
+        title: turn.title,
+        mode: turn.mode,
+        prompt: turn.prompt,
+        model: turn.model,
+        count: turn.count,
+        size: turn.size,
+        resolutionAccess: turn.resolutionAccess,
+        quality: turn.quality,
+        sourceImages: turn.sourceImages,
+        images: turn.images,
+        createdAt: turn.createdAt,
+        status: turn.status,
+        turns: [turn],
+      } as ImageConversation)),
+      turns: (current?.turns ?? [turn]).map((item) =>
+        item.id === turn.id
+          ? {
+              ...item,
+              promptEnhanceOptions: (item.promptEnhanceOptions ?? []).map((option, optionIndex) =>
+                optionIndex === index ? prompt : option,
+              ),
+            }
+          : item,
+      ),
+    }));
+  }, [updateConversation]);
+
+  const handleSelectEnhancedPrompt = useCallback(async (
+    conversationId: string,
+    turn: ImageConversationTurn,
+    prompt: string,
+  ) => {
+    const latestTurn = selectedConversation?.turns?.find((item) => item.id === turn.id) ?? turn;
+    await handlePreparedSubmit(conversationId, latestTurn, prompt);
+  }, [handlePreparedSubmit, selectedConversation?.turns]);
 
   const handleCancelTurn = useCallback(
     async (conversationId: string, turn: ImageConversationTurn) => {
@@ -1450,6 +1680,8 @@ export default function ImagePage() {
               onDiagnoseTurn={handleDiagnoseTurn}
               onRetryWithDiagnostic={handleRetryWithDiagnostic}
               onCancelTurn={handleCancelTurn}
+              onSelectEnhancedPrompt={handleSelectEnhancedPrompt}
+              onUpdateEnhancedPrompt={handleUpdateEnhancedPrompt}
             />
           )}
         </div>
@@ -1520,8 +1752,19 @@ export default function ImagePage() {
           setImageResolutionTier(value as ImageResolutionTier);
         }}
         onImageQualityChange={(value) => setImageQuality(value as ImageQuality)}
-        onPromptChange={setImagePrompt}
+        onPromptChange={(value) => {
+          setImagePrompt(value);
+          if (promptEnhanceError) {
+            setPromptEnhanceError("");
+          }
+        }}
         onPromptPaste={handlePromptPaste}
+        isEnhancingPrompt={isEnhancingPrompt}
+        promptEnhanceError={promptEnhanceError}
+        thinkingModeEnabled={thinkingModeEnabled}
+        autoThinkingEnabled={autoThinkingEnabled}
+        onThinkingModeChange={setThinkingModeEnabled}
+        onAutoThinkingChange={setAutoThinkingEnabled}
         onApplyPromptPreset={applyPromptPreset}
         onTogglePromptPresetFavorite={togglePromptPresetFavorite}
         onRemoveSourceImage={removeSourceImage}
