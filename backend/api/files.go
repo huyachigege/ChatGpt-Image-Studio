@@ -103,9 +103,9 @@ func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (strin
 	if len(data) == 0 {
 		return "", fmt.Errorf("image is empty")
 	}
-	src, format, err := image.Decode(bytes.NewReader(data))
+	_, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return "", fmt.Errorf("decode image: %w", err)
+		return "", fmt.Errorf("decode image config: %w", err)
 	}
 	hash := sha256.Sum256(data)
 	namePrefix := firstNonEmpty(strings.TrimSpace(prefix), "image")
@@ -125,6 +125,10 @@ func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (strin
 		return ".thumbs/" + filename, nil
 	}
 
+	src, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("decode image: %w", err)
+	}
 	thumb := resizeImageShortestSide(src, imageThumbnailShortSide)
 	filename := fmt.Sprintf("%s-%x.jpg", namePrefix, hash[:12])
 	path := filepath.Join(cacheDir, filename)

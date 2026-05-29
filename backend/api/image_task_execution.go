@@ -18,7 +18,10 @@ import (
 	"chatgpt2api/internal/imagehistory"
 )
 
-const imageTaskFakeHost = "workspace.local"
+const (
+	imageTaskFakeHost                   = "workspace.local"
+	externalResponsesPublicImageBaseURL = "https://images-bak.chigege.cn:8888"
+)
 
 type imageTaskDeferredError struct {
 	cause           error
@@ -196,6 +199,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if len(mask) == 0 {
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
+		imageFileURLs, urlErr := s.buildTaskImageURLs(imageFiles, task.UserID, task.RequestBaseURL, "source")
+		if urlErr != nil {
+			return nil, urlErr
+		}
 		selectionEditModel := "gpt-image-2"
 		responsesEligible := true
 		selectionEditRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
@@ -206,24 +213,15 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					prompt = instructions + "\n\n" + prompt
 				}
 			}
-			sameSourceAccount := isExternalResponsesAttemptToken(lease.auth.AccessToken) || (strings.TrimSpace(task.SourceReference.SourceAccountID) != "" && strings.TrimSpace(task.SourceReference.SourceAccountID) == strings.TrimSpace(lease.account.ID))
-			if !sameSourceAccount && len(imageFiles) > 0 {
-				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-			}
 			if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() && responsesEligible {
-				previousResponseID := providerScopedPreviousResponseID(client, task.SourceReference.ResponseProviderID, task.SourceReference.ResponseID)
-				if previousResponseID != "" {
-					if editor, ok := client.(interface {
-						EditImageByUploadWithPreviousResponse(context.Context, string, string, [][]byte, []byte, string, string, string) ([]handler.ImageResult, error)
-					}); ok {
-						results, err := editor.EditImageByUploadWithPreviousResponse(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality, previousResponseID)
-						if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
-							return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
-						}
-						return results, err
-					}
+				if len(imageFileURLs) == 0 {
+					return nil, newRequestError("source_reference_url_required", "external_responses 选区编辑需要可公开访问的源图 URL")
 				}
-				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
+				if editor, ok := client.(interface {
+					EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
+				}); ok {
+					return editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
+				}
 			}
 			if len(imageFiles) > 0 {
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
@@ -269,6 +267,13 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 							prompt = instructions + "\n\n" + prompt
 						}
 					}
+					if len(imageFileURLs) > 0 {
+						if editor, ok := client.(interface {
+							EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
+						}); ok {
+							return editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, nil, task.Size, task.Quality)
+						}
+					}
 					return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, nil, task.Size, task.Quality)
 				},
 				fakeReq,
@@ -301,10 +306,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if editor, ok := client.(interface {
 						EditImageByUploadWithImageURLs(context.Context, string, string, []string, []byte, string, string) ([]handler.ImageResult, error)
 					}); ok {
-						results, err := editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
-						if err == nil || !isResponsesURLReferenceFallbackError(err) {
-							return results, err
-						}
+						return editor.EditImageByUploadWithImageURLs(taskCtx, prompt, upstreamModel, imageFileURLs, mask, task.Size, task.Quality)
 					}
 				}
 			}
@@ -423,10 +425,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					if generator, ok := client.(interface {
 						GenerateImageWithReferenceImageURLs(context.Context, string, string, int, string, string, string, []string) ([]handler.ImageResult, error)
 					}); ok {
-						results, err := generator.GenerateImageWithReferenceImageURLs(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageURLs)
-						if err == nil || !isResponsesURLReferenceFallbackError(err) {
-							return results, err
-						}
+						return generator.GenerateImageWithReferenceImageURLs(taskCtx, prompt, upstreamModel, 1, task.Size, task.Quality, task.Background, referenceImageURLs)
 					}
 				}
 			}
@@ -702,8 +701,9 @@ func isResponsesURLReferenceFallbackError(err error) bool {
 }
 
 func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix string) ([]string, error) {
-	baseURL = strings.TrimRight(strings.TrimSpace(baseURL), "/")
-	if baseURL == "" || len(images) == 0 {
+	_ = baseURL
+	baseURL = externalResponsesPublicImageBaseURL
+	if len(images) == 0 {
 		return nil, nil
 	}
 	urls := make([]string, 0, len(images))

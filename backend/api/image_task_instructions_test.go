@@ -5,7 +5,10 @@ import (
 	"image"
 	"image/color"
 	"image/png"
+	"strings"
 	"testing"
+
+	"chatgpt2api/internal/config"
 )
 
 func TestPreferredRouteForFreeGenerateUsesResponsesAfterDeferredRetry(t *testing.T) {
@@ -89,6 +92,28 @@ func testPNGImageBytes(t *testing.T, width, height int, fill color.NRGBA) []byte
 		t.Fatalf("encode test png: %v", err)
 	}
 	return buffer.Bytes()
+}
+
+func TestBuildTaskImageURLsUsesFixedExternalResponsesHost(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	server := &Server{cfg: cfg}
+	urls, err := server.buildTaskImageURLs([][]byte{testPNGImageBytes(t, 1, 1, color.NRGBA{A: 255})}, "", "http://workspace.local", "source")
+	if err != nil {
+		t.Fatalf("buildTaskImageURLs() returned error: %v", err)
+	}
+	if len(urls) != 1 || !strings.HasPrefix(urls[0], externalResponsesPublicImageBaseURL+"/v1/files/image/.thumbs/source-") {
+		t.Fatalf("urls = %#v, want fixed external responses host", urls)
+	}
+}
+
+func TestResponsesURLReferenceFallbackDoesNotHideDownloadTimeout(t *testing.T) {
+	err := newRequestError("bad_gateway", `external responses returned 400: 上游返回错误 (status 400): { "error": { "message": "Unable to download content from the provided URL before the timeout.", "type": "invalid_request_error", "param": "url", "code": "invalid_value" } }`)
+	if isResponsesURLReferenceFallbackError(err) {
+		t.Fatalf("isResponsesURLReferenceFallbackError() = true, want false")
+	}
 }
 
 func TestBuildImageTaskInstructionsUsesCommonHintInNormalMode(t *testing.T) {

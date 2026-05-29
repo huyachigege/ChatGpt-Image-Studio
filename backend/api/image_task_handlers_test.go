@@ -1571,7 +1571,7 @@ func waitForTaskStatus(t *testing.T, server *Server, taskID string, want imageTa
 	if err != nil {
 		t.Fatalf("getTask(%s) returned error: %v", taskID, err)
 	}
-	t.Fatalf("task %s status = %q, want %q", taskID, task.Status, want)
+	t.Fatalf("task %s status = %q, want %q; error = %q", taskID, task.Status, want, task.Error)
 }
 
 func TestImageTaskStreamWritesInitPayload(t *testing.T) {
