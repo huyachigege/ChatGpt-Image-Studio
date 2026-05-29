@@ -2,15 +2,15 @@ package api
 
 import "testing"
 
-func TestPreferredRouteForFreeGenerateUsesLegacyAfterDeferredRetry(t *testing.T) {
+func TestPreferredRouteForFreeGenerateUsesResponsesAfterDeferredRetry(t *testing.T) {
 	manager := &imageTaskManager{server: &Server{}}
 	task := &imageTask{
-		Mode: "generate",
+		Mode:  "generate",
 		Units: []imageTaskUnit{{DeferredCount: 1}},
 	}
 
-	if got := manager.preferredRouteForTask(task, 0); got != "legacy" {
-		t.Fatalf("preferredRouteForTask() = %q, want legacy", got)
+	if got := manager.preferredRouteForTask(task, 0); got != "responses" {
+		t.Fatalf("preferredRouteForTask() = %q, want responses", got)
 	}
 }
 

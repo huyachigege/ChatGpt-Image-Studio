@@ -352,7 +352,7 @@ func TestValidateExternalResponsesRequiresEnabledProviderFields(t *testing.T) {
 	}
 }
 
-func TestValidatePreservesLegacyImageModels(t *testing.T) {
+func TestValidateNormalizesLegacyImageRoutesToResponses(t *testing.T) {
 	cfg := &Config{
 		ChatGPT: ChatGPTConfig{
 			ImageMode:      "studio",
@@ -366,14 +366,17 @@ func TestValidatePreservesLegacyImageModels(t *testing.T) {
 	if err := cfg.validate(); err != nil {
 		t.Fatalf("validate() returned error: %v", err)
 	}
-	if cfg.ChatGPT.FreeImageRoute != "legacy" {
-		t.Fatalf("FreeImageRoute = %q, want legacy", cfg.ChatGPT.FreeImageRoute)
+	if cfg.ChatGPT.FreeImageRoute != "responses" {
+		t.Fatalf("FreeImageRoute = %q, want responses", cfg.ChatGPT.FreeImageRoute)
 	}
-	if cfg.ChatGPT.FreeImageModel != "gpt-image-2" {
-		t.Fatalf("FreeImageModel = %q, want gpt-image-2", cfg.ChatGPT.FreeImageModel)
+	if cfg.ChatGPT.PaidImageRoute != "responses" {
+		t.Fatalf("PaidImageRoute = %q, want responses", cfg.ChatGPT.PaidImageRoute)
 	}
-	if cfg.ChatGPT.PaidImageModel != "gpt-image-2" {
-		t.Fatalf("PaidImageModel = %q, want gpt-image-2", cfg.ChatGPT.PaidImageModel)
+	if cfg.ChatGPT.FreeImageModel != "auto" {
+		t.Fatalf("FreeImageModel = %q, want auto", cfg.ChatGPT.FreeImageModel)
+	}
+	if cfg.ChatGPT.PaidImageModel != "gpt-5.4-mini" {
+		t.Fatalf("PaidImageModel = %q, want gpt-5.4-mini", cfg.ChatGPT.PaidImageModel)
 	}
 }
 

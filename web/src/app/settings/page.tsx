@@ -148,7 +148,7 @@ function defaultConfigPayload(): ConfigPayload {
       pollMaxWait: 600,
       requestTimeout: 120,
       imageMode: "studio",
-      freeImageRoute: "legacy",
+      freeImageRoute: "responses",
       freeImageModel: "auto",
       paidImageRoute: "responses",
       paidImageModel: "gpt-5.4-mini",
@@ -1535,8 +1535,7 @@ function ImageSystemHintSection() {
         生图系统提示词
       </h3>
       <p className="mb-3 text-xs text-stone-500 dark:text-[var(--studio-text-muted)]">
-        系统提示词会按上游能力注入到 Responses instructions 或 Legacy system
-        消息；留空则不注入。
+        系统提示词会注入到 Responses instructions；留空则不注入。
       </p>
       {isLoading ? (
         <div className="text-sm text-stone-400">加载中...</div>

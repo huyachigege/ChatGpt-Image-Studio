@@ -2025,7 +2025,7 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 			route = forcedRoute
 		}
 		effectiveRoute := route
-		if effectiveRoute == "responses" {
+		if effectiveRoute == "responses" || effectiveRoute == "legacy" || effectiveRoute == "conversation" {
 			effectiveRoute = "external_responses"
 		}
 		upstreamModel = s.resolveImageUpstreamModel(requestedModel, account.Type)
@@ -2067,8 +2067,6 @@ func (s *Server) runImageRequestWithAdmissionRoute(ctx context.Context, authFile
 			upstreamModel = provider.Model
 			route = "external_responses"
 			direction = "external"
-		case "legacy":
-			client = s.newOfficialWorkflowClient(authFile.AccessToken, authFile.Data)
 		}
 	}
 	if quotaErr := s.ensureUserImageQuotaAvailable(ctx, imageQuotaKind(account.Type, direction, route), 1); quotaErr != nil {
@@ -2996,9 +2994,7 @@ func isInvalidRefreshError(message string) bool {
 }
 
 func isImageAccountUsable(account accounts.PublicAccount, allowDisabled bool) bool {
-	return (allowDisabled || account.Status != "禁用") &&
-		account.Status != "异常" &&
-		accounts.AccountSupportsImageRoute(account, "legacy")
+	return (allowDisabled || account.Status != "禁用") && account.Status != "异常"
 }
 
 func (s *Server) allowDisabledStudioImageAccounts() bool {
@@ -3041,26 +3037,18 @@ func (s *Server) externalResponsesConfigured() bool {
 }
 
 func (s *Server) configuredImageRoute(accountType string) string {
-	switch strings.TrimSpace(accountType) {
-	case "Plus", "Pro", "Team":
-		return normalizeConfiguredImageRoute(s.cfg.ChatGPT.PaidImageRoute, "responses")
-	default:
-		return "legacy"
-	}
+	_ = accountType
+	return "responses"
 }
 
 func (s *Server) preferredImageRouteForRequest(responsesEligible bool) string {
-	if responsesEligible {
-		return "responses"
-	}
-	return "legacy"
+	_ = responsesEligible
+	return "responses"
 }
 
 func (s *Server) configuredImageRouteForAccount(account accounts.PublicAccount) string {
-	if s.allowDisabledStudioImageAccounts() && strings.TrimSpace(account.Status) == "禁用" {
-		return "legacy"
-	}
-	return s.configuredImageRoute(account.Type)
+	_ = account
+	return "responses"
 }
 
 func (s *Server) imageRequestConfig() handler.ImageRequestConfig {
@@ -3098,16 +3086,9 @@ func (s *Server) resolveImageUpstreamModel(requestedModel, accountType string) s
 }
 
 func normalizeConfiguredImageRoute(value, fallback string) string {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "":
-		return strings.ToLower(strings.TrimSpace(fallback))
-	case "legacy", "conversation":
-		return "legacy"
-	case "responses":
-		return "responses"
-	default:
-		return strings.ToLower(strings.TrimSpace(fallback))
-	}
+	_ = value
+	_ = fallback
+	return "responses"
 }
 
 func resolveLoggedImageRoute(configuredRoute string, client any) string {

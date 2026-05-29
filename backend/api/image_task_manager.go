@@ -713,28 +713,6 @@ func (m *imageTaskManager) acquireLeaseForTask(task *imageTask, unitIndex int) (
 
 	excluded := imageTaskUnitAttemptedTokens(task, unitIndex)
 	preferredRoute := m.preferredRouteForTask(task, unitIndex)
-	if task.Requirement.SourceAccountID != "" {
-		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, "legacy")
-		if err == nil {
-			if _, attempted := excluded[auth.AccessToken]; !attempted {
-				return &imageTaskLease{
-					auth:    auth,
-					account: account,
-					release: release,
-				}, imageTaskBlocker{}, nil
-			}
-			release()
-		} else {
-			if errors.Is(err, accounts.ErrSourceAccountNotFound) {
-				return nil, imageTaskBlocker{}, newRequestError("source_account_not_found", "原始图片所属账号不存在，请使用普通编辑重试")
-			}
-			if errors.Is(err, accounts.ErrImageAuthInUse) {
-				return nil, imageTaskBlocker{Code: string(imageTaskWaitingReasonSourceAccountBusy), Detail: "等待原始图片所属账号空闲"}, nil
-			}
-			return nil, imageTaskBlocker{}, err
-		}
-	}
-
 	if preferredRoute == "responses" || isExternalResponsesRoute(preferredRoute) {
 		return m.externalResponsesLeaseForTaskLocked(task, unitIndex)
 	}
@@ -898,19 +876,7 @@ func (m *imageTaskManager) allowAccountFn(task *imageTask) func(accounts.PublicA
 
 func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ...int) string {
 	if task == nil || m == nil || m.server == nil {
-		return "legacy"
-	}
-	if task.Requirement.SourceAccountID != "" || strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "free") {
-		return "legacy"
-	}
-	if !task.Requirement.NeedPaid && strings.TrimSpace(task.ResolutionAccess) == "" && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 {
-		return "legacy"
-	}
-	if !task.Requirement.NeedPaid && task.Mode == "generate" && task.SourceReference == nil && task.ContextReference == nil && len(task.SourceImages) == 0 && len(task.ReferenceImages) == 0 && len(unitIndexes) > 0 {
-		unitIndex := unitIndexes[0]
-		if unitIndex >= 0 && unitIndex < len(task.Units) && task.Units[unitIndex].DeferredCount > 0 {
-			return "legacy"
-		}
+		return "responses"
 	}
 	if task.SourceReference != nil || task.Mode == "edit" || len(task.SourceImages) > 0 || len(task.ReferenceImages) > 0 || task.ContextReference != nil {
 		return "responses"
@@ -918,10 +884,10 @@ func (m *imageTaskManager) preferredRouteForTask(task *imageTask, unitIndexes ..
 	if task.Mode == "generate" && task.Requirement.NeedPaid {
 		return "responses"
 	}
-	if task.Mode == "generate" && !strings.EqualFold(strings.TrimSpace(task.ResolutionAccess), "legacy") {
+	if task.Mode == "generate" {
 		return "responses"
 	}
-	return "legacy"
+	return "responses"
 }
 
 func (m *imageTaskManager) busyBlocker(task *imageTask) imageTaskBlocker {
@@ -944,6 +910,17 @@ func normalizeImageConversationContext(value string) string {
 		return normalized
 	}
 	return string([]rune(normalized)[:3000])
+}
+
+func imageTaskEffectiveQuality(mode, resolutionAccess, size, quality string) string {
+	quality = strings.TrimSpace(quality)
+	if quality == "" {
+		quality = "high"
+	}
+	if imageTaskQuotaKind(mode, resolutionAccess, size) == "free" {
+		return "low"
+	}
+	return quality
 }
 
 func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, error) {
@@ -1060,7 +1037,7 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 		RetryImageIndex:     req.RetryImageIndex,
 		Size:                strings.TrimSpace(req.Size),
 		ResolutionAccess:    resolutionAccess,
-		Quality:             strings.TrimSpace(req.Quality),
+		Quality:             imageTaskEffectiveQuality(mode, resolutionAccess, req.Size, req.Quality),
 		Background:          strings.TrimSpace(req.Background),
 		ResponseFormat:      "url",
 		PrivatePhotoMode:    req.PrivatePhotoMode,

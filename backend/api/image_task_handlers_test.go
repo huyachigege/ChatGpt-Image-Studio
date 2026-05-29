@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"chatgpt2api/handler"
+	"chatgpt2api/internal/config"
 	"chatgpt2api/internal/users"
 )
 
@@ -81,12 +82,12 @@ func TestCreateImageTaskRunsToSuccessForWorkspaceUser(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, payload.Task.ID, imageTaskStatusSucceeded)
-	if recorder.officialCalls != 1 {
-		t.Fatalf("officialCalls = %d, want 1", recorder.officialCalls)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 1 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/1", recorder.officialCalls, recorder.externalCalls)
 	}
 }
 
-func TestCreateLegacyImageTaskRunsMultipleImagesSeriallyForSameUser(t *testing.T) {
+func TestCreateLegacyConfiguredImageTaskUsesExternalResponses(t *testing.T) {
 	started := make(chan string, 4)
 	release := make(chan struct{})
 	released := false
@@ -130,15 +131,20 @@ func TestCreateLegacyImageTaskRunsMultipleImagesSeriallyForSameUser(t *testing.T
 		t.Fatalf("createTask() returned error: %v", err)
 	}
 
-	select {
-	case <-started:
-	case <-time.After(2 * time.Second):
-		t.Fatal("first image unit did not start")
+	received := make([]string, 0, 4)
+	deadline := time.After(2 * time.Second)
+	for len(received) < 4 {
+		select {
+		case token := <-started:
+			received = append(received, token)
+		case <-deadline:
+			t.Fatalf("started tokens = %v, want 4 external responses starts", received)
+		}
 	}
-	select {
-	case token := <-started:
-		t.Fatalf("unexpected concurrent image unit start with token %q", token)
-	case <-time.After(150 * time.Millisecond):
+	for _, token := range received {
+		if token != externalResponsesAttemptToken("default") {
+			t.Fatalf("started tokens = %v, want external responses provider", received)
+		}
 	}
 
 	close(release)
@@ -482,8 +488,8 @@ func TestCreateImageTaskRunsToSuccess(t *testing.T) {
 	if !strings.HasPrefix(task.Images[0].URL, "/v1/files/image/") {
 		t.Fatalf("task image url = %q, want relative cached file url", task.Images[0].URL)
 	}
-	if recorder.officialCalls != 1 {
-		t.Fatalf("officialCalls = %d, want 1", recorder.officialCalls)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 1 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/1", recorder.officialCalls, recorder.externalCalls)
 	}
 }
 
@@ -506,6 +512,12 @@ func TestCreateImageTaskSelectionEditBypassesPolicySnapshot(t *testing.T) {
 		"model":"gpt-image-2",
 		"count":1,
 		"sourceImages":[
+			{
+				"id":"source-1",
+				"role":"image",
+				"name":"source.png",
+				"dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"
+			},
 			{
 				"id":"mask-1",
 				"role":"mask",
@@ -549,14 +561,14 @@ func TestCreateImageTaskSelectionEditBypassesPolicySnapshot(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, payload.Task.ID, imageTaskStatusSucceeded)
-	if recorder.officialCalls != 1 {
-		t.Fatalf("officialCalls = %d, want 1 source-bound official call", recorder.officialCalls)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 1 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/1", recorder.officialCalls, recorder.externalCalls)
 	}
 	if len(recorder.callSequence) != 1 {
 		t.Fatalf("callSequence = %#v, want 1 entry", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], ":selection-edit") {
-		t.Fatalf("callSequence[0] = %q, want selection-edit operation", recorder.callSequence[0])
+	if !strings.HasPrefix(recorder.callSequence[0], "external_responses:") || !strings.Contains(recorder.callSequence[0], ":edit") {
+		t.Fatalf("callSequence[0] = %q, want external edit operation", recorder.callSequence[0])
 	}
 }
 
@@ -617,6 +629,12 @@ func TestCreateImageTaskSourceAccountRateLimitFallsBack(t *testing.T) {
 		Count:          1,
 		SourceImages: []imageTaskSourceImagePayload{
 			{
+				ID:      "source-1",
+				Role:    "image",
+				Name:    "source.png",
+				DataURL: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+			},
+			{
 				ID:      "mask-1",
 				Role:    "mask",
 				Name:    "mask.png",
@@ -635,14 +653,11 @@ func TestCreateImageTaskSourceAccountRateLimitFallsBack(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, "turn-source-fallback-1", imageTaskStatusSucceeded)
-	if len(recorder.callSequence) < 2 {
-		t.Fatalf("callSequence = %#v, want source then fallback attempt", recorder.callSequence)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("callSequence = %#v, want one external edit attempt", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-source-limited") {
-		t.Fatalf("callSequence[0] = %q, want source account first", recorder.callSequence[0])
-	}
-	if !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], "token-fallback-healthy") {
-		t.Fatalf("callSequence = %#v, want fallback healthy account", recorder.callSequence)
+	if !strings.HasPrefix(recorder.callSequence[0], "external_responses:") || !strings.Contains(recorder.callSequence[0], ":edit") {
+		t.Fatalf("callSequence = %#v, want external edit attempt", recorder.callSequence)
 	}
 }
 
@@ -652,7 +667,7 @@ func TestCreateImageTaskSelectionEditFallsBackToSourceMaskEdit(t *testing.T) {
 		accountType: "Plus",
 		freeRoute:   "legacy",
 		freeModel:   "auto",
-		paidRoute:   "legacy",
+		paidRoute:   "responses",
 		paidModel:   "gpt-5.4-mini",
 	}, compatTestServerOptions{
 		behavior: compatClientBehavior{
@@ -696,11 +711,11 @@ func TestCreateImageTaskSelectionEditFallsBackToSourceMaskEdit(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, "turn-selection-fallback-1", imageTaskStatusSucceeded)
-	if len(recorder.callSequence) != 2 {
-		t.Fatalf("callSequence = %#v, want selection edit then source-mask edit", recorder.callSequence)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("callSequence = %#v, want one external source-mask edit", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], ":selection-edit") || !strings.Contains(recorder.callSequence[1], ":edit") {
-		t.Fatalf("callSequence = %#v, want selection edit fallback to edit", recorder.callSequence)
+	if !strings.HasPrefix(recorder.callSequence[0], "external_responses:") || !strings.Contains(recorder.callSequence[0], ":edit") {
+		t.Fatalf("callSequence = %#v, want external source-mask edit", recorder.callSequence)
 	}
 }
 
@@ -878,7 +893,7 @@ func TestCreateImageEditTaskWithMultipleImagesUsesResponsesThumbnails(t *testing
 	}
 }
 
-func TestCreateImageGenerateTaskAutoFreeUsesFreeAccount(t *testing.T) {
+func TestCreateImageGenerateTaskAutoFreeUsesExternalResponsesLowQuality(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -922,12 +937,19 @@ func TestCreateImageGenerateTaskAutoFreeUsesFreeAccount(t *testing.T) {
 	}
 
 	waitForTaskStatus(t, server, "turn-generate-auto-free-1", imageTaskStatusSucceeded)
+	entries := server.reqLogs.list(1)
+	if len(entries) != 1 {
+		t.Fatalf("log entries = %d, want 1", len(entries))
+	}
+	if entries[0].Quality != "low" {
+		t.Fatalf("log quality = %q, want low", entries[0].Quality)
+	}
 	if len(recorder.callSequence) == 0 {
-		t.Fatal("callSequence = empty, want free auto execution")
+		t.Fatal("callSequence = empty, want external responses execution")
 	}
 	lastCall := recorder.callSequence[len(recorder.callSequence)-1]
-	if !strings.Contains(lastCall, "token-free-auto") {
-		t.Fatalf("callSequence = %#v, want free account selected for auto-free generate", recorder.callSequence)
+	if !strings.HasPrefix(lastCall, "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external responses for auto-free generate", recorder.callSequence)
 	}
 }
 
@@ -1661,7 +1683,7 @@ func TestSchedulePublishesQueuedBlockerUpdatesWhenConcurrencyIsFull(t *testing.T
 	}
 }
 
-func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
+func TestCreateImageTaskLegacyConfigUsesExternalResponses(t *testing.T) {
 	oldBackoffBase := imageTaskRetryBackoffBase
 	oldBackoffMax := imageTaskRetryBackoffMax
 	imageTaskRetryBackoffBase = 20 * time.Millisecond
@@ -1724,14 +1746,11 @@ func TestCreateImageTaskRetriesRateLimitedAccount(t *testing.T) {
 	if len(task.Images) != 1 || task.Images[0].URL == "" {
 		t.Fatalf("task images = %#v, want successful cached image", task.Images)
 	}
-	if len(recorder.callSequence) < 2 {
-		t.Fatalf("callSequence = %#v, want limited then fallback attempt", recorder.callSequence)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("callSequence = %#v, want one external responses attempt", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-limited") {
-		t.Fatalf("callSequence[0] = %q, want first limited account", recorder.callSequence[0])
-	}
-	if !strings.Contains(recorder.callSequence[len(recorder.callSequence)-1], "token-healthy") {
-		t.Fatalf("callSequence = %#v, want fallback healthy account", recorder.callSequence)
+	if !strings.HasPrefix(recorder.callSequence[0], "external_responses:") {
+		t.Fatalf("callSequence = %#v, want external responses attempt", recorder.callSequence)
 	}
 }
 
@@ -1814,12 +1833,10 @@ func TestCancelRunningImageTaskCancelsQueuedUnits(t *testing.T) {
 
 	var active int32
 	var maxActive int32
-	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
-		_ = proxyURL
-		_ = authData
-		_ = requestConfig
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
 		return &parallelGenerateWorkflowClient{
-			token:     accessToken,
+			token:     externalResponsesAttemptToken("default"),
 			active:    &active,
 			maxActive: &maxActive,
 			delay:     180 * time.Millisecond,
@@ -1872,12 +1889,10 @@ func TestCancelRunningImageTaskInterruptsUpstreamRequest(t *testing.T) {
 		paidModel:   "gpt-5.4-mini",
 	}, compatTestServerOptions{})
 
-	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
-		_ = proxyURL
-		_ = authData
-		_ = requestConfig
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
 		return &parallelGenerateWorkflowClient{
-			token:     accessToken,
+			token:     externalResponsesAttemptToken("default"),
 			active:    new(int32),
 			maxActive: new(int32),
 			delay:     5 * time.Second,
@@ -1965,12 +1980,10 @@ func TestQueuedImageTaskExpiresBeforeFirstRun(t *testing.T) {
 
 	server.cfg.Server.MaxImageConcurrency = 1
 	server.cfg.Server.ImageTaskQueueTTLSeconds = 1
-	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
-		_ = proxyURL
-		_ = authData
-		_ = requestConfig
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
 		return &parallelGenerateWorkflowClient{
-			token:     accessToken,
+			token:     externalResponsesAttemptToken("default"),
 			active:    new(int32),
 			maxActive: new(int32),
 			delay:     1500 * time.Millisecond,

@@ -130,19 +130,6 @@ func (s *Server) acquireImageTaskAttemptLease(task *imageTask, excluded map[stri
 	store := s.getStore()
 	allowDisabled := s.allowDisabledStudioImageAccounts()
 	allowAccount := imageTaskAttemptAllowAccount(task)
-	if task.Requirement.SourceAccountID != "" {
-		auth, account, release, err := store.FindImageAuthByIDWithLeaseForUserRoute(task.Requirement.SourceAccountID, task.UserID, "legacy")
-		if err == nil {
-			if _, blocked := excluded[strings.TrimSpace(auth.AccessToken)]; !blocked {
-				return &imageTaskLease{auth: auth, account: account, release: release}, nil
-			}
-			if release != nil {
-				release()
-			}
-		} else if len(excluded) == 0 {
-			return nil, err
-		}
-	}
 	if task.Requirement.PolicySnapshot != nil && task.Requirement.PolicySnapshot.Enabled {
 		auth, account, decision, release, err := store.AcquireRandomImageAuthLeaseForUserConversationWithPolicyRouteFilteredWithDisabledOption(excluded, allowAccount, allowDisabled, task.Requirement.PolicySnapshot, task.UserID, task.ConversationID, route)
 		if err != nil {
@@ -209,7 +196,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
 		selectionEditModel := "gpt-image-2"
-		responsesEligible := false
+		responsesEligible := true
 		selectionEditRun := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			applySystemHint(client)
 			prompt := effectivePrompt
@@ -218,7 +205,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 					prompt = instructions + "\n\n" + prompt
 				}
 			}
-			sameSourceAccount := strings.TrimSpace(task.SourceReference.SourceAccountID) != "" && strings.TrimSpace(task.SourceReference.SourceAccountID) == strings.TrimSpace(lease.account.ID)
+			sameSourceAccount := isExternalResponsesAttemptToken(lease.auth.AccessToken) || (strings.TrimSpace(task.SourceReference.SourceAccountID) != "" && strings.TrimSpace(task.SourceReference.SourceAccountID) == strings.TrimSpace(lease.account.ID))
 			if !sameSourceAccount && len(imageFiles) > 0 {
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			}
@@ -237,22 +224,10 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				}
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			}
-			results, err := client.InpaintImageByMask(
-				taskCtx,
-				prompt,
-				upstreamModel,
-				task.SourceReference.OriginalFileID,
-				task.SourceReference.OriginalGenID,
-				task.SourceReference.ConversationID,
-				task.SourceReference.ParentMessageID,
-				mask,
-				task.Size,
-				task.Quality,
-			)
-			if err != nil && len(imageFiles) > 0 && isSelectionEditContextFallbackError(err) {
+			if len(imageFiles) > 0 {
 				return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 			}
-			return results, err
+			return nil, newRequestError("source_reference_upload_required", "legacy 图片链路已停用，请重新上传原图后再编辑")
 		}
 		items, _, err = s.runImageRequestWithAdmissionRoute(
 			taskCtx,
@@ -269,7 +244,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			selectionEditRun,
 			fakeReq,
 			false,
-			"legacy",
+			"external_responses",
 		)
 		attemptClass := classifyImageAttemptError(err)
 		if shouldTryImageFallback(err, attemptClass) && len(imageFiles) > 0 {
@@ -297,7 +272,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				},
 				fakeReq,
 				false,
-				"legacy",
+				"external_responses",
 			)
 		}
 	case task.Mode == "edit" || len(task.SourceImages) > 0:
@@ -334,7 +309,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return client.EditImageByUpload(taskCtx, prompt, upstreamModel, imageFiles, mask, task.Size, task.Quality)
 		}
-		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
+		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "external_responses")
 		items, _, err = s.runImageRequestWithAdmissionRoute(
 			taskCtx,
 			lease.auth,
@@ -389,7 +364,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				editRun,
 				fakeReq,
 				false,
-				"legacy",
+				"external_responses",
 			)
 		}
 	default:
@@ -482,7 +457,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return tokens
 		}
-		legacyRetryLimit := max(1, min(64, s.cfg.ImageAccountRetryTimes()))
 		tryRoute := func(attemptLease *imageTaskLease, route string) ([]map[string]any, imageAttemptErrorClass, error) {
 			if attemptLease == nil || attemptLease.auth == nil {
 				return nil, imageAttemptFatal, fmt.Errorf("task lease is required")
@@ -530,28 +504,6 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			}
 			return attemptItems, attemptClass, attemptErr
 		}
-		acquireNext := func(route string) (*imageTaskLease, error) {
-			return s.acquireImageTaskAttemptLease(task, excluded, route)
-		}
-		tryNextLegacy := func() ([]map[string]any, imageAttemptErrorClass, error) {
-			nextLease, acquireErr := acquireNext("legacy")
-			if acquireErr != nil {
-				return nil, imageAttemptRetryable, acquireErr
-			}
-			if nextLease.release != nil {
-				defer nextLease.release()
-			}
-			attemptItems, attemptClass, attemptErr := tryRoute(nextLease, "legacy")
-			if attemptErr != nil {
-				rememberAttempt(nextLease)
-			}
-			return attemptItems, attemptClass, attemptErr
-		}
-		tryLegacyRetries := func(attemptClass *imageAttemptErrorClass) {
-			for i := 0; i < legacyRetryLimit && err != nil && *attemptClass != imageAttemptFatal && len(excluded) < 64; i++ {
-				items, *attemptClass, err = tryNextLegacy()
-			}
-		}
 		tryExternal := func() ([]map[string]any, imageAttemptErrorClass, error) {
 			if !s.externalResponsesConfigured() {
 				return nil, imageAttemptRetryable, fmt.Errorf("external responses route is not configured")
@@ -578,27 +530,13 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 			return attemptItems, attemptClass, attemptErr
 		}
 		var attemptClass imageAttemptErrorClass
-		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "legacy")
-		if isExternalResponsesRoute(startRoute) {
+		startRoute := firstNonEmpty(strings.TrimSpace(lease.forceRoute), "external_responses")
+		if isExternalResponsesRoute(startRoute) || startRoute == "responses" {
 			items, attemptClass, err = tryExternal()
 		} else {
-			items, attemptClass, err = tryRoute(lease, startRoute)
+			items, attemptClass, err = tryRoute(lease, "external_responses")
 			if err != nil {
 				rememberAttempt(lease)
-			}
-		}
-		if err != nil && attemptClass != imageAttemptFatal {
-			if isExternalResponsesRoute(startRoute) {
-				if !task.Requirement.NeedPaid {
-					tryLegacyRetries(&attemptClass)
-				}
-			} else if startRoute == "responses" && s.externalResponsesConfigured() {
-				items, attemptClass, err = tryExternal()
-				if !task.Requirement.NeedPaid {
-					tryLegacyRetries(&attemptClass)
-				}
-			} else {
-				tryLegacyRetries(&attemptClass)
 			}
 		}
 		_ = attemptClass

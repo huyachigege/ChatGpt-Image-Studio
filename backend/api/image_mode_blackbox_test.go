@@ -320,7 +320,7 @@ func (c *parallelGenerateWorkflowClient) InpaintImageByMask(ctx context.Context,
 	return nil, fmt.Errorf("not implemented")
 }
 
-func TestLegacyImageGenerationsStaySerialAcrossAvailableAccounts(t *testing.T) {
+func TestLegacyConfiguredImageGenerationsUseExternalResponses(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -359,13 +359,11 @@ func TestLegacyImageGenerationsStaySerialAcrossAvailableAccounts(t *testing.T) {
 
 	var active int32
 	var maxActive int32
-	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
-		_ = proxyURL
-		_ = authData
-		_ = requestConfig
-		recorder.officialCalls++
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
+		recorder.externalCalls++
 		return &parallelGenerateWorkflowClient{
-			token:     accessToken,
+			token:     externalResponsesAttemptToken("default"),
 			active:    &active,
 			maxActive: &maxActive,
 			delay:     150 * time.Millisecond,
@@ -392,11 +390,11 @@ func TestLegacyImageGenerationsStaySerialAcrossAvailableAccounts(t *testing.T) {
 	if len(payload.Data) != 3 {
 		t.Fatalf("len(data) = %d, want 3", len(payload.Data))
 	}
-	if recorder.officialCalls != 3 {
-		t.Fatalf("official client calls = %d, want 3", recorder.officialCalls)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 3 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/3", recorder.officialCalls, recorder.externalCalls)
 	}
-	if got := atomic.LoadInt32(&maxActive); got != 1 {
-		t.Fatalf("max concurrent generate calls = %d, want 1 for legacy route", got)
+	if got := atomic.LoadInt32(&maxActive); got < 1 {
+		t.Fatalf("max concurrent generate calls = %d, want external responses execution", got)
 	}
 }
 
@@ -412,13 +410,11 @@ func TestImageGenerationsStaySerialWhenOnlyOneAccountIsAvailable(t *testing.T) {
 
 	var active int32
 	var maxActive int32
-	server.officialClientFactory = func(accessToken, proxyURL string, authData map[string]any, requestConfig handler.ImageRequestConfig) imageWorkflowClient {
-		_ = proxyURL
-		_ = authData
-		_ = requestConfig
-		recorder.officialCalls++
+	server.externalResponsesClientFactory = func(cfg config.ExternalResponsesConfig) imageWorkflowClient {
+		_ = cfg
+		recorder.externalCalls++
 		return &parallelGenerateWorkflowClient{
-			token:     accessToken,
+			token:     externalResponsesAttemptToken("default"),
 			active:    &active,
 			maxActive: &maxActive,
 			delay:     120 * time.Millisecond,
@@ -445,11 +441,11 @@ func TestImageGenerationsStaySerialWhenOnlyOneAccountIsAvailable(t *testing.T) {
 	if len(payload.Data) != 3 {
 		t.Fatalf("len(data) = %d, want 3", len(payload.Data))
 	}
-	if recorder.officialCalls != 3 {
-		t.Fatalf("official client calls = %d, want 3", recorder.officialCalls)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 3 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/3", recorder.officialCalls, recorder.externalCalls)
 	}
-	if got := atomic.LoadInt32(&maxActive); got != 1 {
-		t.Fatalf("max concurrent generate calls = %d, want 1 with a single available account", got)
+	if got := atomic.LoadInt32(&maxActive); got < 1 {
+		t.Fatalf("max concurrent generate calls = %d, want external responses execution", got)
 	}
 }
 
@@ -460,32 +456,32 @@ func TestImageModeCompatibilityBlackBox(t *testing.T) {
 
 	scenarios := []imageModeCompatScenario{
 		{
-			name:          "studio free uses official legacy route",
+			name:          "studio free uses external responses route",
 			imageMode:     "studio",
 			accountType:   "Free",
 			freeRoute:     "legacy",
 			freeModel:     "auto",
 			paidRoute:     "responses",
 			paidModel:     "gpt-5.4-mini",
-			wantRoute:     "legacy",
-			wantDirection: "official",
-			wantUpstream:  "auto",
-			wantToolModel: "auto",
-			wantFactory:   "official",
+			wantRoute:     "external_responses",
+			wantDirection: "external",
+			wantUpstream:  "external-model",
+			wantToolModel: "gpt-image-2",
+			wantFactory:   "external_responses",
 		},
 		{
-			name:          "studio paid uses official responses route",
+			name:          "studio paid uses external responses route",
 			imageMode:     "studio",
 			accountType:   "Plus",
 			freeRoute:     "legacy",
 			freeModel:     "auto",
 			paidRoute:     "responses",
 			paidModel:     "gpt-5.4-mini",
-			wantRoute:     "responses",
-			wantDirection: "official",
-			wantUpstream:  "gpt-5.4-mini",
-			wantToolModel: "gpt-5.4-mini",
-			wantFactory:   "responses",
+			wantRoute:     "external_responses",
+			wantDirection: "external",
+			wantUpstream:  "external-model",
+			wantToolModel: "gpt-image-2",
+			wantFactory:   "external_responses",
 		},
 		{
 			name:             "cpa mode always uses cpa fixed model",
@@ -504,7 +500,7 @@ func TestImageModeCompatibilityBlackBox(t *testing.T) {
 			wantCPASubroute:  "images_api",
 		},
 		{
-			name:             "legacy mix free is coerced to studio official route",
+			name:             "legacy mix free is coerced to studio external responses",
 			imageMode:        "mix",
 			wantImageMode:    "studio",
 			accountType:      "Free",
@@ -513,14 +509,14 @@ func TestImageModeCompatibilityBlackBox(t *testing.T) {
 			paidRoute:        "responses",
 			paidModel:        "gpt-5.4-mini",
 			cpaRouteStrategy: "images_api",
-			wantRoute:        "responses",
-			wantDirection:    "official",
-			wantUpstream:     "auto",
-			wantToolModel:    "auto",
-			wantFactory:      "responses",
+			wantRoute:        "external_responses",
+			wantDirection:    "external",
+			wantUpstream:     "external-model",
+			wantToolModel:    "gpt-image-2",
+			wantFactory:      "external_responses",
 		},
 		{
-			name:             "legacy mix paid is coerced to studio official responses",
+			name:             "legacy mix paid is coerced to studio external responses",
 			imageMode:        "mix",
 			wantImageMode:    "studio",
 			accountType:      "Pro",
@@ -529,11 +525,11 @@ func TestImageModeCompatibilityBlackBox(t *testing.T) {
 			paidRoute:        "responses",
 			paidModel:        "gpt-5.4",
 			cpaRouteStrategy: "images_api",
-			wantRoute:        "responses",
-			wantDirection:    "official",
-			wantUpstream:     "gpt-5.4",
-			wantToolModel:    "gpt-5.4",
-			wantFactory:      "responses",
+			wantRoute:        "external_responses",
+			wantDirection:    "external",
+			wantUpstream:     "external-model",
+			wantToolModel:    "gpt-image-2",
+			wantFactory:      "external_responses",
 		},
 	}
 
@@ -599,15 +595,19 @@ func TestImageModeCompatibilityBlackBox(t *testing.T) {
 
 			switch scenario.wantFactory {
 			case "official":
-				if recorder.officialCalls != 1 || recorder.responsesCalls != 0 || recorder.cpaCalls != 0 {
+				if recorder.officialCalls != 1 || recorder.responsesCalls != 0 || recorder.externalCalls != 0 || recorder.cpaCalls != 0 {
 					t.Fatalf("factory counts = %+v, want official only", recorder)
 				}
 			case "responses":
-				if recorder.officialCalls != 0 || recorder.responsesCalls != 1 || recorder.cpaCalls != 0 {
+				if recorder.officialCalls != 0 || recorder.responsesCalls != 1 || recorder.externalCalls != 0 || recorder.cpaCalls != 0 {
 					t.Fatalf("factory counts = %+v, want responses only", recorder)
 				}
+			case "external_responses":
+				if recorder.officialCalls != 0 || recorder.responsesCalls != 0 || recorder.externalCalls != 1 || recorder.cpaCalls != 0 {
+					t.Fatalf("factory counts = %+v, want external responses only", recorder)
+				}
 			case "cpa":
-				if recorder.officialCalls != 0 || recorder.responsesCalls != 0 || recorder.cpaCalls != 1 {
+				if recorder.officialCalls != 0 || recorder.responsesCalls != 0 || recorder.externalCalls != 0 || recorder.cpaCalls != 1 {
 					t.Fatalf("factory counts = %+v, want cpa only", recorder)
 				}
 			default:
@@ -640,7 +640,7 @@ func TestImageModeCompatibilityBlackBoxEditsAndSelection(t *testing.T) {
 		behavior        compatClientBehavior
 	}{
 		{
-			name: "studio paid edit uses responses route",
+			name: "studio paid edit uses external responses route",
 			scenario: imageModeCompatScenario{
 				imageMode:   "studio",
 				accountType: "Plus",
@@ -661,11 +661,11 @@ func TestImageModeCompatibilityBlackBoxEditsAndSelection(t *testing.T) {
 			},
 			wantStatus:    http.StatusOK,
 			wantOperation: "edit",
-			wantRoute:     "responses",
-			wantDirection: "official",
-			wantUpstream:  "gpt-5.4-mini",
-			wantToolModel: "gpt-5.4-mini",
-			wantFactory:   "responses",
+			wantRoute:     "external_responses",
+			wantDirection: "external",
+			wantUpstream:  "external-model",
+			wantToolModel: "gpt-image-2",
+			wantFactory:   "external_responses",
 		},
 		{
 			name: "studio paid selection edit keeps preferred account on official client",
@@ -784,7 +784,7 @@ func TestImageModeCompatibilityBlackBoxEditsAndSelection(t *testing.T) {
 	}
 }
 
-func TestLegacyImageGenerationRetrySwitchesAccount(t *testing.T) {
+func TestLegacyImageGenerationConfigUsesExternalResponses(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -792,29 +792,7 @@ func TestLegacyImageGenerationRetrySwitchesAccount(t *testing.T) {
 		freeModel:   "auto",
 		paidRoute:   "responses",
 		paidModel:   "gpt-5.4-mini",
-	}, compatTestServerOptions{
-		accounts: []compatSeedAccount{
-			{
-				fileName:    "priority-first.json",
-				accessToken: "token-first",
-				accountType: "Free",
-				priority:    100,
-				quota:       5,
-			},
-			{
-				fileName:    "fallback-second.json",
-				accessToken: "token-second",
-				accountType: "Free",
-				priority:    10,
-				quota:       5,
-			},
-		},
-		behavior: compatClientBehavior{
-			officialGenerateErrors: map[string]error{
-				"token-first": fmt.Errorf("HTTP 401 unauthorized"),
-			},
-		},
-	})
+	}, compatTestServerOptions{})
 
 	req := httptest.NewRequest(http.MethodPost, "/v1/images/generations", strings.NewReader(`{"prompt":"retry prompt","response_format":"b64_json"}`))
 	req.Header.Set("Authorization", "Bearer "+server.cfg.App.APIKey)
@@ -826,40 +804,15 @@ func TestLegacyImageGenerationRetrySwitchesAccount(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
-
-	if got, want := recorder.officialCalls, 2; got != want {
-		t.Fatalf("officialCalls = %d, want %d", got, want)
+	if recorder.officialCalls != 0 || recorder.externalCalls != 1 {
+		t.Fatalf("factory calls official/external = %d/%d, want 0/1", recorder.officialCalls, recorder.externalCalls)
 	}
-	if len(recorder.callSequence) != 2 {
-		t.Fatalf("callSequence = %#v, want 2 entries", recorder.callSequence)
+	entries := server.reqLogs.list(1)
+	if len(entries) != 1 {
+		t.Fatalf("log entries = %d, want 1", len(entries))
 	}
-	firstToken := strings.Split(recorder.callSequence[0], ":")[1]
-	secondToken := strings.Split(recorder.callSequence[1], ":")[1]
-	if firstToken == secondToken {
-		t.Fatalf("retry used same account twice: %#v", recorder.callSequence)
-	}
-	if firstToken != "token-first" {
-		t.Fatalf("first attempt token = %q, want token-first", firstToken)
-	}
-	if secondToken != "token-second" {
-		t.Fatalf("second attempt token = %q, want token-second", secondToken)
-	}
-
-	entries := server.reqLogs.list(2)
-	if len(entries) != 2 {
-		t.Fatalf("log entries = %d, want 2", len(entries))
-	}
-	if !entries[0].Success || entries[1].Success {
-		t.Fatalf("log success flags = [%v %v], want [true false]", entries[0].Success, entries[1].Success)
-	}
-	if entries[0].AccountFile == entries[1].AccountFile {
-		t.Fatalf("retry log used same account twice: success=%q failure=%q", entries[0].AccountFile, entries[1].AccountFile)
-	}
-	if entries[0].AccountFile != "fallback-second.json" {
-		t.Fatalf("success account = %q, want fallback-second.json", entries[0].AccountFile)
-	}
-	if entries[1].AccountFile != "priority-first.json" {
-		t.Fatalf("failure account = %q, want priority-first.json", entries[1].AccountFile)
+	if entries[0].Route != "external_responses" || entries[0].Direction != "external" {
+		t.Fatalf("log route/direction = %q/%q, want external_responses/external", entries[0].Route, entries[0].Direction)
 	}
 }
 
@@ -867,7 +820,7 @@ func TestImageModeCompatibilityBlackBoxRetry(t *testing.T) {
 	if os.Getenv(imageModeCompatEnv) == "" {
 		t.Skipf("set %s=1 to run optional image mode compatibility tests", imageModeCompatEnv)
 	}
-	TestLegacyImageGenerationRetrySwitchesAccount(t)
+	TestLegacyImageGenerationConfigUsesExternalResponses(t)
 }
 
 type compatSeedAccount struct {

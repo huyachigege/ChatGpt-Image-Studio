@@ -668,14 +668,14 @@ func (c *Config) validate() error {
 	}
 
 	if normalized, ok := normalizeImageRoute(c.ChatGPT.FreeImageRoute); !ok {
-		return fmt.Errorf("invalid chatgpt.free_image_route %q: only legacy or responses are supported", strings.TrimSpace(c.ChatGPT.FreeImageRoute))
+		return fmt.Errorf("invalid chatgpt.free_image_route %q: only responses is supported", strings.TrimSpace(c.ChatGPT.FreeImageRoute))
 	} else if normalized == "" {
 		return fmt.Errorf("invalid chatgpt.free_image_route %q", strings.TrimSpace(c.ChatGPT.FreeImageRoute))
 	} else {
 		c.ChatGPT.FreeImageRoute = normalized
 	}
 	if normalized, ok := normalizeImageRoute(c.ChatGPT.PaidImageRoute); !ok {
-		return fmt.Errorf("invalid chatgpt.paid_image_route %q: only legacy or responses are supported", strings.TrimSpace(c.ChatGPT.PaidImageRoute))
+		return fmt.Errorf("invalid chatgpt.paid_image_route %q: only responses is supported", strings.TrimSpace(c.ChatGPT.PaidImageRoute))
 	} else if normalized == "" {
 		return fmt.Errorf("invalid chatgpt.paid_image_route %q", strings.TrimSpace(c.ChatGPT.PaidImageRoute))
 	} else {
@@ -733,9 +733,7 @@ func normalizeProxyMode(mode string) string {
 
 func normalizeImageRoute(route string) (string, bool) {
 	switch strings.ToLower(strings.TrimSpace(route)) {
-	case "", "legacy", "conversation":
-		return "legacy", true
-	case "responses":
+	case "", "legacy", "conversation", "responses", "external_responses":
 		return "responses", true
 	default:
 		return "", false

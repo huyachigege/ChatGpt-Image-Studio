@@ -86,6 +86,9 @@ func (s *Server) normalizeCreateImageTaskRequest(ctx context.Context, req create
 			}
 		}
 	}
+	if imageTaskQuotaKind(mode, req.ResolutionAccess, req.Size) == "free" {
+		req.Quality = "low"
+	}
 	return req
 }
 

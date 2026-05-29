@@ -83,11 +83,11 @@ func TestConfiguredImageRoute(t *testing.T) {
 		},
 	}
 
-	if got := server.configuredImageRoute("Free"); got != "legacy" {
-		t.Fatalf("configuredImageRoute(Free) = %q, want %q", got, "legacy")
+	if got := server.configuredImageRoute("Free"); got != "responses" {
+		t.Fatalf("configuredImageRoute(Free) = %q, want %q", got, "responses")
 	}
-	if got := server.configuredImageRoute("Plus"); got != "legacy" {
-		t.Fatalf("configuredImageRoute(Plus) = %q, want %q", got, "legacy")
+	if got := server.configuredImageRoute("Plus"); got != "responses" {
+		t.Fatalf("configuredImageRoute(Plus) = %q, want %q", got, "responses")
 	}
 }
 
@@ -127,7 +127,7 @@ func TestApplyExternalResponsesLogAccountUsesExternalBaseURL(t *testing.T) {
 	}
 }
 
-func TestConfiguredImageRouteForDisabledStudioAccountUsesLegacy(t *testing.T) {
+func TestConfiguredImageRouteForDisabledStudioAccountUsesResponses(t *testing.T) {
 	server := &Server{
 		cfg: &config.Config{
 			ChatGPT: config.ChatGPTConfig{
@@ -140,8 +140,8 @@ func TestConfiguredImageRouteForDisabledStudioAccountUsesLegacy(t *testing.T) {
 	}
 
 	account := accounts.PublicAccount{Type: "Plus", Status: "禁用"}
-	if got := server.configuredImageRouteForAccount(account); got != "legacy" {
-		t.Fatalf("configuredImageRouteForAccount(disabled Plus) = %q, want %q", got, "legacy")
+	if got := server.configuredImageRouteForAccount(account); got != "responses" {
+		t.Fatalf("configuredImageRouteForAccount(disabled Plus) = %q, want %q", got, "responses")
 	}
 
 	account.Status = "正常"
@@ -713,7 +713,7 @@ func TestStudioPaidResolutionUsesPaidAccount(t *testing.T) {
 	}
 }
 
-func TestStudioRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
+func TestStudioFreeGenerationUsesExternalResponses(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -758,25 +758,19 @@ func TestStudioRateLimitedAccountRetriesWithNextAccount(t *testing.T) {
 		t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 	}
 
-	if len(recorder.callSequence) != 2 {
-		t.Fatalf("call sequence = %v, want two attempts", recorder.callSequence)
+	if len(recorder.callSequence) != 1 {
+		t.Fatalf("call sequence = %v, want one external responses attempt", recorder.callSequence)
 	}
-	if !strings.Contains(recorder.callSequence[0], "token-limited") || !strings.Contains(recorder.callSequence[1], "token-fallback") {
-		t.Fatalf("call sequence = %v, want limited then fallback", recorder.callSequence)
+	if !strings.Contains(recorder.callSequence[0], externalResponsesAttemptToken("default")) {
+		t.Fatalf("call sequence = %v, want external responses provider", recorder.callSequence)
 	}
 
 	limitedAccount, err := server.getStore().GetAccountByToken("token-limited")
 	if err != nil {
 		t.Fatalf("GetAccountByToken(limited) returned error: %v", err)
 	}
-	if limitedAccount.Status != "限流" {
-		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "限流")
-	}
-	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
-		t.Fatalf("limited account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
-	}
-	if accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
-		t.Fatalf("limited account routes = %v, want responses removed", limitedAccount.ImageRoutes)
+	if limitedAccount.Status != "正常" {
+		t.Fatalf("limited account status = %q, want %q", limitedAccount.Status, "正常")
 	}
 }
 
@@ -839,9 +833,6 @@ func TestStudioResponses403DoesNotRetryWithNextAccount(t *testing.T) {
 	}
 	if limitedAccount.Status != "正常" {
 		t.Fatalf("limited paid account status = %q, want %q", limitedAccount.Status, "正常")
-	}
-	if !accounts.AccountSupportsImageRoute(*limitedAccount, "legacy") {
-		t.Fatalf("limited paid account routes = %v, want legacy retained", limitedAccount.ImageRoutes)
 	}
 	if !accounts.AccountSupportsImageRoute(*limitedAccount, "responses") {
 		t.Fatalf("limited paid account routes = %v, want responses retained after 403", limitedAccount.ImageRoutes)

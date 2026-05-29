@@ -18,13 +18,8 @@ import { testIntegration, type ConfigPayload, type ImageMode, type IntegrationTe
 import { ConfigSection, Field, ToggleField, TooltipDetails, type SetConfigSection } from "./shared";
 
 const imageModeOptions: Array<{ label: string; value: ImageMode; hint: string }> = [
-  { label: "Studio", value: "studio", hint: "Free 走当前项目官方链路，Plus/Pro/Team 走官方 responses" },
+  { label: "Studio", value: "studio", hint: "所有 Studio 图片请求统一走 external_responses；Free 自动 low 质量" },
   { label: "CPA", value: "cpa", hint: "所有图片请求都直接走 CPA；本地号池不参与 CPA 实际选路，Free 号大概率无权限" },
-];
-
-const imageRouteOptions = [
-  { label: "legacy", value: "legacy" },
-  { label: "responses", value: "responses" },
 ];
 
 const responsesCompatibleImageModelOptions = [
@@ -34,26 +29,15 @@ const responsesCompatibleImageModelOptions = [
   { label: "gpt-5-5-thinking", value: "gpt-5-5-thinking" },
 ];
 
-const freeLegacyImageModelOptions = [
-  { label: "auto（默认）", value: "auto" },
-  { label: "gpt-image-2", value: "gpt-image-2" },
-  ...responsesCompatibleImageModelOptions,
-];
-
 const freeResponsesImageModelOptions = [
   { label: "auto（默认）", value: "auto" },
   ...responsesCompatibleImageModelOptions,
 ];
 
-const paidLegacyImageModelOptions = [
+const paidResponsesImageModelOptions = [
   { label: "gpt-5.4-mini（默认）", value: "gpt-5.4-mini" },
-  { label: "gpt-5.4", value: "gpt-5.4" },
-  { label: "gpt-5.5", value: "gpt-5.5" },
-  { label: "gpt-5-5-thinking", value: "gpt-5-5-thinking" },
-  { label: "gpt-image-2", value: "gpt-image-2" },
+  ...responsesCompatibleImageModelOptions.filter((item) => item.value !== "gpt-5.4-mini"),
 ];
-
-const paidResponsesImageModelOptions = paidLegacyImageModelOptions.filter((item) => item.value !== "gpt-image-2");
 
 const cpaRouteStrategyOptions: Array<{
   label: string;
@@ -65,12 +49,12 @@ const cpaRouteStrategyOptions: Array<{
   { label: "auto", value: "auto", hint: "先走 /v1/images/*，命中特定已知错误时再回退到 codex responses。" },
 ];
 
-function getFreeImageModelOptions(route: string) {
-  return route === "responses" ? freeResponsesImageModelOptions : freeLegacyImageModelOptions;
+function getFreeImageModelOptions(_route: string) {
+  return freeResponsesImageModelOptions;
 }
 
-function getPaidImageModelOptions(route: string) {
-  return route === "responses" ? paidResponsesImageModelOptions : paidLegacyImageModelOptions;
+function getPaidImageModelOptions(_route: string) {
+  return paidResponsesImageModelOptions;
 }
 
 function normalizeImageRouteModel(
@@ -182,7 +166,7 @@ export function ImageModeSection({
                   title: "Studio",
                   body: (
                     <>
-                      Free 账号走当前项目官方链路，Plus / Pro / Team 账号走官方 <code>responses</code> 链路。
+                      所有 Studio 图片请求统一走 <code>external_responses</code>；Free 请求会自动使用 <code>low</code> 质量。
                     </>
                   ),
                 },
@@ -281,62 +265,34 @@ export function ImageModeSection({
         )}
         {isStudioMode ? (
           <Field
-            label="Free 账号路由"
-            hint="Studio 模式下 Free 账号走 legacy（网页 API 接口）还是 responses。"
+            label="Studio 图片路由"
+            hint="legacy 已停用；Studio 模式统一走 external_responses，Free 请求自动使用 low 质量。"
             tooltip={
               <TooltipDetails
                 items={[
                   {
-                    title: "legacy",
-                    body: <>走当前项目网页 API 接口链路，本质是网页侧会话接口，兼容性更高，Free 账号通常建议保留这个值。</>,
+                    title: "统一链路",
+                    body: <>所有 Studio 图片请求都会走外部 <code>/v1/responses</code> provider，不再调用账号内置 legacy / responses。</>,
                   },
                   {
-                    title: "responses",
-                    body: <>走官方新的 `responses` 链路，但 Free 账号经常没有对应工具权限，可能直接失败。</>,
-                  },
-                  {
-                    title: "建议",
-                    body: <>除非你确认 Free 账号在上游具备图片工具权限，否则保持 `legacy` 更稳。</>,
+                    title: "Free 质量",
+                    body: <>Free 请求会在后端强制使用 <code>low</code> 质量，避免高质量请求占用付费额度或失败。</>,
                   },
                 ]}
               />
             }
           >
-            <Select
-              value={config.chatgpt.freeImageRoute}
-              onValueChange={(value) =>
-                setSection("chatgpt", {
-                  ...config.chatgpt,
-                  freeImageRoute: value,
-                  freeImageModel: normalizeImageRouteModel(
-                    config.chatgpt.freeImageModel,
-                    getFreeImageModelOptions(value),
-                    "auto",
-                  ),
-                })
-              }
-            >
-              <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {imageRouteOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Input
+              value="external_responses"
+              readOnly
+              className="h-11 rounded-2xl border-stone-200 bg-stone-50 text-stone-500 shadow-none"
+            />
           </Field>
         ) : null}
         {isStudioMode ? (
           <Field
             label="Free 模型"
-            hint={
-              config.chatgpt.freeImageRoute === "responses"
-                ? "Free 走 responses 时只保留 auto 与 gpt-5.* 兼容模型；gpt-image-2 已移除，避免误选。"
-                : "Studio 模式下 Free 账号真正发给官方的模型。legacy 路由仍可选 gpt-image-2。"
-            }
+            hint="Free 走 external_responses 时只保留 auto 与 gpt-5.* 兼容模型；后端会强制 low 质量。"
             tooltip={
               <TooltipDetails
                 items={[
@@ -344,8 +300,7 @@ export function ImageModeSection({
                     title: "路由绑定",
                     body: (
                       <>
-                        <code>legacy</code> 可选 <code>auto</code>、<code>gpt-image-2</code> 和 <code>gpt-5.*</code>；
-                        <code>responses</code> 只保留 <code>auto</code> 与 <code>gpt-5.*</code> 兼容模型。
+                        Free 图片统一走 <code>external_responses</code>；模型只保留 <code>auto</code> 与 <code>gpt-5.*</code> 兼容项。
                       </>
                     ),
                   },
@@ -445,62 +400,8 @@ export function ImageModeSection({
         ) : null}
         {isStudioMode ? (
           <Field
-            label="Paid 账号路由"
-            hint="Studio 模式下 Plus / Pro / Team 账号走 legacy（网页 API 接口）还是 responses。"
-            tooltip={
-              <TooltipDetails
-                items={[
-                  {
-                    title: "responses",
-                    body: <>走官方新的付费账号图像链路，功能更完整，当前默认就是这个值。</>,
-                  },
-                  {
-                    title: "legacy",
-                    body: <>走当前项目网页 API 接口链路，也就是网页侧会话接口；如果 `responses` 临时异常，可用它做兼容兜底。</>,
-                  },
-                  {
-                    title: "建议",
-                    body: <>Paid 账号一般优先保留 `responses`，只有排障时再切到 `legacy`。</>,
-                  },
-                ]}
-              />
-            }
-          >
-            <Select
-              value={config.chatgpt.paidImageRoute}
-              onValueChange={(value) =>
-                setSection("chatgpt", {
-                  ...config.chatgpt,
-                  paidImageRoute: value,
-                  paidImageModel: normalizeImageRouteModel(
-                    config.chatgpt.paidImageModel,
-                    getPaidImageModelOptions(value),
-                    "gpt-5.4-mini",
-                  ),
-                })
-              }
-            >
-              <SelectTrigger className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {imageRouteOptions.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
-        ) : null}
-        {isStudioMode ? (
-          <Field
             label="Paid 模型"
-            hint={
-              config.chatgpt.paidImageRoute === "responses"
-                ? "Paid 走 responses 时只保留 gpt-5.* 兼容模型；gpt-image-2 已移除，避免触发不兼容请求。"
-                : "Studio 模式下 Paid 账号真正发给官方的模型。legacy 路由可继续使用 gpt-image-2 或 gpt-5.*。"
-            }
+            hint="Paid 图片统一走 external_responses，只保留 gpt-5.* 兼容模型；gpt-image-2 已移除。"
             tooltip={
               <TooltipDetails
                 items={[

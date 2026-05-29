@@ -25,19 +25,15 @@ poll_max_wait = 600
 request_timeout = 120
 image_mode = "studio"
 
-# Free 账号图片请求走哪条链路：
-# legacy    -> 当前项目原有的 /backend-api/conversation 流程
-# responses -> 官方 /backend-api/codex/responses 流程
-# 默认建议保留 legacy，因为 Free 账号通常没有 image_generation 工具权限。
-free_image_route = "legacy"
+# 图片请求统一走 external_responses；旧的 legacy / conversation 配置会自动兼容为 responses。
+# Free 账号链路实际使用 external_responses，并强制 low 质量。
+free_image_route = "responses"
 
-# Free 账号真正发给上游的模型名。
-# 默认 auto，表示保留旧行为，让上游自动选择兼容模型。
+# Free 账号 external_responses 上游模型名。
+# 默认 auto，表示保留兼容模型选择。
 free_image_model = "auto"
 
-# Plus / Pro / Team 账号图片请求走哪条链路。
-# 默认 responses，表示优先走官方 codex / responses。
-# 注意：这条 paid 默认链路当前尚未经过真实付费账号端到端实测。
+# Plus / Pro / Team 账号图片请求统一走 external_responses。
 paid_image_route = "responses"
 
 # Plus / Pro / Team 账号真正发给上游的模型名。

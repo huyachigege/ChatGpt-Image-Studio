@@ -222,7 +222,7 @@ func TestImageTaskRetriesExternalResponsesForGenericErrors(t *testing.T) {
 	}
 }
 
-func TestImageTaskLegacyGenericErrorSwitchesAccount(t *testing.T) {
+func TestImageTaskLegacyGenericErrorUsesExternalResponses(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -255,12 +255,12 @@ func TestImageTaskLegacyGenericErrorSwitchesAccount(t *testing.T) {
 	if finalTask.Status != imageTaskStatusSucceeded {
 		t.Fatalf("task status = %q, want succeeded; error = %q", finalTask.Status, finalTask.Error)
 	}
-	if got, want := recorder.callSequence, []string{"official:token-first:generate", "official:token-second:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
+	if got, want := recorder.callSequence, []string{"external_responses:external_responses:default:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("callSequence = %#v, want %#v", got, want)
 	}
 }
 
-func TestImageTaskLegacy403DoesNotRetry(t *testing.T) {
+func TestImageTaskLegacy403ConfigUsesExternalResponses(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",
 		accountType: "Free",
@@ -290,10 +290,10 @@ func TestImageTaskLegacy403DoesNotRetry(t *testing.T) {
 		ResolutionAccess: "legacy",
 	})
 
-	if finalTask.Status != imageTaskStatusFailed {
-		t.Fatalf("task status = %q, want failed", finalTask.Status)
+	if finalTask.Status != imageTaskStatusSucceeded {
+		t.Fatalf("task status = %q, want succeeded; error = %q", finalTask.Status, finalTask.Error)
 	}
-	if got, want := recorder.callSequence, []string{"official:token-first:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
+	if got, want := recorder.callSequence, []string{"external_responses:external_responses:default:generate"}; strings.Join(got, "|") != strings.Join(want, "|") {
 		t.Fatalf("callSequence = %#v, want %#v", got, want)
 	}
 }
