@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
+	"image/png"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -735,7 +736,42 @@ func (s *Server) resolveTaskEditInputs(task *imageTask) ([]byte, [][]byte, error
 		}
 		imageFiles = append(imageFiles, data)
 	}
+	var err error
+	mask, err = normalizeTaskEditMaskToFirstImage(mask, imageFiles)
+	if err != nil {
+		return nil, nil, err
+	}
 	return mask, imageFiles, nil
+}
+
+func normalizeTaskEditMaskToFirstImage(mask []byte, imageFiles [][]byte) ([]byte, error) {
+	if len(mask) == 0 || len(imageFiles) == 0 || len(imageFiles[0]) == 0 {
+		return mask, nil
+	}
+	maskConfig, _, err := image.DecodeConfig(bytes.NewReader(mask))
+	if err != nil {
+		return nil, fmt.Errorf("mask image is not a valid image: %w", err)
+	}
+	imageConfig, _, err := image.DecodeConfig(bytes.NewReader(imageFiles[0]))
+	if err != nil {
+		return nil, fmt.Errorf("source image is not a valid image: %w", err)
+	}
+	if maskConfig.Width == imageConfig.Width && maskConfig.Height == imageConfig.Height {
+		return mask, nil
+	}
+	if imageConfig.Width <= 0 || imageConfig.Height <= 0 {
+		return mask, nil
+	}
+	decodedMask, _, err := image.Decode(bytes.NewReader(mask))
+	if err != nil {
+		return nil, fmt.Errorf("decode mask image: %w", err)
+	}
+	resized := resizeImageNearestTo(decodedMask, imageConfig.Width, imageConfig.Height)
+	var buffer bytes.Buffer
+	if err := png.Encode(&buffer, resized); err != nil {
+		return nil, fmt.Errorf("encode resized mask image: %w", err)
+	}
+	return buffer.Bytes(), nil
 }
 
 func (s *Server) resolveTaskReferenceImageInputs(task *imageTask) ([][]byte, error) {
