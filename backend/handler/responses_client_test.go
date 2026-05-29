@@ -322,7 +322,7 @@ func TestPrepareResponsesReferenceImagesRejectsTenImages(t *testing.T) {
 }
 
 func TestPrepareResponsesReferenceImagesUsesOriginalShortSideForFourImages(t *testing.T) {
-	imageBytes := testLargePNGBytes(t, 1200, 800)
+	imageBytes := testLargePNGBytes(t, 1600, 1200)
 	images := [][]byte{imageBytes, imageBytes, imageBytes, imageBytes}
 
 	prepared, err := PrepareResponsesReferenceImages(images)

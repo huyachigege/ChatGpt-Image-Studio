@@ -31,8 +31,9 @@ const (
 	maxResponsesReferenceImages           = 9
 	maxResponsesReferenceCompactThreshold = 5
 	maxResponsesReferenceBytes            = 2 << 20
-	maxResponsesReferenceShortSide        = 768
+	maxResponsesReferenceShortSide        = 1080
 	maxResponsesReferenceCompactShortSide = 540
+	maxResponsesReferenceJPEGQuality      = 90
 	maxResponsesSSELineBytes              = 128 << 20
 )
 
@@ -733,7 +734,7 @@ func encodeResponsesReferenceThumbnail(data []byte, thumbSide int) ([]byte, erro
 
 func encodeResponsesReferenceJPEG(img image.Image) ([]byte, error) {
 	var buffer bytes.Buffer
-	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: 82}); err != nil {
+	if err := jpeg.Encode(&buffer, img, &jpeg.Options{Quality: maxResponsesReferenceJPEGQuality}); err != nil {
 		return nil, fmt.Errorf("encode reference thumbnail: %w", err)
 	}
 	return buffer.Bytes(), nil

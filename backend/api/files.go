@@ -23,9 +23,9 @@ import (
 
 const (
 	defaultImageDir               = "data/tmp/image"
-	imageThumbnailShortSide       = 768
+	imageThumbnailShortSide       = 1080
 	imageThumbnailSkipCompressMax = 768 << 10
-	imageThumbnailJPEGQuality     = 88
+	imageThumbnailJPEGQuality     = 90
 )
 
 // downloadAndCache downloads an upstream image using the image client's transport
