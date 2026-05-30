@@ -125,81 +125,88 @@ func appendImagesToLastUserInput(items []imageConversationInputItem, imageParts 
 }
 
 func buildResponsesInputItemsFromPrompt(prompt string, imageParts []map[string]any) []any {
-	if items := selectRecentImageConversationInputItems(decodeImageConversationInput(prompt), len(imageParts) > 0); len(items) > 0 {
-		return imageConversationInputItemsToPayload(appendImagesToLastUserInput(items, imageParts))
+	if items := decodeImageConversationInput(prompt); len(items) > 0 {
+		return buildResponsesInputItemsFromConversation(items, imageParts)
 	}
 	content := []map[string]any{{"type": "input_text", "text": strings.TrimSpace(prompt)}}
 	content = append(content, imageParts...)
 	return []any{map[string]any{"role": "user", "content": content}}
 }
 
-func selectRecentImageConversationInputItems(items []imageConversationInputItem, hasManualImages bool) []imageConversationInputItem {
+func buildResponsesInputItemsFromConversation(items []imageConversationInputItem, imageParts []map[string]any) []any {
 	items = normalizeImageConversationInput(items)
-	if len(items) == 0 {
+	currentText := latestUserText(items)
+	if currentText == "" {
 		return nil
 	}
 
-	lastUserIndex := -1
-	previousUserIndex := -1
+	text := currentText
+	if hasPreviousUserText(items) {
+		text = strings.Join([]string{
+			"历史上下文（仅供理解连续创作方式，不是本次生成主体）：上一条消息属于同一组生图任务，可参考其通用输出格式、构图、画幅、光影、质感和角色设定图表达方式；不要复用历史人物的性别、身份、物种、外貌、服装、配饰、材质、剧情或具体设定。若历史上下文与当前任务冲突，必须以当前任务为准。",
+			"当前最终生图任务（唯一主体，必须严格执行）：" + currentText,
+		}, "\n\n")
+	}
+
+	content := []map[string]any{{"type": "input_text", "text": text}}
+	if len(imageParts) > 0 {
+		content = append(content, imageParts...)
+	} else if imageURL := latestImageConversationInputURL(items); imageURL != "" {
+		content = append(content, map[string]any{"type": "input_image", "image_url": imageURL, "detail": "high"})
+	}
+	return []any{map[string]any{"role": "user", "content": content}}
+}
+
+func latestUserText(items []imageConversationInputItem) string {
 	for index := len(items) - 1; index >= 0; index-- {
 		if !strings.EqualFold(strings.TrimSpace(items[index].Role), "user") {
 			continue
 		}
-		if lastUserIndex < 0 {
-			lastUserIndex = index
-			continue
-		}
-		previousUserIndex = index
-		break
-	}
-	if lastUserIndex < 0 {
-		return nil
-	}
-
-	result := make([]imageConversationInputItem, 0, 2)
-	if previousUserIndex >= 0 {
-		previous := filterImageConversationInputItem(items[previousUserIndex], true)
-		if len(previous.Content) > 0 {
-			result = append(result, previous)
+		if text := imageConversationInputItemText(items[index]); text != "" {
+			return text
 		}
 	}
-	current := filterImageConversationInputItem(items[lastUserIndex], hasManualImages)
-	result = append(result, current)
-	if !hasManualImages && !imageConversationInputItemsHaveImage(result) {
-		for index := lastUserIndex; index >= 0; index-- {
-			if imageURL := firstImageConversationInputURL(items[index]); imageURL != "" {
-				result[len(result)-1].Content = append(result[len(result)-1].Content, imageConversationInputContent{Type: "input_image", ImageURL: imageURL, Detail: "high"})
-				break
-			}
-		}
-	}
-	return normalizeImageConversationInput(result)
+	return ""
 }
 
-func filterImageConversationInputItem(item imageConversationInputItem, dropImages bool) imageConversationInputItem {
-	filtered := imageConversationInputItem{Role: item.Role, Content: make([]imageConversationInputContent, 0, len(item.Content))}
-	for _, part := range item.Content {
-		if dropImages && part.Type == "input_image" {
+func hasPreviousUserText(items []imageConversationInputItem) bool {
+	foundLatest := false
+	for index := len(items) - 1; index >= 0; index-- {
+		if !strings.EqualFold(strings.TrimSpace(items[index].Role), "user") {
 			continue
 		}
-		filtered.Content = append(filtered.Content, part)
-	}
-	return filtered
-}
-
-func imageConversationInputItemsHaveImage(items []imageConversationInputItem) bool {
-	for _, item := range items {
-		if firstImageConversationInputURL(item) != "" {
-			return true
+		if imageConversationInputItemText(items[index]) == "" {
+			continue
 		}
+		if !foundLatest {
+			foundLatest = true
+			continue
+		}
+		return true
 	}
 	return false
 }
 
-func firstImageConversationInputURL(item imageConversationInputItem) string {
+func imageConversationInputItemText(item imageConversationInputItem) string {
+	texts := make([]string, 0, len(item.Content))
 	for _, part := range item.Content {
-		if part.Type == "input_image" && strings.TrimSpace(part.ImageURL) != "" {
-			return strings.TrimSpace(part.ImageURL)
+		if part.Type != "input_text" && part.Type != "output_text" {
+			continue
+		}
+		if text := strings.TrimSpace(part.Text); text != "" {
+			texts = append(texts, text)
+		}
+	}
+	return strings.Join(texts, "\n\n")
+}
+
+func latestImageConversationInputURL(items []imageConversationInputItem) string {
+	for index := len(items) - 1; index >= 0; index-- {
+		for partIndex := len(items[index].Content) - 1; partIndex >= 0; partIndex-- {
+			part := items[index].Content[partIndex]
+			if part.Type == "input_image" && strings.TrimSpace(part.ImageURL) != "" {
+				return strings.TrimSpace(part.ImageURL)
+			}
 		}
 	}
 	return ""
