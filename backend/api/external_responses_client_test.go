@@ -367,9 +367,9 @@ func TestExternalResponsesClientTimeoutDefault(t *testing.T) {
 	}
 }
 
-func TestParseExternalResponsesSSEIncludesUpstreamResponseWhenNoImage(t *testing.T) {
+func TestParseExternalResponsesSSEIncludesOnlyModelResponseWhenNoImage(t *testing.T) {
 	stream := strings.Join([]string{
-		`data: {"type":"response.completed","response":{"id":"resp_123","output":[{"type":"message","content":[{"type":"output_text","text":"无法生成图片，因为请求被安全策略拦截。"}]}]}}`,
+		`data: {"type":"response.completed","response":{"id":"resp_123","instructions":"secret system prompt","input":[{"role":"user","content":[{"type":"input_text","text":"user prompt"}]}],"output":[{"type":"message","content":[{"type":"output_text","text":"无法生成图片，因为请求被安全策略拦截。"}]}]}}`,
 		``,
 	}, "\n")
 
@@ -378,22 +378,27 @@ func TestParseExternalResponsesSSEIncludesUpstreamResponseWhenNoImage(t *testing
 		t.Fatalf("parseExternalResponsesSSE() error = nil, want error")
 	}
 	message := err.Error()
-	if !strings.Contains(message, "external responses did not return image output; upstream response:") {
-		t.Fatalf("error = %q, want upstream response prefix", message)
+	if !strings.Contains(message, "external responses did not return image output; model response:") {
+		t.Fatalf("error = %q, want model response prefix", message)
 	}
 	if !strings.Contains(message, "无法生成图片") || !strings.Contains(message, "resp_123") {
-		t.Fatalf("error = %q, want real upstream payload details", message)
+		t.Fatalf("error = %q, want model response details", message)
+	}
+	for _, forbidden := range []string{"secret system prompt", "user prompt", "instructions", "input"} {
+		if strings.Contains(message, forbidden) {
+			t.Fatalf("error = %q, should not contain %q", message, forbidden)
+		}
 	}
 }
 
-func TestSummarizeExternalResponsesFrameOmitsImageData(t *testing.T) {
+func TestExtractExternalResponsesModelMessageIgnoresImageData(t *testing.T) {
 	frame := `{"type":"response.image_generation_call.partial_image","partial_image_b64":"` + strings.Repeat("a", 32) + `"}`
-	got := summarizeExternalResponsesFrame(frame)
-	if strings.Contains(got, strings.Repeat("a", 32)) {
-		t.Fatalf("summary = %q, should omit image data", got)
+	got := extractExternalResponsesModelMessage(frame)
+	if got != "output_types=response.image_generation_call.partial_image" {
+		t.Fatalf("summary = %q, want only output type", got)
 	}
-	if !strings.Contains(got, "[omitted image data]") {
-		t.Fatalf("summary = %q, want omitted marker", got)
+	if strings.Contains(got, strings.Repeat("a", 32)) || strings.Contains(got, "partial_image_b64") {
+		t.Fatalf("summary = %q, should omit image data fields", got)
 	}
 }
 

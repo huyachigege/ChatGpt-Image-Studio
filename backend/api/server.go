@@ -2847,7 +2847,24 @@ func isImageModelRefusalError(err error) bool {
 		return true
 	}
 	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "image generation refused") || strings.Contains(message, "model_refused") || strings.Contains(message, "content_policy") || strings.Contains(message, "safety_violation") || strings.Contains(message, "safety system") || strings.Contains(message, "safety_violations")
+	return strings.Contains(message, "image generation refused") ||
+		strings.Contains(message, "model_refused") ||
+		strings.Contains(message, "content_policy") ||
+		strings.Contains(message, "content policy") ||
+		strings.Contains(message, "policy violation") ||
+		strings.Contains(message, "safety_violation") ||
+		strings.Contains(message, "safety system") ||
+		strings.Contains(message, "safety_violations") ||
+		strings.Contains(message, "refused") ||
+		strings.Contains(message, "rejected") ||
+		strings.Contains(message, "拒绝") ||
+		strings.Contains(message, "被拒") ||
+		strings.Contains(message, "暴力") ||
+		strings.Contains(message, "色情") ||
+		strings.Contains(message, "sexual") ||
+		strings.Contains(message, "explicit") ||
+		strings.Contains(message, "violence") ||
+		strings.Contains(message, "violent")
 }
 
 func isImageNoOutputRefusalError(err error) bool {
@@ -2856,7 +2873,7 @@ func isImageNoOutputRefusalError(err error) bool {
 	}
 	message := strings.ToLower(strings.TrimSpace(err.Error()))
 	return strings.Contains(message, "did not return image output") &&
-		(strings.Contains(message, "upstream response") || strings.Contains(message, "external responses") || strings.Contains(message, "cpa"))
+		(strings.Contains(message, "model response") || strings.Contains(message, "upstream response") || strings.Contains(message, "external responses") || strings.Contains(message, "cpa"))
 }
 
 func isInvalidImageTokenError(err error) bool {
@@ -2892,6 +2909,13 @@ func isImageHTTPStatusError(err error, status int) bool {
 		}
 	}
 	return false
+}
+
+func isImageGatewayRetryStatusError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return isImageHTTPStatusError(err, 502) || isImageHTTPStatusError(err, 503) || isImageHTTPStatusError(err, 504)
 }
 
 func isImage5xxHTTPStatusError(err error) bool {
@@ -2953,7 +2977,6 @@ func isTransientImageStreamError(err error) bool {
 		"http2: client connection lost",
 		"connection reset by peer",
 		"stream closed",
-		"responses returned 500",
 		"responses returned 502",
 		"responses returned 503",
 		"responses returned 504",

@@ -367,17 +367,17 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 	responseID := ""
 	results := make([]handler.ImageResult, 0)
 	partialImages := make(map[string]string)
-	responseFrames := make([]string, 0, 8)
+	responseSummaries := make([]string, 0, 8)
 
 	processFrame := func(frame string) error {
 		frame = strings.TrimSpace(frame)
 		if frame == "" || frame == "[DONE]" {
 			return nil
 		}
-		if summary := summarizeExternalResponsesFrame(frame); summary != "" {
-			responseFrames = append(responseFrames, summary)
-			if len(responseFrames) > 8 {
-				responseFrames = responseFrames[len(responseFrames)-8:]
+		if summary := extractExternalResponsesModelMessage(frame); summary != "" {
+			responseSummaries = append(responseSummaries, summary)
+			if len(responseSummaries) > 8 {
+				responseSummaries = responseSummaries[len(responseSummaries)-8:]
 			}
 		}
 		var payload struct {
@@ -473,10 +473,10 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 		}
 	}
 	if len(results) == 0 {
-		if summary := strings.TrimSpace(strings.Join(responseFrames, "\n")); summary != "" {
-			return nil, fmt.Errorf("external responses did not return image output; upstream response: %s", summary)
+		if summary := strings.TrimSpace(strings.Join(responseSummaries, "\n")); summary != "" {
+			return nil, fmt.Errorf("external responses did not return image output; model response: %s", summary)
 		}
-		return nil, fmt.Errorf("external responses did not return image output; upstream response: empty SSE stream")
+		return nil, fmt.Errorf("external responses did not return image output; model response: empty SSE stream")
 	}
 	if responseID != "" {
 		for index := range results {
@@ -488,46 +488,124 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 	return results, nil
 }
 
-func summarizeExternalResponsesFrame(frame string) string {
-	var payload any
+func extractExternalResponsesModelMessage(frame string) string {
+	var payload map[string]any
 	if err := json.Unmarshal([]byte(frame), &payload); err != nil {
-		return truncateExternalResponsesString(frame, 4000)
+		return ""
 	}
-	sanitized := sanitizeExternalResponsesPayload(payload)
-	raw, err := json.Marshal(sanitized)
-	if err != nil {
-		return truncateExternalResponsesString(frame, 4000)
+	parts := make([]string, 0, 4)
+	if responseID := externalResponsesNestedString(payload, "response", "id"); responseID != "" {
+		parts = append(parts, "response_id="+responseID)
 	}
-	return truncateExternalResponsesString(string(raw), 4000)
+	if code := externalResponsesNestedString(payload, "error", "code"); code != "" {
+		parts = append(parts, "error_code="+code)
+	}
+	if message := externalResponsesNestedString(payload, "error", "message"); message != "" {
+		parts = append(parts, "error_message="+message)
+	}
+	texts := collectExternalResponsesModelTexts(payload)
+	if len(texts) > 0 {
+		parts = append(parts, "text="+strings.Join(texts, " | "))
+	}
+	if len(parts) == 0 {
+		outputTypes := collectExternalResponsesOutputTypes(payload)
+		if len(outputTypes) > 0 {
+			parts = append(parts, "output_types="+strings.Join(outputTypes, ","))
+		}
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return truncateExternalResponsesString(strings.Join(parts, "; "), 4000)
 }
 
-func sanitizeExternalResponsesPayload(value any) any {
-	switch typed := value.(type) {
-	case map[string]any:
-		result := make(map[string]any, len(typed))
-		for key, item := range typed {
-			lowerKey := strings.ToLower(strings.TrimSpace(key))
-			if lowerKey == "partial_image_b64" || lowerKey == "b64_json" || lowerKey == "image_base64" {
-				result[key] = "[omitted image data]"
-				continue
-			}
-			result[key] = sanitizeExternalResponsesPayload(item)
+func externalResponsesNestedString(payload map[string]any, keys ...string) string {
+	var current any = payload
+	for _, key := range keys {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return ""
 		}
-		return result
-	case []any:
-		result := make([]any, 0, len(typed))
-		for _, item := range typed {
-			result = append(result, sanitizeExternalResponsesPayload(item))
-		}
-		return result
-	case string:
-		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(typed)), "data:image/") {
-			return "[omitted image data]"
-		}
-		return truncateExternalResponsesString(typed, 2000)
-	default:
-		return value
+		current = object[key]
 	}
+	value, _ := current.(string)
+	return truncateExternalResponsesString(strings.TrimSpace(value), 2000)
+}
+
+func collectExternalResponsesModelTexts(value any) []string {
+	texts := make([]string, 0, 4)
+	var walk func(any)
+	walk = func(current any) {
+		if len(texts) >= 8 {
+			return
+		}
+		switch typed := current.(type) {
+		case map[string]any:
+			itemType, _ := typed["type"].(string)
+			itemType = strings.ToLower(strings.TrimSpace(itemType))
+			if itemType == "output_text" || itemType == "refusal" {
+				for _, key := range []string{"text", "refusal"} {
+					if text, _ := typed[key].(string); strings.TrimSpace(text) != "" {
+						texts = append(texts, truncateExternalResponsesString(strings.TrimSpace(text), 2000))
+						return
+					}
+				}
+				return
+			}
+			if itemType == "message" {
+				for _, key := range []string{"content", "text", "refusal"} {
+					if next, ok := typed[key]; ok {
+						walk(next)
+					}
+				}
+				return
+			}
+			for _, key := range []string{"response", "output", "item", "content", "message"} {
+				if next, ok := typed[key]; ok {
+					walk(next)
+				}
+			}
+		case []any:
+			for _, item := range typed {
+				walk(item)
+			}
+		case string:
+			if strings.TrimSpace(typed) != "" {
+				texts = append(texts, truncateExternalResponsesString(strings.TrimSpace(typed), 2000))
+			}
+		}
+	}
+	walk(value)
+	return texts
+}
+
+func collectExternalResponsesOutputTypes(payload map[string]any) []string {
+	seen := map[string]struct{}{}
+	result := make([]string, 0, 4)
+	var walk func(any)
+	walk = func(current any) {
+		switch typed := current.(type) {
+		case map[string]any:
+			if itemType, _ := typed["type"].(string); strings.TrimSpace(itemType) != "" {
+				itemType = strings.TrimSpace(itemType)
+				if _, ok := seen[itemType]; !ok {
+					seen[itemType] = struct{}{}
+					result = append(result, itemType)
+				}
+			}
+			for _, key := range []string{"response", "output", "item", "content"} {
+				if next, ok := typed[key]; ok {
+					walk(next)
+				}
+			}
+		case []any:
+			for _, item := range typed {
+				walk(item)
+			}
+		}
+	}
+	walk(payload)
+	return result
 }
 
 func truncateExternalResponsesString(value string, limit int) string {

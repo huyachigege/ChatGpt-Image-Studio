@@ -46,8 +46,24 @@ func TestRaw403IsFatal(t *testing.T) {
 	}
 }
 
+func TestGateway5xxClassificationRetriesOnly502503504(t *testing.T) {
+	for _, err := range []error{
+		errors.New("external responses returned 502: bad gateway"),
+		errors.New("external responses returned 503: service unavailable"),
+		errors.New("external responses returned 504: upstream timeout"),
+	} {
+		if got := classifyImageAttemptError(err); got != imageAttemptRetrySameOnce {
+			t.Fatalf("classifyImageAttemptError(%v) = %v, want %v", err, got, imageAttemptRetrySameOnce)
+		}
+	}
+	err := errors.New("external responses returned 500: internal error with details")
+	if got := classifyImageAttemptError(err); got != imageAttemptRetryable {
+		t.Fatalf("classifyImageAttemptError(%v) = %v, want %v", err, got, imageAttemptRetryable)
+	}
+}
+
 func TestNoImageOutputWithUpstreamTextIsFatalRefusal(t *testing.T) {
-	err := errors.New(`external responses did not return image output; upstream response: {"type":"response.completed","response":{"output":[{"type":"message","content":[{"type":"output_text","text":"无法生成图片"}]}]}}`)
+	err := errors.New(`external responses did not return image output; model response: response_id=resp_123; text=无法生成图片`)
 	if got := classifyImageAttemptError(err); got != imageAttemptFatal {
 		t.Fatalf("classifyImageAttemptError = %v, want %v", got, imageAttemptFatal)
 	}

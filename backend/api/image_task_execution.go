@@ -80,7 +80,7 @@ func classifyImageAttemptError(err error) imageAttemptErrorClass {
 	if isImageHTTPStatusError(err, 401) || isImageHTTPStatusError(err, 429) || isImageFiveHourLimitError(err) {
 		return imageAttemptRetryableDisableResponses
 	}
-	if isImage5xxHTTPStatusError(err) {
+	if isImageGatewayRetryStatusError(err) {
 		return imageAttemptRetrySameOnce
 	}
 	if isImageRateLimitError(err) || isTransientImageStreamError(err) || isInvalidImageTokenError(err) {
