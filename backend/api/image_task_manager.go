@@ -923,13 +923,42 @@ func imageTaskEffectiveQuality(mode, resolutionAccess, size, quality string) str
 	return quality
 }
 
+func countImageTaskSourceImages(sources []imageTaskSourceImage) int {
+	count := 0
+	for _, source := range sources {
+		if strings.EqualFold(strings.TrimSpace(source.Role), "mask") {
+			continue
+		}
+		if strings.TrimSpace(source.DataURL) == "" && strings.TrimSpace(source.URL) == "" {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+func moveImageTaskSourceImagesToReferences(sourceImages []imageTaskSourceImage, referenceImages []imageTaskSourceImage) ([]imageTaskSourceImage, []imageTaskSourceImage) {
+	nextReferences := append([]imageTaskSourceImage(nil), referenceImages...)
+	for _, source := range sourceImages {
+		if strings.EqualFold(strings.TrimSpace(source.Role), "mask") {
+			continue
+		}
+		if strings.TrimSpace(source.DataURL) == "" && strings.TrimSpace(source.URL) == "" {
+			continue
+		}
+		source.Role = "image"
+		nextReferences = append(nextReferences, source)
+	}
+	return nil, nextReferences
+}
+
 func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, error) {
 	id := firstNonEmpty(strings.TrimSpace(req.TaskID), strings.TrimSpace(req.TurnID))
 	if id == "" {
 		id = fmt.Sprintf("task-%d", time.Now().UnixNano())
 	}
 	prompt := strings.TrimSpace(req.Prompt)
-	mode := strings.TrimSpace(req.Mode)
+	mode := strings.ToLower(strings.TrimSpace(req.Mode))
 	if mode == "" {
 		mode = "generate"
 	}
@@ -960,6 +989,14 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 			DataURL: strings.TrimSpace(source.DataURL),
 			URL:     strings.TrimSpace(source.URL),
 		})
+	}
+
+	if mode == "generate" && countImageTaskSourceImages(sourceImages) > 0 {
+		sourceImages, referenceImages = moveImageTaskSourceImagesToReferences(sourceImages, referenceImages)
+	}
+	if mode == "edit" && countImageTaskSourceImages(sourceImages) > 1 && req.SourceReference == nil {
+		mode = "generate"
+		sourceImages, referenceImages = moveImageTaskSourceImagesToReferences(sourceImages, referenceImages)
 	}
 
 	var sourceReference *imageTaskSourceReference

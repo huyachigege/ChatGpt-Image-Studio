@@ -199,7 +199,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if len(mask) == 0 {
 			return nil, fmt.Errorf("selection edit mask is required")
 		}
-		imageFileURLs, urlErr := s.buildTaskImageURLs(imageFiles, task.UserID, task.RequestBaseURL, "source")
+		imageFileURLs, urlErr := s.buildTaskImageURLsWithCompression(imageFiles, task.UserID, task.RequestBaseURL, "source", false)
 		if urlErr != nil {
 			return nil, urlErr
 		}
@@ -281,14 +281,17 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 				"external_responses",
 			)
 		}
-	case task.Mode == "edit" || len(task.SourceImages) > 0:
+	case task.Mode == "edit":
 		var mask []byte
 		var imageFiles [][]byte
 		mask, imageFiles, err = s.resolveTaskEditInputs(task)
 		if err != nil {
 			return nil, err
 		}
-		imageFileURLs, urlErr := s.buildTaskImageURLs(imageFiles, task.UserID, task.RequestBaseURL, "source")
+		if len(imageFiles) > 1 {
+			return nil, newRequestError("too_many_edit_source_images", "编辑模式最多只能使用 1 张源图；多张参考图请使用生成模式")
+		}
+		imageFileURLs, urlErr := s.buildTaskImageURLsWithCompression(imageFiles, task.UserID, task.RequestBaseURL, "source", false)
 		if urlErr != nil {
 			return nil, urlErr
 		}
@@ -376,7 +379,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		if err != nil {
 			return nil, err
 		}
-		referenceImageURLs, urlErr := s.buildTaskImageURLs(referenceImageFiles, task.UserID, task.RequestBaseURL, "reference")
+		referenceImageURLs, urlErr := s.buildTaskImageURLsWithCompression(referenceImageFiles, task.UserID, task.RequestBaseURL, "reference", len(referenceImageFiles) > 1)
 		if urlErr != nil {
 			return nil, urlErr
 		}
@@ -397,7 +400,7 @@ func (s *Server) executeImageTaskUnit(ctx context.Context, taskID string, unitIn
 		}
 		runGenerate := func(client imageWorkflowClient, upstreamModel string) ([]handler.ImageResult, error) {
 			prompt := buildPrompt(client)
-			if task.ContextReference != nil && sameSourceAccount {
+			if task.ContextReference != nil && sameSourceAccount && len(referenceImageFiles) == 0 {
 				if previousResponseID := providerScopedPreviousResponseID(client, task.ContextReference.ResponseProviderID, task.ContextReference.ResponseID); previousResponseID != "" {
 					if responses, ok := client.(interface{ UsesResponsesAPI() bool }); ok && responses.UsesResponsesAPI() {
 						if generator, ok := client.(interface {
@@ -714,6 +717,10 @@ func isResponsesURLReferenceFallbackError(err error) bool {
 }
 
 func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix string) ([]string, error) {
+	return s.buildTaskImageURLsWithCompression(images, userID, baseURL, prefix, true)
+}
+
+func (s *Server) buildTaskImageURLsWithCompression(images [][]byte, userID, baseURL, prefix string, compress bool) ([]string, error) {
 	_ = baseURL
 	if len(images) == 0 {
 		return nil, nil
@@ -723,7 +730,15 @@ func (s *Server) buildTaskImageURLs(images [][]byte, userID, baseURL, prefix str
 		if len(image) == 0 {
 			continue
 		}
-		url, err := s.buildExternalResponsesImageReference(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
+		var (
+			url string
+			err error
+		)
+		if compress {
+			url, err = s.buildExternalResponsesImageReference(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
+		} else {
+			url, err = s.buildExternalResponsesOriginalImageReference(image, userID, fmt.Sprintf("%s-%d", prefix, index+1))
+		}
 		if err != nil {
 			return nil, err
 		}

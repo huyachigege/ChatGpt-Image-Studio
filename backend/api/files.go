@@ -104,6 +104,18 @@ func (s *Server) buildExternalResponsesImageReference(data []byte, userID, prefi
 	return s.buildExternalResponsesImageReferenceWithConfig(data, userID, prefix, s.cfg.ExternalResponsesImageReferenceMode(), s.cfg.ExternalResponsesImageReferenceBaseURL())
 }
 
+func (s *Server) buildExternalResponsesOriginalImageReference(data []byte, userID, prefix string) (string, error) {
+	name, err := s.saveOriginalImageBytesForURL(data, userID, prefix)
+	if err != nil {
+		return "", err
+	}
+	if s.resolveImageFilePath(name) == "" {
+		return "", fmt.Errorf("saved original reference image cannot be resolved: %s", name)
+	}
+	baseURL := firstNonEmpty(strings.TrimRight(strings.TrimSpace(s.cfg.ExternalResponsesImageReferenceBaseURL()), "/"), externalResponsesPublicImageBaseURL)
+	return absoluteImageFileURL(baseURL, name), nil
+}
+
 func (s *Server) buildExternalResponsesImageReferenceWithConfig(data []byte, userID, prefix, mode, baseURL string) (string, error) {
 	if strings.EqualFold(strings.TrimSpace(mode), "base64") {
 		return encodeJPEGReferenceImageDataURL(data)
@@ -129,6 +141,31 @@ func encodeJPEGReferenceImageDataURL(data []byte) (string, error) {
 		return "", fmt.Errorf("encode jpeg reference image: %w", err)
 	}
 	return "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+}
+
+func (s *Server) saveOriginalImageBytesForURL(data []byte, userID, prefix string) (string, error) {
+	if len(data) == 0 {
+		return "", fmt.Errorf("image is empty")
+	}
+	_, format, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return "", fmt.Errorf("decode image config: %w", err)
+	}
+	hash := sha256.Sum256(data)
+	namePrefix := firstNonEmpty(strings.TrimSpace(prefix), "image")
+	filename := fmt.Sprintf("%s-%x%s", namePrefix, hash[:12], imageFormatExtension(format))
+	dir := s.cfg.ResolvePath(s.cfg.Storage.ImageDir)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, filename)
+	if _, err := os.Stat(path); err == nil {
+		return filename, nil
+	}
+	if err := writeFileAtomic(path, data); err != nil {
+		return "", err
+	}
+	return filename, nil
 }
 
 func (s *Server) saveImageBytesForURL(data []byte, userID, prefix string) (string, error) {

@@ -63,13 +63,62 @@ func imageTaskQuotaKind(mode, resolutionAccess, size string) string {
 	return "free"
 }
 
+func countCreateTaskImageSources(sources []imageTaskSourceImagePayload) int {
+	count := 0
+	for _, source := range sources {
+		role := strings.ToLower(strings.TrimSpace(source.Role))
+		if role == "mask" {
+			continue
+		}
+		if strings.TrimSpace(source.DataURL) == "" && strings.TrimSpace(source.URL) == "" {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+func moveCreateTaskSourceImagesToReferences(req createImageTaskRequest) createImageTaskRequest {
+	if len(req.SourceImages) == 0 {
+		return req
+	}
+	references := append([]imageTaskReferenceImagePayload(nil), req.ReferenceImages...)
+	for _, source := range req.SourceImages {
+		role := strings.ToLower(strings.TrimSpace(source.Role))
+		if role == "mask" {
+			continue
+		}
+		if strings.TrimSpace(source.DataURL) == "" && strings.TrimSpace(source.URL) == "" {
+			continue
+		}
+		references = append(references, imageTaskReferenceImagePayload{
+			ID:      strings.TrimSpace(source.ID),
+			Name:    strings.TrimSpace(source.Name),
+			DataURL: strings.TrimSpace(source.DataURL),
+			URL:     strings.TrimSpace(source.URL),
+		})
+	}
+	req.SourceImages = nil
+	req.ReferenceImages = references
+	return req
+}
+
 func (s *Server) normalizeCreateImageTaskRequest(ctx context.Context, req createImageTaskRequest) createImageTaskRequest {
 	mode := strings.ToLower(strings.TrimSpace(req.Mode))
 	if mode == "" {
 		mode = "generate"
 	}
+	req.Mode = mode
 	if strings.TrimSpace(req.Quality) == "" {
 		req.Quality = "high"
+	}
+	if mode == "generate" && countCreateTaskImageSources(req.SourceImages) > 0 {
+		req = moveCreateTaskSourceImagesToReferences(req)
+	}
+	if mode == "edit" && countCreateTaskImageSources(req.SourceImages) > 1 && req.SourceReference == nil {
+		mode = "generate"
+		req.Mode = mode
+		req = moveCreateTaskSourceImagesToReferences(req)
 	}
 	if mode != "generate" || req.SourceReference != nil || req.ContextReference != nil {
 		return req

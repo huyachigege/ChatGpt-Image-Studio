@@ -367,6 +367,36 @@ func TestExternalResponsesClientTimeoutDefault(t *testing.T) {
 	}
 }
 
+func TestParseExternalResponsesSSEIncludesUpstreamResponseWhenNoImage(t *testing.T) {
+	stream := strings.Join([]string{
+		`data: {"type":"response.completed","response":{"id":"resp_123","output":[{"type":"message","content":[{"type":"output_text","text":"无法生成图片，因为请求被安全策略拦截。"}]}]}}`,
+		``,
+	}, "\n")
+
+	_, err := parseExternalResponsesSSE(strings.NewReader(stream))
+	if err == nil {
+		t.Fatalf("parseExternalResponsesSSE() error = nil, want error")
+	}
+	message := err.Error()
+	if !strings.Contains(message, "external responses did not return image output; upstream response:") {
+		t.Fatalf("error = %q, want upstream response prefix", message)
+	}
+	if !strings.Contains(message, "无法生成图片") || !strings.Contains(message, "resp_123") {
+		t.Fatalf("error = %q, want real upstream payload details", message)
+	}
+}
+
+func TestSummarizeExternalResponsesFrameOmitsImageData(t *testing.T) {
+	frame := `{"type":"response.image_generation_call.partial_image","partial_image_b64":"` + strings.Repeat("a", 32) + `"}`
+	got := summarizeExternalResponsesFrame(frame)
+	if strings.Contains(got, strings.Repeat("a", 32)) {
+		t.Fatalf("summary = %q, should omit image data", got)
+	}
+	if !strings.Contains(got, "[omitted image data]") {
+		t.Fatalf("summary = %q, want omitted marker", got)
+	}
+}
+
 func apiTestPNGBytes() []byte {
 	return []byte{
 		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,

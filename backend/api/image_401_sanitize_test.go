@@ -46,6 +46,19 @@ func TestRaw403IsFatal(t *testing.T) {
 	}
 }
 
+func TestNoImageOutputWithUpstreamTextIsFatalRefusal(t *testing.T) {
+	err := errors.New(`external responses did not return image output; upstream response: {"type":"response.completed","response":{"output":[{"type":"message","content":[{"type":"output_text","text":"无法生成图片"}]}]}}`)
+	if got := classifyImageAttemptError(err); got != imageAttemptFatal {
+		t.Fatalf("classifyImageAttemptError = %v, want %v", got, imageAttemptFatal)
+	}
+	if shouldRetryImageRequestWithNextAccount(err) {
+		t.Fatalf("shouldRetryImageRequestWithNextAccount returned true for no image output refusal")
+	}
+	if shouldTryImageFallback(err, classifyImageAttemptError(err)) {
+		t.Fatalf("shouldTryImageFallback returned true for no image output refusal")
+	}
+}
+
 func TestRaw401IsSanitized(t *testing.T) {
 	message := sanitizeImageUserFacingMessage(errors.New("responses returned 401: unauthorized invalid_token"))
 	for _, token := range []string{"401", "unauthorized", "invalid_token"} {

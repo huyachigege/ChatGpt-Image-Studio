@@ -367,11 +367,18 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 	responseID := ""
 	results := make([]handler.ImageResult, 0)
 	partialImages := make(map[string]string)
+	responseFrames := make([]string, 0, 8)
 
 	processFrame := func(frame string) error {
 		frame = strings.TrimSpace(frame)
 		if frame == "" || frame == "[DONE]" {
 			return nil
+		}
+		if summary := summarizeExternalResponsesFrame(frame); summary != "" {
+			responseFrames = append(responseFrames, summary)
+			if len(responseFrames) > 8 {
+				responseFrames = responseFrames[len(responseFrames)-8:]
+			}
 		}
 		var payload struct {
 			Type   string `json:"type"`
@@ -466,7 +473,10 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 		}
 	}
 	if len(results) == 0 {
-		return nil, fmt.Errorf("external responses did not return image output")
+		if summary := strings.TrimSpace(strings.Join(responseFrames, "\n")); summary != "" {
+			return nil, fmt.Errorf("external responses did not return image output; upstream response: %s", summary)
+		}
+		return nil, fmt.Errorf("external responses did not return image output; upstream response: empty SSE stream")
 	}
 	if responseID != "" {
 		for index := range results {
@@ -476,6 +486,55 @@ func parseExternalResponsesSSE(reader io.Reader) ([]handler.ImageResult, error) 
 		}
 	}
 	return results, nil
+}
+
+func summarizeExternalResponsesFrame(frame string) string {
+	var payload any
+	if err := json.Unmarshal([]byte(frame), &payload); err != nil {
+		return truncateExternalResponsesString(frame, 4000)
+	}
+	sanitized := sanitizeExternalResponsesPayload(payload)
+	raw, err := json.Marshal(sanitized)
+	if err != nil {
+		return truncateExternalResponsesString(frame, 4000)
+	}
+	return truncateExternalResponsesString(string(raw), 4000)
+}
+
+func sanitizeExternalResponsesPayload(value any) any {
+	switch typed := value.(type) {
+	case map[string]any:
+		result := make(map[string]any, len(typed))
+		for key, item := range typed {
+			lowerKey := strings.ToLower(strings.TrimSpace(key))
+			if lowerKey == "partial_image_b64" || lowerKey == "b64_json" || lowerKey == "image_base64" {
+				result[key] = "[omitted image data]"
+				continue
+			}
+			result[key] = sanitizeExternalResponsesPayload(item)
+		}
+		return result
+	case []any:
+		result := make([]any, 0, len(typed))
+		for _, item := range typed {
+			result = append(result, sanitizeExternalResponsesPayload(item))
+		}
+		return result
+	case string:
+		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(typed)), "data:image/") {
+			return "[omitted image data]"
+		}
+		return truncateExternalResponsesString(typed, 2000)
+	default:
+		return value
+	}
+}
+
+func truncateExternalResponsesString(value string, limit int) string {
+	if limit <= 0 || len(value) <= limit {
+		return value
+	}
+	return value[:limit] + fmt.Sprintf("...[truncated %d bytes]", len(value)-limit)
 }
 
 func appendExternalResponseImage(results *[]handler.ImageResult, result string, outputFormat string, revisedPrompt string, responseID string) {

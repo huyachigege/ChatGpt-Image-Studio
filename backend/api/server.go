@@ -2839,12 +2839,24 @@ func isImageModelRefusalError(err error) bool {
 	if err == nil {
 		return false
 	}
+	if isImageNoOutputRefusalError(err) {
+		return true
+	}
 	code := requestErrorCode(err)
 	if code == "model_refused" || code == "content_policy_violation" {
 		return true
 	}
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "image generation refused") || strings.Contains(message, "model_refused") || strings.Contains(message, "content_policy") || strings.Contains(message, "safety_violation") || strings.Contains(message, "safety system") || strings.Contains(message, "safety_violations")
+}
+
+func isImageNoOutputRefusalError(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error()))
+	return strings.Contains(message, "did not return image output") &&
+		(strings.Contains(message, "upstream response") || strings.Contains(message, "external responses") || strings.Contains(message, "cpa"))
 }
 
 func isInvalidImageTokenError(err error) bool {

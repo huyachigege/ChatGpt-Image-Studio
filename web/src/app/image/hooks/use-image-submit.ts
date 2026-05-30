@@ -69,6 +69,18 @@ type RetryTurnOverride = {
   omitOriginalReferences?: boolean;
 };
 
+function imageReferenceCount(sourceImages: StoredSourceImage[]) {
+  return sourceImages.filter((item) => item.role === "image").length;
+}
+
+function resolveSubmitMode(requestedMode: ImageMode, sourceImages: StoredSourceImage[]): ImageMode {
+  return requestedMode === "edit" && imageReferenceCount(sourceImages) > 1 ? "generate" : requestedMode;
+}
+
+function normalizeSourceImagesForMode(mode: ImageMode, sourceImages: StoredSourceImage[]): StoredSourceImage[] {
+  return mode === "generate" ? sourceImages.filter((item) => item.role === "image") : sourceImages;
+}
+
 function diagnosticToSourceImages(
   diagnostic: ImageRejectionDiagnostic,
 ): StoredSourceImage[] {
@@ -345,13 +357,15 @@ export function useImageSubmit({
       }
 
       const prompt = (override?.prompt ?? turn.prompt)?.trim() ?? "";
-      const turnMode = turn.mode || "generate";
+      const requestedTurnMode = turn.mode || "generate";
       const turnSourceImages = Array.isArray(override?.sourceImages)
         ? override.sourceImages
         : Array.isArray(turn.sourceImages)
         ? turn.sourceImages
         : [];
-      const turnImageSources = turnSourceImages.filter(
+      const turnMode = resolveSubmitMode(requestedTurnMode, turnSourceImages);
+      const requestSourceImages = normalizeSourceImagesForMode(turnMode, turnSourceImages);
+      const turnImageSources = requestSourceImages.filter(
         (item) => item.role === "image" && buildSourceImageUrl(item),
       );
       const turnQuality = turn.quality || "high";
@@ -400,7 +414,7 @@ export function useImageSubmit({
             buildImageDataUrl,
             { excludeTurnId: turn.id },
           );
-      const referenceImages = referenceImage && turnSourceImages.length === 0 ? [referenceImage] : undefined;
+      const referenceImages = referenceImage && requestSourceImages.length === 0 ? [referenceImage] : undefined;
       const retrySourceReference = undefined;
       const retryContextReference = undefined;
       const draftTurn = createConversationTurn({
@@ -413,7 +427,7 @@ export function useImageSubmit({
         size: turn.size,
         resolutionAccess: turnResolutionAccess,
         quality: turnQuality,
-        sourceImages: turnSourceImages,
+        sourceImages: requestSourceImages,
         sourceReference: omitOriginalReferences ? undefined : retrySourceReference,
         contextReference: omitOriginalReferences ? undefined : retryContextReference,
         images: nextImages,
@@ -445,7 +459,7 @@ export function useImageSubmit({
           size: turn.size,
           resolutionAccess: turnResolutionAccess,
           quality: turnQuality,
-          sourceImages: turnSourceImages,
+          sourceImages: requestSourceImages,
           referenceImages,
           sourceReference: omitOriginalReferences ? undefined : retrySourceReference,
           contextReference: omitOriginalReferences ? undefined : retryContextReference,
@@ -627,9 +641,11 @@ export function useImageSubmit({
     isSubmitDispatchingRef.current = true;
 
     const turnSourceImages = Array.isArray(turn.sourceImages) ? turn.sourceImages : [];
-    const turnImageSources = turnSourceImages.filter((item) => item.role === "image");
-    const expectedCount = turn.mode === "generate" ? Math.max(1, turn.count || 1) : 1;
-    const hasUserUploadedImages = turnSourceImages.length > 0;
+    const effectiveMode = resolveSubmitMode(turn.mode, turnSourceImages);
+    const requestSourceImages = normalizeSourceImagesForMode(effectiveMode, turnSourceImages);
+    const turnImageSources = requestSourceImages.filter((item) => item.role === "image");
+    const expectedCount = effectiveMode === "generate" ? Math.max(1, turn.count || 1) : 1;
+    const hasUserUploadedImages = requestSourceImages.length > 0;
     const contextReference = selectedConversationId
       ? buildLatestImageContextReference(conversationTurns)
       : undefined;
@@ -648,17 +664,17 @@ export function useImageSubmit({
     const referenceImages = referenceImage ? [referenceImage] : undefined;
     const draftTurn = createConversationTurn({
       turnId: turn.id,
-      title: buildConversationTitle(turn.mode, prompt),
-      mode: turn.mode,
+      title: buildConversationTitle(effectiveMode, prompt),
+      mode: effectiveMode,
       prompt,
       originalPrompt: turn.originalPrompt || turn.prompt,
       enhancedPrompt: prompt,
       model: turn.model,
       count: expectedCount,
-      size: turn.mode === "generate" ? turn.size : undefined,
+      size: effectiveMode === "generate" ? turn.size : undefined,
       resolutionAccess: turn.resolutionAccess,
       quality: turn.quality,
-      sourceImages: turnSourceImages,
+      sourceImages: requestSourceImages,
       contextReference,
       images: createLoadingImages(expectedCount, turn.id),
       createdAt: turn.createdAt || new Date().toISOString(),
@@ -679,14 +695,14 @@ export function useImageSubmit({
       const result = await createImageTask({
         conversationId,
         turnId: turn.id,
-        mode: turn.mode,
+        mode: effectiveMode,
         prompt,
         model: turn.model,
         count: expectedCount,
-        size: turn.mode === "generate" ? turn.size : undefined,
+        size: effectiveMode === "generate" ? turn.size : undefined,
         resolutionAccess: turn.resolutionAccess,
         quality: turn.quality,
-        sourceImages: turnSourceImages,
+        sourceImages: requestSourceImages,
         referenceImages: turnImageSources.length > 0 ? undefined : referenceImages,
         contextReference,
         conversationContext,
@@ -749,24 +765,29 @@ export function useImageSubmit({
       return;
     }
     const prompt = imagePrompt.trim();
-    if (mode === "generate" && !prompt) {
+    const effectiveMode = resolveSubmitMode(mode, sourceImages);
+    if (effectiveMode === "generate" && !prompt) {
       toast.error("请输入提示词");
       return;
     }
-    if (mode === "edit" && imageSources.length === 0) {
+    if (effectiveMode === "edit" && imageSources.length === 0) {
       toast.error("编辑模式至少需要一张源图");
       return;
     }
-    if (mode === "edit" && !prompt) {
+    if (effectiveMode === "edit" && !prompt) {
       toast.error("编辑模式需要提示词");
       return;
+    }
+    if (mode === "edit" && effectiveMode === "generate") {
+      toast.info("多张参考图已自动切换为生成模式");
     }
     isSubmitDispatchingRef.current = true;
 
     const conversationId = selectedConversationId ?? makeId();
     const turnId = makeId();
-    const expectedCount = mode === "generate" ? parsedCount : 1;
-    const hasUserUploadedImages = sourceImages.length > 0;
+    const expectedCount = effectiveMode === "generate" ? parsedCount : 1;
+    const requestSourceImages = normalizeSourceImagesForMode(effectiveMode, sourceImages);
+    const hasUserUploadedImages = requestSourceImages.length > 0;
     const contextReference = selectedConversationId
       ? buildLatestImageContextReference(conversationTurns)
       : undefined;
@@ -779,15 +800,15 @@ export function useImageSubmit({
     const referenceImages = referenceImage ? [referenceImage] : undefined;
     const draftTurn = createConversationTurn({
       turnId,
-      title: buildConversationTitle(mode, prompt),
-      mode,
+      title: buildConversationTitle(effectiveMode, prompt),
+      mode: effectiveMode,
       prompt,
       model: imageModel,
       count: expectedCount,
-      size: mode === "generate" ? imageSize : undefined,
-      resolutionAccess: mode === "generate" ? imageResolutionAccess : editResolutionAccess,
+      size: effectiveMode === "generate" ? imageSize : undefined,
+      resolutionAccess: effectiveMode === "generate" ? imageResolutionAccess : editResolutionAccess,
       quality: imageQuality,
-      sourceImages,
+      sourceImages: requestSourceImages,
       contextReference,
       images: createLoadingImages(expectedCount, turnId),
       createdAt: new Date().toISOString(),
@@ -814,14 +835,14 @@ export function useImageSubmit({
       const result = await createImageTask({
         conversationId,
         turnId,
-        mode,
+        mode: effectiveMode,
         prompt,
         model: imageModel,
         count: expectedCount,
-        size: mode === "generate" ? imageSize : undefined,
-        resolutionAccess: mode === "generate" ? imageResolutionAccess : editResolutionAccess,
+        size: effectiveMode === "generate" ? imageSize : undefined,
+        resolutionAccess: effectiveMode === "generate" ? imageResolutionAccess : editResolutionAccess,
         quality: imageQuality,
-        sourceImages,
+        sourceImages: requestSourceImages,
         referenceImages,
         contextReference,
         conversationContext,
@@ -844,7 +865,7 @@ export function useImageSubmit({
             : turn,
         ),
       }));
-      resetComposer(mode === "generate" ? "generate" : "edit");
+      resetComposer(effectiveMode === "generate" ? "generate" : "edit");
       toast.success("图片任务已加入队列");
     } catch (error) {
       const message =

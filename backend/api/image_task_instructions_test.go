@@ -109,6 +109,25 @@ func TestBuildTaskImageURLsUsesFixedExternalResponsesHost(t *testing.T) {
 	}
 }
 
+func TestBuildTaskImageURLsWithoutCompressionUsesResolvableOriginalImagePath(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	server := &Server{cfg: cfg}
+	urls, err := server.buildTaskImageURLsWithCompression([][]byte{testPNGImageBytes(t, 1, 1, color.NRGBA{A: 255})}, "", "http://workspace.local", "source", false)
+	if err != nil {
+		t.Fatalf("buildTaskImageURLsWithCompression() returned error: %v", err)
+	}
+	if len(urls) != 1 || !strings.HasPrefix(urls[0], externalResponsesPublicImageBaseURL+"/v1/files/image/source-") || strings.Contains(urls[0], "/.thumbs/") {
+		t.Fatalf("urls = %#v, want original image path without thumbnail", urls)
+	}
+	name := strings.TrimPrefix(urls[0], externalResponsesPublicImageBaseURL+"/v1/files/image/")
+	if path := server.resolveImageFilePath(name); path == "" {
+		t.Fatalf("resolveImageFilePath(%q) returned empty path", name)
+	}
+}
+
 func TestResponsesURLReferenceFallbackDoesNotHideDownloadTimeout(t *testing.T) {
 	err := newRequestError("bad_gateway", `external responses returned 400: 上游返回错误 (status 400): { "error": { "message": "Unable to download content from the provided URL before the timeout.", "type": "invalid_request_error", "param": "url", "code": "invalid_value" } }`)
 	if isResponsesURLReferenceFallbackError(err) {

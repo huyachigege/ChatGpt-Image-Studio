@@ -91,13 +91,21 @@ export function useImageSourceInputs({
         dataUrl: await fileToDataUrl(file),
       })),
     );
+    const shouldSwitchToGenerate = role === "image" && mode === "edit" && sourceImages.filter((item) => item.role === "image").length + nextItems.length > 1;
+    if (shouldSwitchToGenerate) {
+      setMode("generate");
+      toast.info("多张参考图已自动切换为生成模式");
+    }
     setSourceImages((prev) => {
       if (role === "mask") {
         return [...prev.filter((item) => item.role !== "mask"), nextItems[0]];
       }
+      if (shouldSwitchToGenerate) {
+        return [...prev.filter((item) => item.role === "image"), ...nextItems];
+      }
       return [...prev.filter((item) => item.role !== "mask"), ...prev.filter((item) => item.role === "mask"), ...nextItems];
     });
-  }, [makeId, sourceImages]);
+  }, [makeId, mode, setMode, sourceImages]);
 
   const handlePromptPaste = useCallback((event: ReactClipboardEvent<Element>) => {
     const clipboardImages = Array.from(event.clipboardData.items)
