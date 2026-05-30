@@ -17,14 +17,15 @@ import (
 )
 
 type cpaImageClient struct {
-	baseURL            string
-	apiKey             string
-	httpClient         *http.Client
-	routeStrategy      string
-	lastRoute          string
-	lastModel          string
-	lastToolModel      string
-	lastFallbackReason string
+	baseURL               string
+	apiKey                string
+	httpClient            *http.Client
+	routeStrategy         string
+	lastRoute             string
+	lastModel             string
+	lastToolModel         string
+	lastFallbackReason    string
+	responsesInstructions string
 }
 
 const maxCPAResponsesSSELineBytes = 128 << 20
@@ -69,6 +70,13 @@ func (c *cpaImageClient) LastFallbackReason() string {
 		return ""
 	}
 	return strings.TrimSpace(c.lastFallbackReason)
+}
+
+func (c *cpaImageClient) SetInstructions(instructions string) {
+	if c == nil {
+		return
+	}
+	c.responsesInstructions = strings.TrimSpace(instructions)
 }
 
 func (c *cpaImageClient) DownloadBytes(url string) ([]byte, error) {
@@ -426,17 +434,22 @@ func (c *cpaImageClient) shouldFallbackToResponses(err error) bool {
 }
 
 func (c *cpaImageClient) generateViaResponses(ctx context.Context, prompt, size, quality, background string) ([]handler.ImageResult, error) {
-	payload := c.buildResponsesRequest(prompt, nil, nil, size, quality, background)
+	payload := c.buildResponsesRequest(prompt, nil, nil, nil, size, quality, background)
 	return c.executeResponsesRequest(ctx, payload)
 }
 
 func (c *cpaImageClient) editViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
-	payload := c.buildResponsesRequest(prompt, images, mask, size, quality, "")
+	payload := c.buildResponsesRequest(prompt, images, nil, mask, size, quality, "")
 	return c.executeResponsesRequest(ctx, payload)
 }
 
-func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, size, quality, background string) map[string]any {
-	imageParts := make([]map[string]any, 0, len(images))
+func (c *cpaImageClient) EditImageByURL(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]handler.ImageResult, error) {
+	payload := c.buildResponsesRequest(prompt, nil, imageURLs, mask, size, quality, "")
+	return c.executeResponsesRequest(ctx, payload)
+}
+
+func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, imageURLs []string, mask []byte, size, quality, background string) map[string]any {
+	imageParts := make([]map[string]any, 0, len(images)+len(imageURLs))
 	for _, image := range images {
 		if len(image) == 0 {
 			continue
@@ -447,9 +460,18 @@ func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, m
 			"detail":    "high",
 		})
 	}
+	for _, imageURL := range imageURLs {
+		if trimmed := strings.TrimSpace(imageURL); trimmed != "" {
+			imageParts = append(imageParts, map[string]any{
+				"type":      "input_image",
+				"image_url": trimmed,
+				"detail":    "high",
+			})
+		}
+	}
 
 	action := "generate"
-	if len(images) > 0 {
+	if len(images) > 0 || len(imageURLs) > 0 {
 		action = "edit"
 	}
 	tool := map[string]any{
@@ -474,16 +496,13 @@ func (c *cpaImageClient) buildResponsesRequest(prompt string, images [][]byte, m
 	}
 
 	return map[string]any{
-		"instructions":        "",
-		"stream":              true,
-		"reasoning":           map[string]any{"effort": "xhigh", "summary": "auto"},
-		"parallel_tool_calls": true,
-		"include":             []string{"reasoning.encrypted_content"},
-		"model":               cpaResponsesMainModel,
-		"store":               false,
-		"tool_choice":         map[string]any{"type": "image_generation"},
-		"input":               buildResponsesInputItemsFromPrompt(prompt, imageParts),
-		"tools":               []any{tool},
+		"instructions": strings.TrimSpace(c.responsesInstructions),
+		"stream":       true,
+		"model":        cpaResponsesMainModel,
+		"store":        false,
+		"tool_choice":  map[string]any{"type": "image_generation"},
+		"input":        buildResponsesInputItemsFromPrompt(prompt, imageParts),
+		"tools":        []any{tool},
 	}
 }
 

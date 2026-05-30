@@ -311,16 +311,13 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 		instructions = strings.TrimSpace(c.customInstructions)
 	}
 	payload := map[string]any{
-		"model":               c.model,
-		"input":               buildResponsesInputItemsFromPrompt(prompt, imageParts),
-		"tools":               []any{tool},
-		"tool_choice":         map[string]any{"type": "image_generation"},
-		"instructions":        instructions,
-		"stream":              true,
-		"reasoning":           map[string]any{"effort": "xhigh"},
-		"store":               false,
-		"parallel_tool_calls": true,
-		"include":             []string{"reasoning.encrypted_content"},
+		"model":        c.model,
+		"input":        buildResponsesInputItemsFromPrompt(prompt, imageParts),
+		"tools":        []any{tool},
+		"tool_choice":  map[string]any{"type": "image_generation"},
+		"instructions": instructions,
+		"stream":       true,
+		"store":        false,
 	}
 	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
 		payload["previous_response_id"] = previousResponseID

@@ -125,12 +125,84 @@ func appendImagesToLastUserInput(items []imageConversationInputItem, imageParts 
 }
 
 func buildResponsesInputItemsFromPrompt(prompt string, imageParts []map[string]any) []any {
-	if items := decodeImageConversationInput(prompt); len(items) > 0 {
+	if items := selectRecentImageConversationInputItems(decodeImageConversationInput(prompt), len(imageParts) > 0); len(items) > 0 {
 		return imageConversationInputItemsToPayload(appendImagesToLastUserInput(items, imageParts))
 	}
 	content := []map[string]any{{"type": "input_text", "text": strings.TrimSpace(prompt)}}
 	content = append(content, imageParts...)
 	return []any{map[string]any{"role": "user", "content": content}}
+}
+
+func selectRecentImageConversationInputItems(items []imageConversationInputItem, hasManualImages bool) []imageConversationInputItem {
+	items = normalizeImageConversationInput(items)
+	if len(items) == 0 {
+		return nil
+	}
+
+	lastUserIndex := -1
+	previousUserIndex := -1
+	for index := len(items) - 1; index >= 0; index-- {
+		if !strings.EqualFold(strings.TrimSpace(items[index].Role), "user") {
+			continue
+		}
+		if lastUserIndex < 0 {
+			lastUserIndex = index
+			continue
+		}
+		previousUserIndex = index
+		break
+	}
+	if lastUserIndex < 0 {
+		return nil
+	}
+
+	result := make([]imageConversationInputItem, 0, 2)
+	if previousUserIndex >= 0 {
+		previous := filterImageConversationInputItem(items[previousUserIndex], true)
+		if len(previous.Content) > 0 {
+			result = append(result, previous)
+		}
+	}
+	current := filterImageConversationInputItem(items[lastUserIndex], hasManualImages)
+	result = append(result, current)
+	if !hasManualImages && !imageConversationInputItemsHaveImage(result) {
+		for index := lastUserIndex; index >= 0; index-- {
+			if imageURL := firstImageConversationInputURL(items[index]); imageURL != "" {
+				result[len(result)-1].Content = append(result[len(result)-1].Content, imageConversationInputContent{Type: "input_image", ImageURL: imageURL, Detail: "high"})
+				break
+			}
+		}
+	}
+	return normalizeImageConversationInput(result)
+}
+
+func filterImageConversationInputItem(item imageConversationInputItem, dropImages bool) imageConversationInputItem {
+	filtered := imageConversationInputItem{Role: item.Role, Content: make([]imageConversationInputContent, 0, len(item.Content))}
+	for _, part := range item.Content {
+		if dropImages && part.Type == "input_image" {
+			continue
+		}
+		filtered.Content = append(filtered.Content, part)
+	}
+	return filtered
+}
+
+func imageConversationInputItemsHaveImage(items []imageConversationInputItem) bool {
+	for _, item := range items {
+		if firstImageConversationInputURL(item) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func firstImageConversationInputURL(item imageConversationInputItem) string {
+	for _, part := range item.Content {
+		if part.Type == "input_image" && strings.TrimSpace(part.ImageURL) != "" {
+			return strings.TrimSpace(part.ImageURL)
+		}
+	}
+	return ""
 }
 
 func imageConversationInputItemsToPayload(items []imageConversationInputItem) []any {

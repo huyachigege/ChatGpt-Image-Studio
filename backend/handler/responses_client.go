@@ -241,15 +241,13 @@ func (c *ResponsesClient) generateViaResponsesWithActionAndImageURLs(ctx context
 		instructions = strings.TrimSpace(c.customInstructions)
 	}
 	payload := map[string]any{
-		"model":               model,
-		"input":               []any{map[string]any{"role": "user", "content": content}},
-		"tools":               []any{tool},
-		"tool_choice":         map[string]any{"type": "image_generation"},
-		"instructions":        instructions,
-		"stream":              true,
-		"store":               false,
-		"parallel_tool_calls": true,
-		"include":             []string{"reasoning.encrypted_content"},
+		"model":        model,
+		"input":        []any{map[string]any{"role": "user", "content": content}},
+		"tools":        []any{tool},
+		"tool_choice":  map[string]any{"type": "image_generation"},
+		"instructions": instructions,
+		"stream":       true,
+		"store":        false,
 	}
 	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
 		payload["previous_response_id"] = previousResponseID
