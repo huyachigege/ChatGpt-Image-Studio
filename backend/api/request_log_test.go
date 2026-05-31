@@ -127,3 +127,37 @@ func TestImageRequestLogStoreDeletesBeforeCutoff(t *testing.T) {
 		}
 	}
 }
+
+func TestImageRequestLogStoreDeletesPromptMetadataIncrementally(t *testing.T) {
+	rootDir := t.TempDir()
+	cfg := config.New(rootDir)
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	store := newImageRequestLogStore(cfg)
+	defer store.close()
+
+	store.add(imageRequestLogEntry{ID: "delete-me", StartedAt: "2026-05-31T10:00:00Z", Prompt: "old prompt", Success: true, ImageNames: []string{"old.png"}})
+	store.add(imageRequestLogEntry{ID: "keep-me", StartedAt: "2026-05-31T10:01:00Z", Prompt: "new prompt", Success: true, ImageNames: []string{"new.png"}})
+
+	metadata := store.imagePromptMetadata()
+	if metadata["old.png"].Prompt != "old prompt" || metadata["new.png"].Prompt != "new prompt" {
+		t.Fatalf("initial metadata = %#v, want old and new prompts", metadata)
+	}
+
+	deleted, err := store.delete([]string{"delete-me"})
+	if err != nil {
+		t.Fatalf("delete() returned error: %v", err)
+	}
+	if len(deleted) != 1 || deleted[0] != "delete-me" {
+		t.Fatalf("delete() = %#v, want delete-me", deleted)
+	}
+
+	metadata = store.imagePromptMetadata()
+	if _, ok := metadata["old.png"]; ok {
+		t.Fatalf("deleted prompt metadata still present: %#v", metadata)
+	}
+	if metadata["new.png"].Prompt != "new prompt" {
+		t.Fatalf("kept prompt metadata = %#v, want new prompt", metadata["new.png"])
+	}
+}

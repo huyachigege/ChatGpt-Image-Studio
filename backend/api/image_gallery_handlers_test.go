@@ -50,6 +50,38 @@ func TestImageConversationPromptMetadataCacheAddsIncrementalConversation(t *test
 	}
 }
 
+func TestImageConversationPromptMetadataCacheRemovesDeletedConversation(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	cfg.Storage.ImageConversationStorage = "server"
+	server := NewServer(cfg, nil, nil)
+	t.Cleanup(func() { server.Close() })
+
+	server.imageConversationPromptMetadataCache["user-1"] = imageConversationPromptMetadataCacheEntry{
+		loaded: true,
+		metadata: map[string]imageGalleryPromptMetadata{
+			"deleted.png": {Prompt: "deleted prompt", ConversationID: "conversation-deleted"},
+			"kept.png":    {Prompt: "kept prompt", ConversationID: "conversation-kept"},
+		},
+		metadataKeysByConversationID: map[string][]string{
+			"conversation-deleted": {"deleted.png"},
+			"conversation-kept":    {"kept.png"},
+		},
+	}
+
+	server.removeImageConversationPromptMetadataCache("user-1", "conversation-deleted")
+
+	metadata := server.imageConversationPromptMetadata(context.Background(), "user-1")
+	if _, ok := metadata["deleted.png"]; ok {
+		t.Fatalf("deleted conversation metadata still present: %#v", metadata)
+	}
+	if metadata["kept.png"].Prompt != "kept prompt" {
+		t.Fatalf("kept conversation metadata = %#v, want kept prompt", metadata["kept.png"])
+	}
+}
+
 func TestLookupImageGalleryPromptMetadataMatchesLegacyURLForms(t *testing.T) {
 	metadata := imageGalleryPromptMetadata{Prompt: "a prompt", ConversationID: "conversation-1", TurnID: "turn-1"}
 	metadataByName := map[string]imageGalleryPromptMetadata{}

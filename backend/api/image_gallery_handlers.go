@@ -57,8 +57,9 @@ type imageGalleryPromptMetadata struct {
 }
 
 type imageConversationPromptMetadataCacheEntry struct {
-	loaded   bool
-	metadata map[string]imageGalleryPromptMetadata
+	loaded                       bool
+	metadata                     map[string]imageGalleryPromptMetadata
+	metadataKeysByConversationID map[string][]string
 }
 
 func (s *Server) handleListImageGallery(w http.ResponseWriter, r *http.Request) {
@@ -467,20 +468,20 @@ func (s *Server) imageConversationPromptMetadata(ctx context.Context, userID str
 	if err != nil {
 		return metadataByName
 	}
-	metadataByName = buildImageGalleryPromptMetadata(conversations)
+	metadataByName, keysByConversationID := buildImageGalleryPromptMetadata(conversations)
 
 	s.imageConversationPromptMetadataCacheMu.Lock()
 	if s.imageConversationPromptMetadataCache == nil {
 		s.imageConversationPromptMetadataCache = make(map[string]imageConversationPromptMetadataCacheEntry)
 	}
-	s.imageConversationPromptMetadataCache[scope] = imageConversationPromptMetadataCacheEntry{loaded: true, metadata: metadataByName}
+	s.imageConversationPromptMetadataCache[scope] = imageConversationPromptMetadataCacheEntry{loaded: true, metadata: metadataByName, metadataKeysByConversationID: keysByConversationID}
 	metadata := cloneImageGalleryPromptMetadata(metadataByName)
 	s.imageConversationPromptMetadataCacheMu.Unlock()
 	return metadata
 }
 
 func (s *Server) addImageConversationPromptMetadataCache(userID string, conversation imagehistory.Conversation) {
-	metadataByName := buildImageGalleryPromptMetadata([]imagehistory.Conversation{conversation})
+	metadataByName, keysByConversationID := buildImageGalleryPromptMetadata([]imagehistory.Conversation{conversation})
 	if len(metadataByName) == 0 {
 		return
 	}
@@ -494,6 +495,15 @@ func (s *Server) addImageConversationPromptMetadataCache(userID string, conversa
 		if entry.metadata == nil {
 			entry.metadata = make(map[string]imageGalleryPromptMetadata)
 		}
+		if entry.metadataKeysByConversationID == nil {
+			entry.metadataKeysByConversationID = make(map[string][]string)
+		}
+		for conversationID, keys := range keysByConversationID {
+			for _, key := range entry.metadataKeysByConversationID[conversationID] {
+				delete(entry.metadata, key)
+			}
+			entry.metadataKeysByConversationID[conversationID] = keys
+		}
 		for key, metadata := range metadataByName {
 			entry.metadata[key] = metadata
 		}
@@ -506,6 +516,45 @@ func (s *Server) invalidateImageConversationPromptMetadataCache(userID string) {
 	defer s.imageConversationPromptMetadataCacheMu.Unlock()
 	for _, scope := range imageConversationPromptMetadataAffectedScopes(userID) {
 		delete(s.imageConversationPromptMetadataCache, scope)
+	}
+}
+
+func (s *Server) removeImageConversationPromptMetadataCache(userID, conversationID string) {
+	conversationID = strings.TrimSpace(conversationID)
+	if conversationID == "" {
+		return
+	}
+	s.imageConversationPromptMetadataCacheMu.Lock()
+	defer s.imageConversationPromptMetadataCacheMu.Unlock()
+	for _, scope := range imageConversationPromptMetadataAffectedScopes(userID) {
+		entry, ok := s.imageConversationPromptMetadataCache[scope]
+		if !ok || !entry.loaded {
+			continue
+		}
+		for _, key := range entry.metadataKeysByConversationID[conversationID] {
+			delete(entry.metadata, key)
+		}
+		delete(entry.metadataKeysByConversationID, conversationID)
+		s.imageConversationPromptMetadataCache[scope] = entry
+	}
+}
+
+func (s *Server) clearImageConversationPromptMetadataCache(userID string) {
+	s.imageConversationPromptMetadataCacheMu.Lock()
+	defer s.imageConversationPromptMetadataCacheMu.Unlock()
+	userScope := imageConversationPromptMetadataScope(userID)
+	for _, scope := range imageConversationPromptMetadataAffectedScopes(userID) {
+		if scope != userScope {
+			delete(s.imageConversationPromptMetadataCache, scope)
+			continue
+		}
+		entry, ok := s.imageConversationPromptMetadataCache[scope]
+		if !ok || !entry.loaded {
+			continue
+		}
+		entry.metadata = make(map[string]imageGalleryPromptMetadata)
+		entry.metadataKeysByConversationID = make(map[string][]string)
+		s.imageConversationPromptMetadataCache[scope] = entry
 	}
 }
 
@@ -535,37 +584,47 @@ func cloneImageGalleryPromptMetadata(source map[string]imageGalleryPromptMetadat
 	return clone
 }
 
-func buildImageGalleryPromptMetadata(conversations []imagehistory.Conversation) map[string]imageGalleryPromptMetadata {
+func buildImageGalleryPromptMetadata(conversations []imagehistory.Conversation) (map[string]imageGalleryPromptMetadata, map[string][]string) {
 	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	keysByConversationID := make(map[string][]string)
 	for _, conversation := range conversations {
+		conversationID := strings.TrimSpace(conversation.ID)
 		conversationPrompt := strings.TrimSpace(conversation.Prompt)
 		for _, image := range conversation.Images {
-			addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
+			keys := addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
 				Prompt:         strings.TrimSpace(firstNonEmpty(image.Prompt, conversationPrompt)),
 				ConversationID: conversation.ID,
 			})
+			if conversationID != "" {
+				keysByConversationID[conversationID] = append(keysByConversationID[conversationID], keys...)
+			}
 		}
 		for _, turn := range conversation.Turns {
 			turnPrompt := strings.TrimSpace(firstNonEmpty(turn.Prompt, conversationPrompt))
 			for _, image := range turn.Images {
-				addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
+				keys := addImageGalleryPromptMetadata(metadataByName, image.URL, imageGalleryPromptMetadata{
 					Prompt:         strings.TrimSpace(firstNonEmpty(image.Prompt, turnPrompt)),
 					ConversationID: conversation.ID,
 					TurnID:         turn.ID,
 				})
+				if conversationID != "" {
+					keysByConversationID[conversationID] = append(keysByConversationID[conversationID], keys...)
+				}
 			}
 		}
 	}
-	return metadataByName
+	return metadataByName, keysByConversationID
 }
 
-func addImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, imageURL string, metadata imageGalleryPromptMetadata) {
+func addImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, imageURL string, metadata imageGalleryPromptMetadata) []string {
 	if metadata.Prompt == "" {
-		return
+		return nil
 	}
-	for _, key := range imageGalleryPromptKeys(imageURL) {
+	keys := imageGalleryPromptKeys(imageURL)
+	for _, key := range keys {
 		metadataByName[key] = metadata
 	}
+	return keys
 }
 
 func lookupImageGalleryPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, item imageGalleryItem) (imageGalleryPromptMetadata, bool) {

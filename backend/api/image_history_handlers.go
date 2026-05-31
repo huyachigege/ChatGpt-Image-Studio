@@ -103,7 +103,7 @@ func (s *Server) handleDeleteImageConversation(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	s.invalidateImageConversationPromptMetadataCache(identity.UserID)
+	s.removeImageConversationPromptMetadataCache(identity.UserID, r.PathValue("id"))
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -124,7 +124,7 @@ func (s *Server) handleClearImageConversations(w http.ResponseWriter, r *http.Re
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	s.invalidateImageConversationPromptMetadataCache(identity.UserID)
+	s.clearImageConversationPromptMetadataCache(identity.UserID)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 

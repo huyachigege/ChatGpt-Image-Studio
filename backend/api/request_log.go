@@ -154,8 +154,10 @@ type imageRequestLogStore struct {
 	legacyPath           string
 	db                   *sql.DB
 	items                []imageRequestLogEntry
-	promptMetadata       map[string]imageGalleryPromptMetadata
-	promptMetadataLoaded bool
+	promptMetadata            map[string]imageGalleryPromptMetadata
+	promptMetadataKeysByLogID map[string][]string
+	promptMetadataLoaded      bool
+	promptMetadataSyncTimer   *time.Timer
 }
 
 func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
@@ -184,7 +186,16 @@ func (s *imageRequestLogStore) initDB() {
 }
 
 func (s *imageRequestLogStore) close() error {
-	if s == nil || s.db == nil {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	if s.promptMetadataSyncTimer != nil {
+		s.promptMetadataSyncTimer.Stop()
+		s.promptMetadataSyncTimer = nil
+	}
+	s.mu.Unlock()
+	if s.db == nil {
 		return nil
 	}
 	return s.db.Close()
@@ -208,7 +219,10 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 		if s.promptMetadata == nil {
 			s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
 		}
-		addImageRequestLogPromptMetadata(s.promptMetadata, entry)
+		if s.promptMetadataKeysByLogID == nil {
+			s.promptMetadataKeysByLogID = make(map[string][]string)
+		}
+		addImageRequestLogPromptMetadata(s.promptMetadata, s.promptMetadataKeysByLogID, entry)
 	}
 	_ = s.append(entry)
 }
@@ -246,48 +260,114 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 
 func (s *imageRequestLogStore) rebuildImagePromptMetadataLocked() {
 	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	keysByLogID := make(map[string][]string)
 	if s == nil {
 		return
 	}
-	if s.db != nil {
-		rows, err := s.db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
-		if err == nil {
-			defer rows.Close()
-			for rows.Next() {
-				var raw []byte
-				if err := rows.Scan(&raw); err != nil {
-					continue
-				}
-				var entry imageRequestLogEntry
-				if err := json.Unmarshal(raw, &entry); err != nil {
-					continue
-				}
-				addImageRequestLogPromptMetadata(metadataByName, entry)
-			}
-			s.promptMetadata = metadataByName
-			s.promptMetadataLoaded = true
-			return
-		}
+	if dbMetadata, dbKeys, ok := loadImageRequestLogPromptMetadataFromDB(s.db); ok {
+		s.promptMetadata = dbMetadata
+		s.promptMetadataKeysByLogID = dbKeys
+		s.promptMetadataLoaded = true
+		return
 	}
 	for _, entry := range s.items {
-		addImageRequestLogPromptMetadata(metadataByName, entry)
+		addImageRequestLogPromptMetadata(metadataByName, keysByLogID, entry)
 	}
 	s.promptMetadata = metadataByName
+	s.promptMetadataKeysByLogID = keysByLogID
 	s.promptMetadataLoaded = true
 }
 
-func addImageRequestLogPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, entry imageRequestLogEntry) {
+func loadImageRequestLogPromptMetadataFromDB(db *sql.DB) (map[string]imageGalleryPromptMetadata, map[string][]string, bool) {
+	if db == nil {
+		return nil, nil, false
+	}
+	rows, err := db.Query(`SELECT raw_json FROM image_request_logs ORDER BY started_at DESC, id DESC LIMIT ?`, maxImageRequestLogEntries)
+	if err != nil {
+		return nil, nil, false
+	}
+	defer rows.Close()
+	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	keysByLogID := make(map[string][]string)
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			continue
+		}
+		var entry imageRequestLogEntry
+		if err := json.Unmarshal(raw, &entry); err != nil {
+			continue
+		}
+		addImageRequestLogPromptMetadata(metadataByName, keysByLogID, entry)
+	}
+	return metadataByName, keysByLogID, true
+}
+
+func addImageRequestLogPromptMetadata(metadataByName map[string]imageGalleryPromptMetadata, keysByLogID map[string][]string, entry imageRequestLogEntry) {
 	prompt := strings.TrimSpace(entry.Prompt)
 	if prompt == "" || !entry.Success {
 		return
 	}
 	metadata := imageGalleryPromptMetadata{Prompt: prompt}
+	keys := make([]string, 0, len(entry.ImageURLs)+len(entry.ImageNames))
 	for _, imageURL := range entry.ImageURLs {
-		addImageGalleryPromptMetadata(metadataByName, imageURL, metadata)
+		keys = append(keys, addImageRequestLogPromptMetadataKeys(metadataByName, imageURL, metadata)...)
 	}
 	for _, imageName := range entry.ImageNames {
-		addImageGalleryPromptMetadata(metadataByName, imageName, metadata)
+		keys = append(keys, addImageRequestLogPromptMetadataKeys(metadataByName, imageName, metadata)...)
 	}
+	if len(keys) > 0 && strings.TrimSpace(entry.ID) != "" {
+		keysByLogID[entry.ID] = keys
+	}
+}
+
+func addImageRequestLogPromptMetadataKeys(metadataByName map[string]imageGalleryPromptMetadata, imageURL string, metadata imageGalleryPromptMetadata) []string {
+	keys := imageGalleryPromptKeys(imageURL)
+	for _, key := range keys {
+		metadataByName[key] = metadata
+	}
+	return keys
+}
+
+func (s *imageRequestLogStore) removeImageRequestLogPromptMetadataByIDsLocked(ids []string) {
+	if s == nil || !s.promptMetadataLoaded || len(ids) == 0 {
+		return
+	}
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		for _, key := range s.promptMetadataKeysByLogID[id] {
+			delete(s.promptMetadata, key)
+		}
+		delete(s.promptMetadataKeysByLogID, id)
+	}
+}
+
+func (s *imageRequestLogStore) scheduleImagePromptMetadataSyncLocked() {
+	if s == nil || !s.promptMetadataLoaded || s.db == nil {
+		return
+	}
+	if s.promptMetadataSyncTimer != nil {
+		s.promptMetadataSyncTimer.Stop()
+	}
+	s.promptMetadataSyncTimer = time.AfterFunc(2*time.Second, func() {
+		s.mu.Lock()
+		db := s.db
+		s.mu.Unlock()
+
+		metadataByName, keysByLogID, ok := loadImageRequestLogPromptMetadataFromDB(db)
+		if !ok {
+			return
+		}
+
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		s.promptMetadata = metadataByName
+		s.promptMetadataKeysByLogID = keysByLogID
+		s.promptMetadataLoaded = true
+	})
 }
 
 func (s *imageRequestLogStore) latestStartedAtByUser() map[string]string {
@@ -445,7 +525,7 @@ func (s *imageRequestLogStore) deleteFailed() (int64, error) {
 		}
 	}
 	s.items = next
-	s.rebuildImagePromptMetadataLocked()
+	s.scheduleImagePromptMetadataSyncLocked()
 	return affected, nil
 }
 
@@ -458,6 +538,16 @@ func (s *imageRequestLogStore) deleteBefore(cutoff time.Time) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	deletedIDs := make([]string, 0)
+	if rows, err := s.db.Query(`SELECT id FROM image_request_logs WHERE started_at < ?`, cutoffValue); err == nil {
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err == nil && strings.TrimSpace(id) != "" {
+				deletedIDs = append(deletedIDs, id)
+			}
+		}
+		_ = rows.Close()
+	}
 	res, err := s.db.Exec(`DELETE FROM image_request_logs WHERE started_at < ?`, cutoffValue)
 	if err != nil {
 		return 0, err
@@ -474,7 +564,8 @@ func (s *imageRequestLogStore) deleteBefore(cutoff time.Time) (int64, error) {
 		next = append(next, item)
 	}
 	s.items = next
-	s.rebuildImagePromptMetadataLocked()
+	s.removeImageRequestLogPromptMetadataByIDsLocked(deletedIDs)
+	s.scheduleImagePromptMetadataSyncLocked()
 	return affected, nil
 }
 
@@ -502,6 +593,17 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 		placeholders = append(placeholders, "?")
 		args = append(args, id)
 	}
+	selectQuery := `SELECT id FROM image_request_logs WHERE id IN (` + strings.Join(placeholders, ",") + `)`
+	deleted := make([]string, 0, len(wanted))
+	if rows, err := s.db.Query(selectQuery, args...); err == nil {
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err == nil && strings.TrimSpace(id) != "" {
+				deleted = append(deleted, id)
+			}
+		}
+		_ = rows.Close()
+	}
 	query := `DELETE FROM image_request_logs WHERE id IN (` + strings.Join(placeholders, ",") + `)`
 	res, err := s.db.Exec(query, args...)
 	if err != nil {
@@ -512,17 +614,16 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 		return []string{}, nil
 	}
 
-	deleted := make([]string, 0, len(wanted))
 	next := make([]imageRequestLogEntry, 0, len(s.items))
 	for _, item := range s.items {
 		if _, ok := wanted[item.ID]; ok {
-			deleted = append(deleted, item.ID)
 			continue
 		}
 		next = append(next, item)
 	}
 	s.items = next
-	s.rebuildImagePromptMetadataLocked()
+	s.removeImageRequestLogPromptMetadataByIDsLocked(deleted)
+	s.scheduleImagePromptMetadataSyncLocked()
 	return deleted, nil
 }
 
@@ -573,6 +674,7 @@ func (s *imageRequestLogStore) loadFromDB() {
 	}
 	s.items = items
 	s.promptMetadata = nil
+	s.promptMetadataKeysByLogID = nil
 	s.promptMetadataLoaded = false
 }
 
