@@ -58,6 +58,7 @@ type imageGalleryPromptMetadata struct {
 
 type imageConversationPromptMetadataCacheEntry struct {
 	loaded                       bool
+	loading                      bool
 	metadata                     map[string]imageGalleryPromptMetadata
 	metadataKeysByConversationID map[string][]string
 }
@@ -452,32 +453,79 @@ func (s *Server) attachImageGalleryPrompts(ctx context.Context, identity authIde
 func (s *Server) imageConversationPromptMetadata(ctx context.Context, userID string) map[string]imageGalleryPromptMetadata {
 	scope := imageConversationPromptMetadataScope(userID)
 	s.imageConversationPromptMetadataCacheMu.RLock()
-	if entry, ok := s.imageConversationPromptMetadataCache[scope]; ok && entry.loaded {
+	if entry, ok := s.imageConversationPromptMetadataCache[scope]; ok {
 		metadata := cloneImageGalleryPromptMetadata(entry.metadata)
+		loaded := entry.loaded
 		s.imageConversationPromptMetadataCacheMu.RUnlock()
+		if !loaded {
+			s.scheduleImageConversationPromptMetadataLoad(userID)
+		}
 		return metadata
 	}
 	s.imageConversationPromptMetadataCacheMu.RUnlock()
+	s.scheduleImageConversationPromptMetadataLoad(userID)
+	return map[string]imageGalleryPromptMetadata{}
+}
 
-	metadataByName := make(map[string]imageGalleryPromptMetadata)
-	store, err := imagehistory.NewStoreForUser(s.cfg, userID)
-	if err != nil {
-		return metadataByName
-	}
-	conversations, err := store.List(ctx)
-	if err != nil {
-		return metadataByName
-	}
-	metadataByName, keysByConversationID := buildImageGalleryPromptMetadata(conversations)
-
+func (s *Server) scheduleImageConversationPromptMetadataLoad(userID string) {
+	scope := imageConversationPromptMetadataScope(userID)
 	s.imageConversationPromptMetadataCacheMu.Lock()
 	if s.imageConversationPromptMetadataCache == nil {
 		s.imageConversationPromptMetadataCache = make(map[string]imageConversationPromptMetadataCacheEntry)
 	}
-	s.imageConversationPromptMetadataCache[scope] = imageConversationPromptMetadataCacheEntry{loaded: true, metadata: metadataByName, metadataKeysByConversationID: keysByConversationID}
-	metadata := cloneImageGalleryPromptMetadata(metadataByName)
+	entry := s.imageConversationPromptMetadataCache[scope]
+	if entry.loaded || entry.loading {
+		s.imageConversationPromptMetadataCacheMu.Unlock()
+		return
+	}
+	entry.loading = true
+	if entry.metadata == nil {
+		entry.metadata = make(map[string]imageGalleryPromptMetadata)
+	}
+	if entry.metadataKeysByConversationID == nil {
+		entry.metadataKeysByConversationID = make(map[string][]string)
+	}
+	s.imageConversationPromptMetadataCache[scope] = entry
 	s.imageConversationPromptMetadataCacheMu.Unlock()
-	return metadata
+
+	go s.loadImageConversationPromptMetadata(scope, userID)
+}
+
+func (s *Server) loadImageConversationPromptMetadata(scope, userID string) {
+	metadataByName := make(map[string]imageGalleryPromptMetadata)
+	keysByConversationID := make(map[string][]string)
+	loaded := false
+	store, err := imagehistory.NewStoreForUser(s.cfg, userID)
+	if err == nil {
+		defer store.Close()
+		if conversations, listErr := store.List(context.Background()); listErr == nil {
+			metadataByName, keysByConversationID = buildImageGalleryPromptMetadata(conversations)
+			loaded = true
+		}
+	}
+
+	s.imageConversationPromptMetadataCacheMu.Lock()
+	defer s.imageConversationPromptMetadataCacheMu.Unlock()
+	if s.imageConversationPromptMetadataCache == nil {
+		s.imageConversationPromptMetadataCache = make(map[string]imageConversationPromptMetadataCacheEntry)
+	}
+	current := s.imageConversationPromptMetadataCache[scope]
+	if !loaded {
+		current.loading = false
+		s.imageConversationPromptMetadataCache[scope] = current
+		return
+	}
+	for key, metadata := range current.metadata {
+		if _, exists := metadataByName[key]; !exists {
+			metadataByName[key] = metadata
+		}
+	}
+	for conversationID, keys := range current.metadataKeysByConversationID {
+		if _, exists := keysByConversationID[conversationID]; !exists {
+			keysByConversationID[conversationID] = keys
+		}
+	}
+	s.imageConversationPromptMetadataCache[scope] = imageConversationPromptMetadataCacheEntry{loaded: true, metadata: metadataByName, metadataKeysByConversationID: keysByConversationID}
 }
 
 func (s *Server) addImageConversationPromptMetadataCache(userID string, conversation imagehistory.Conversation) {
@@ -489,7 +537,7 @@ func (s *Server) addImageConversationPromptMetadataCache(userID string, conversa
 	defer s.imageConversationPromptMetadataCacheMu.Unlock()
 	for _, scope := range imageConversationPromptMetadataAffectedScopes(userID) {
 		entry, ok := s.imageConversationPromptMetadataCache[scope]
-		if !ok || !entry.loaded {
+		if !ok {
 			continue
 		}
 		if entry.metadata == nil {

@@ -156,8 +156,10 @@ type imageRequestLogStore struct {
 	items                []imageRequestLogEntry
 	promptMetadata            map[string]imageGalleryPromptMetadata
 	promptMetadataKeysByLogID map[string][]string
-	promptMetadataLoaded      bool
-	promptMetadataSyncTimer   *time.Timer
+	promptMetadataLoaded       bool
+	promptMetadataRefreshing   bool
+	promptMetadataRefreshAgain bool
+	promptMetadataSyncTimer    *time.Timer
 }
 
 func newImageRequestLogStore(cfg *config.Config) *imageRequestLogStore {
@@ -183,6 +185,9 @@ func (s *imageRequestLogStore) initDB() {
 	}
 	_ = s.importLegacyJSONL()
 	s.loadFromDB()
+	s.mu.Lock()
+	s.scheduleImagePromptMetadataSyncLocked(0)
+	s.mu.Unlock()
 }
 
 func (s *imageRequestLogStore) close() error {
@@ -215,7 +220,7 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 	if len(s.items) > maxImageRequestLogEntries {
 		s.items = s.items[:maxImageRequestLogEntries]
 	}
-	if s.promptMetadataLoaded {
+	if s.promptMetadataLoaded || s.promptMetadataRefreshing {
 		if s.promptMetadata == nil {
 			s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
 		}
@@ -223,6 +228,9 @@ func (s *imageRequestLogStore) add(entry imageRequestLogEntry) {
 			s.promptMetadataKeysByLogID = make(map[string][]string)
 		}
 		addImageRequestLogPromptMetadata(s.promptMetadata, s.promptMetadataKeysByLogID, entry)
+		if s.promptMetadataRefreshing {
+			s.promptMetadataRefreshAgain = true
+		}
 	}
 	_ = s.append(entry)
 }
@@ -248,13 +256,13 @@ func (s *imageRequestLogStore) imagePromptMetadata() map[string]imageGalleryProm
 		return metadataByName
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	if !s.promptMetadataLoaded {
-		s.rebuildImagePromptMetadataLocked()
+		s.scheduleImagePromptMetadataSyncLocked(0)
 	}
 	for key, metadata := range s.promptMetadata {
 		metadataByName[key] = metadata
 	}
+	s.mu.Unlock()
 	return metadataByName
 }
 
@@ -345,28 +353,39 @@ func (s *imageRequestLogStore) removeImageRequestLogPromptMetadataByIDsLocked(id
 	}
 }
 
-func (s *imageRequestLogStore) scheduleImagePromptMetadataSyncLocked() {
-	if s == nil || !s.promptMetadataLoaded || s.db == nil {
+func (s *imageRequestLogStore) scheduleImagePromptMetadataSyncLocked(delay time.Duration) {
+	if s == nil || s.db == nil {
+		return
+	}
+	if s.promptMetadataRefreshing {
+		s.promptMetadataRefreshAgain = true
 		return
 	}
 	if s.promptMetadataSyncTimer != nil {
 		s.promptMetadataSyncTimer.Stop()
 	}
-	s.promptMetadataSyncTimer = time.AfterFunc(2*time.Second, func() {
+	s.promptMetadataRefreshing = true
+	s.promptMetadataSyncTimer = time.AfterFunc(delay, func() {
 		s.mu.Lock()
 		db := s.db
 		s.mu.Unlock()
 
 		metadataByName, keysByLogID, ok := loadImageRequestLogPromptMetadataFromDB(db)
-		if !ok {
-			return
-		}
 
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		s.promptMetadata = metadataByName
-		s.promptMetadataKeysByLogID = keysByLogID
-		s.promptMetadataLoaded = true
+		s.promptMetadataRefreshing = false
+		refreshAgain := s.promptMetadataRefreshAgain
+		s.promptMetadataRefreshAgain = false
+		if refreshAgain {
+			s.scheduleImagePromptMetadataSyncLocked(0)
+			return
+		}
+		if ok {
+			s.promptMetadata = metadataByName
+			s.promptMetadataKeysByLogID = keysByLogID
+			s.promptMetadataLoaded = true
+		}
 	})
 }
 
@@ -525,7 +544,7 @@ func (s *imageRequestLogStore) deleteFailed() (int64, error) {
 		}
 	}
 	s.items = next
-	s.scheduleImagePromptMetadataSyncLocked()
+	s.scheduleImagePromptMetadataSyncLocked(2 * time.Second)
 	return affected, nil
 }
 
@@ -565,7 +584,7 @@ func (s *imageRequestLogStore) deleteBefore(cutoff time.Time) (int64, error) {
 	}
 	s.items = next
 	s.removeImageRequestLogPromptMetadataByIDsLocked(deletedIDs)
-	s.scheduleImagePromptMetadataSyncLocked()
+	s.scheduleImagePromptMetadataSyncLocked(2 * time.Second)
 	return affected, nil
 }
 
@@ -623,7 +642,7 @@ func (s *imageRequestLogStore) delete(ids []string) ([]string, error) {
 	}
 	s.items = next
 	s.removeImageRequestLogPromptMetadataByIDsLocked(deleted)
-	s.scheduleImagePromptMetadataSyncLocked()
+	s.scheduleImagePromptMetadataSyncLocked(2 * time.Second)
 	return deleted, nil
 }
 
@@ -673,8 +692,8 @@ func (s *imageRequestLogStore) loadFromDB() {
 		items = append(items, requestLogSummaryToEntry(summary))
 	}
 	s.items = items
-	s.promptMetadata = nil
-	s.promptMetadataKeysByLogID = nil
+	s.promptMetadata = make(map[string]imageGalleryPromptMetadata)
+	s.promptMetadataKeysByLogID = make(map[string][]string)
 	s.promptMetadataLoaded = false
 }
 
