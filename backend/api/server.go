@@ -2872,8 +2872,16 @@ func isImageNoOutputRefusalError(err error) bool {
 		return false
 	}
 	message := strings.ToLower(strings.TrimSpace(err.Error()))
-	return strings.Contains(message, "did not return image output") &&
-		(strings.Contains(message, "model response") || strings.Contains(message, "upstream response") || strings.Contains(message, "external responses") || strings.Contains(message, "cpa"))
+	if !strings.Contains(message, "did not return image output") {
+		return false
+	}
+	if !(strings.Contains(message, "model response") || strings.Contains(message, "upstream response") || strings.Contains(message, "external responses") || strings.Contains(message, "cpa")) {
+		return false
+	}
+	return strings.Contains(message, "text=") ||
+		strings.Contains(message, "refusal=") ||
+		strings.Contains(message, "error_message=") ||
+		strings.Contains(message, "error_code=")
 }
 
 func isInvalidImageTokenError(err error) bool {

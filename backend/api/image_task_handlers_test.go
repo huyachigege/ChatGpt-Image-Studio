@@ -1217,6 +1217,43 @@ func TestCreateImageGenerateTaskRetriesExternalResponses5xxThreeTimes(t *testing
 	}
 }
 
+func TestCreateImageGenerateTaskRetriesExternalResponsesStreamOnlyNoImageThreeTimes(t *testing.T) {
+	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
+		imageMode:   "studio",
+		accountType: "Plus",
+		freeRoute:   "legacy",
+		freeModel:   "auto",
+		paidRoute:   "external_responses",
+		paidModel:   "gpt-5.4-mini",
+	}, compatTestServerOptions{
+		externalResponsesEnabled: true,
+		behavior: compatClientBehavior{
+			externalGenerateErr: errors.New(`external responses did not return image output; model response: output_types=response.image_generation_call.generating output_types=response.output_item.done,image_generation_call output_types=response.output_item.added,message output_types=response.content_part.added output_types=response.output_text.done output_types=response.content_part.done output_types=response.output_item.done,message,output_text response_id=resp_123`),
+		},
+	})
+
+	if _, err := server.imageTasks.createTask(createImageTaskRequest{
+		ConversationID:   "conv-external-stream-only-retry-1",
+		TurnID:           "turn-external-stream-only-retry-1",
+		Mode:             "generate",
+		Prompt:           "external stream-only retry generate",
+		Model:            "gpt-image-2",
+		Count:            1,
+		ResolutionAccess: "paid",
+		Quality:          "high",
+	}); err != nil {
+		t.Fatalf("createTask() returned error: %v", err)
+	}
+
+	waitForTaskStatus(t, server, "turn-external-stream-only-retry-1", imageTaskStatusFailed)
+	if recorder.externalCalls != 3 {
+		t.Fatalf("externalCalls = %d, want 3; sequence = %#v", recorder.externalCalls, recorder.callSequence)
+	}
+	if len(recorder.callSequence) != 3 {
+		t.Fatalf("callSequence = %#v, want 3 external retry attempts", recorder.callSequence)
+	}
+}
+
 func TestCreateImageGenerateTaskRetriesExternalResponsesSSEContextCanceledThreeTimes(t *testing.T) {
 	server, recorder := newImageModeCompatTestServerWithOptions(t, imageModeCompatScenario{
 		imageMode:   "studio",

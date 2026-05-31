@@ -75,6 +75,16 @@ func TestNoImageOutputWithUpstreamTextIsFatalRefusal(t *testing.T) {
 	}
 }
 
+func TestNoImageOutputWithOnlyStreamTypesIsRetryable(t *testing.T) {
+	err := errors.New(`external responses did not return image output; model response: output_types=response.image_generation_call.generating output_types=response.output_item.done,image_generation_call output_types=response.output_item.added,message output_types=response.content_part.added output_types=response.output_text.done output_types=response.content_part.done output_types=response.output_item.done,message,output_text response_id=resp_123`)
+	if got := classifyImageAttemptError(err); got != imageAttemptRetryable {
+		t.Fatalf("classifyImageAttemptError = %v, want %v", got, imageAttemptRetryable)
+	}
+	if !shouldTryImageFallback(err, classifyImageAttemptError(err)) {
+		t.Fatalf("shouldTryImageFallback returned false for stream-only no image output")
+	}
+}
+
 func TestRaw401IsSanitized(t *testing.T) {
 	message := sanitizeImageUserFacingMessage(errors.New("responses returned 401: unauthorized invalid_token"))
 	for _, token := range []string{"401", "unauthorized", "invalid_token"} {
