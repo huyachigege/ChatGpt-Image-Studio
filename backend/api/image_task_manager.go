@@ -18,6 +18,7 @@ import (
 
 const maxImageTaskDeferredAttempts = 5
 const imageTaskRetentionAfterFinish = 30 * time.Minute
+const maxImageTaskReferenceImages = 6
 
 var (
 	imageTaskRetryBackoffBase = 2 * time.Second
@@ -997,6 +998,9 @@ func (m *imageTaskManager) newTask(req createImageTaskRequest) (*imageTask, erro
 	if mode == "edit" && countImageTaskSourceImages(sourceImages) > 1 && req.SourceReference == nil {
 		mode = "generate"
 		sourceImages, referenceImages = moveImageTaskSourceImagesToReferences(sourceImages, referenceImages)
+	}
+	if countImageTaskSourceImages(referenceImages) > maxImageTaskReferenceImages {
+		return nil, newRequestError("too_many_reference_images", fmt.Sprintf("参考图最多只能使用 %d 张", maxImageTaskReferenceImages))
 	}
 
 	var sourceReference *imageTaskSourceReference

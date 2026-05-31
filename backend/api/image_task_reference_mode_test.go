@@ -60,3 +60,26 @@ func TestNormalizeCreateImageTaskRequestKeepsSingleImageEdit(t *testing.T) {
 		t.Fatalf("SourceImages = %#v, ReferenceImages = %#v, want single edit source only", req.SourceImages, req.ReferenceImages)
 	}
 }
+
+func TestNewTaskRejectsMoreThanMaxReferenceImages(t *testing.T) {
+	manager := &imageTaskManager{server: &Server{}}
+	references := make([]imageTaskReferenceImagePayload, 0, maxImageTaskReferenceImages+1)
+	for index := 0; index < maxImageTaskReferenceImages+1; index++ {
+		references = append(references, imageTaskReferenceImagePayload{
+			ID:  "reference",
+			URL: "https://example.com/reference.png",
+		})
+	}
+
+	_, err := manager.newTask(createImageTaskRequest{
+		Mode:            "generate",
+		Prompt:          "test",
+		ReferenceImages: references,
+	})
+	if err == nil {
+		t.Fatal("newTask() error = nil, want too_many_reference_images")
+	}
+	if code := requestErrorCode(err); code != "too_many_reference_images" {
+		t.Fatalf("requestErrorCode() = %q, want too_many_reference_images", code)
+	}
+}

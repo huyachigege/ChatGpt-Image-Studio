@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { ImageQuality } from "@/lib/api";
 import type { ImageMode, StoredSourceImage } from "@/store/image-conversations";
 import { cn } from "@/lib/utils";
+import { MAX_REFERENCE_IMAGES } from "../hooks/use-image-source-inputs";
 import type { ImagePromptPreset } from "../prompt-presets";
 import { buildSourceImageUrl } from "../view-utils";
 
@@ -636,7 +637,7 @@ export function PromptComposer({
                   }}
                 >
                   <ImagePlus className="size-3.5" />
-                  {mode === "generate" ? "上传参考图" : "上传源图"}
+                  {mode === "generate" ? `上传参考图（最多 ${MAX_REFERENCE_IMAGES} 张）` : "上传源图"}
                 </Button>
                 <span className="hidden truncate text-xs text-stone-400 dark:text-[var(--studio-text-muted)] lg:inline">
                   Enter 发送 · Shift+Enter 换行 · 可直接粘贴图片

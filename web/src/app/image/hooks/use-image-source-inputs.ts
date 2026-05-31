@@ -24,7 +24,7 @@ type UseImageSourceInputsOptions = {
   makeId: () => string;
 };
 
-const MAX_REFERENCE_IMAGES = 9;
+export const MAX_REFERENCE_IMAGES = 6;
 
 async function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -77,11 +77,11 @@ export function useImageSourceInputs({
       ? normalizedFiles.slice(0, 1)
       : normalizedFiles.slice(0, Math.max(0, MAX_REFERENCE_IMAGES - sourceImages.filter((item) => item.role === "image").length));
     if (acceptedFiles.length === 0) {
-      toast.warning("最多支持 9 张参考图");
+      toast.warning(`最多支持 ${MAX_REFERENCE_IMAGES} 张参考图`);
       return;
     }
     if (role === "image" && acceptedFiles.length < normalizedFiles.length) {
-      toast.warning("最多支持 9 张参考图");
+      toast.warning(`最多支持 ${MAX_REFERENCE_IMAGES} 张参考图`);
     }
     const nextItems = await Promise.all(
       acceptedFiles.map(async (file) => ({
