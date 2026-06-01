@@ -48,6 +48,9 @@ studio_allow_disabled_image_accounts = false
 # 0 表示不额外重试；最大 10。
 image_account_retry_times = 3
 
+# 生成模式最多允许上传的参考图数量；最大 20。
+max_reference_images = 4
+
 [accounts]
 default_quota = 5
 prefer_remote_refresh = true

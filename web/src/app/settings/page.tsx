@@ -154,6 +154,7 @@ function defaultConfigPayload(): ConfigPayload {
       paidImageModel: "gpt-5.4-mini",
       studioAllowDisabledImageAccounts: false,
       imageAccountRetryTimes: 3,
+      maxReferenceImages: 4,
       imageCommonSystemHint: "",
       imagePrivateSystemHint: "",
       imageSystemHint: "",
@@ -257,6 +258,13 @@ function normalizeConfigPayload(
     chatgpt.requestTimeout || defaults.chatgpt.requestTimeout;
   chatgpt.imageAccountRetryTimes =
     chatgpt.imageAccountRetryTimes || defaults.chatgpt.imageAccountRetryTimes;
+  chatgpt.maxReferenceImages = Math.max(
+    1,
+    Math.min(
+      20,
+      Number(chatgpt.maxReferenceImages || defaults.chatgpt.maxReferenceImages),
+    ),
+  );
 
   const server = { ...defaults.server, ...next.server };
   server.port = server.port || defaults.server.port;

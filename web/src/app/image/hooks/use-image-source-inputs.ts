@@ -22,9 +22,10 @@ type UseImageSourceInputsOptions = {
   focusConversation: (conversationId: string) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   makeId: () => string;
+  maxReferenceImages: number;
 };
 
-export const MAX_REFERENCE_IMAGES = 6;
+export const DEFAULT_MAX_REFERENCE_IMAGES = 4;
 
 async function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -64,6 +65,7 @@ export function useImageSourceInputs({
   focusConversation,
   textareaRef,
   makeId,
+  maxReferenceImages,
 }: UseImageSourceInputsOptions) {
   const [sourceImages, setSourceImages] = useState<StoredSourceImage[]>([]);
   const [editorTarget, setEditorTarget] = useState<EditorTarget | null>(null);
@@ -73,15 +75,22 @@ export function useImageSourceInputs({
     if (normalizedFiles.length === 0) {
       return;
     }
+    const referenceLimit = Math.max(
+      1,
+      Math.min(
+        20,
+        Math.trunc(maxReferenceImages || DEFAULT_MAX_REFERENCE_IMAGES),
+      ),
+    );
     const acceptedFiles = role === "mask"
       ? normalizedFiles.slice(0, 1)
-      : normalizedFiles.slice(0, Math.max(0, MAX_REFERENCE_IMAGES - sourceImages.filter((item) => item.role === "image").length));
+      : normalizedFiles.slice(0, Math.max(0, referenceLimit - sourceImages.filter((item) => item.role === "image").length));
     if (acceptedFiles.length === 0) {
-      toast.warning(`最多支持 ${MAX_REFERENCE_IMAGES} 张参考图`);
+      toast.warning(`最多支持 ${referenceLimit} 张参考图`);
       return;
     }
     if (role === "image" && acceptedFiles.length < normalizedFiles.length) {
-      toast.warning(`最多支持 ${MAX_REFERENCE_IMAGES} 张参考图`);
+      toast.warning(`最多支持 ${referenceLimit} 张参考图`);
     }
     const nextItems = await Promise.all(
       acceptedFiles.map(async (file) => ({
@@ -105,7 +114,7 @@ export function useImageSourceInputs({
       }
       return [...prev.filter((item) => item.role !== "mask"), ...prev.filter((item) => item.role === "mask"), ...nextItems];
     });
-  }, [makeId, mode, setMode, sourceImages]);
+  }, [makeId, maxReferenceImages, mode, setMode, sourceImages]);
 
   const handlePromptPaste = useCallback((event: ReactClipboardEvent<Element>) => {
     const clipboardImages = Array.from(event.clipboardData.items)

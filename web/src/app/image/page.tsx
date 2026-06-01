@@ -10,6 +10,7 @@ import {
   cancelImageTask,
   consumeImageTaskStream,
   enhanceImagePrompt,
+  fetchConfig,
   fetchImageQuota,
   listFavorites,
   listImageTasks,
@@ -46,7 +47,10 @@ import {
 import { WorkspaceHeader } from "./components/workspace-header";
 import { imagePromptPresets, type ImagePromptPreset } from "./prompt-presets";
 import { useImageHistory } from "./hooks/use-image-history";
-import { useImageSourceInputs } from "./hooks/use-image-source-inputs";
+import {
+  DEFAULT_MAX_REFERENCE_IMAGES,
+  useImageSourceInputs,
+} from "./hooks/use-image-source-inputs";
 import { useImageSubmit } from "./hooks/use-image-submit";
 import { buildConversationPreviewSource } from "./view-utils";
 import {
@@ -489,6 +493,7 @@ export default function ImagePage() {
     buildEmptyTaskSnapshot(),
   );
   const [showTaskStats, setShowTaskStats] = useState(false);
+  const [maxReferenceImages, setMaxReferenceImages] = useState(DEFAULT_MAX_REFERENCE_IMAGES);
   const [inspirationExamples, setInspirationExamples] = useState<ImagePromptPreset[]>(() => pickRandomPromptPresets());
   const [favoritePromptPresetIds, setFavoritePromptPresetIds] = useState<Set<string>>(() => new Set());
   const persistedTaskStatesRef = useRef<Record<string, string>>({});
@@ -543,6 +548,28 @@ export default function ImagePage() {
         setShowTaskStats(user?.role === "admin");
       }
     });
+    fetchConfig()
+      .then((config) => {
+        if (cancelled) {
+          return;
+        }
+        setMaxReferenceImages(
+          Math.max(
+            1,
+            Math.min(
+              20,
+              Math.trunc(
+                config.chatgpt.maxReferenceImages || DEFAULT_MAX_REFERENCE_IMAGES,
+              ),
+            ),
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMaxReferenceImages(DEFAULT_MAX_REFERENCE_IMAGES);
+        }
+      });
     return () => {
       cancelled = true;
     };
@@ -592,6 +619,7 @@ export default function ImagePage() {
     focusConversation,
     textareaRef,
     makeId,
+    maxReferenceImages,
   });
   const selectedConversationActiveTaskByTurnId = useMemo(() => {
     const next = new Map<string, ImageTaskView>();
@@ -1718,6 +1746,7 @@ export default function ImagePage() {
         imageQualityDisabledReason={imageQualityDisabledReason}
         availableQuota={availableQuota}
         sourceImages={sourceImages}
+        maxReferenceImages={maxReferenceImages}
         imagePrompt={imagePrompt}
         promptPresets={imagePromptPresets}
         favoritePromptPresetIds={favoritePromptPresetIds}

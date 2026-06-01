@@ -54,6 +54,7 @@ type configPayload struct {
 		PaidImageModel                   string `json:"paidImageModel"`
 		StudioAllowDisabledImageAccounts bool   `json:"studioAllowDisabledImageAccounts"`
 		ImageAccountRetryTimes           int    `json:"imageAccountRetryTimes"`
+		MaxReferenceImages               int    `json:"maxReferenceImages"`
 		ImageCommonSystemHint            string `json:"imageCommonSystemHint"`
 		ImagePrivateSystemHint           string `json:"imagePrivateSystemHint"`
 		ImageSystemHint                  string `json:"imageSystemHint"`
@@ -233,6 +234,7 @@ func (s *Server) handleUpdateConfig(w http.ResponseWriter, r *http.Request) {
 			"paid_image_model":                     payload.ChatGPT.PaidImageModel,
 			"studio_allow_disabled_image_accounts": payload.ChatGPT.StudioAllowDisabledImageAccounts,
 			"image_account_retry_times":            payload.ChatGPT.ImageAccountRetryTimes,
+			"max_reference_images":                 payload.ChatGPT.MaxReferenceImages,
 			"image_common_system_hint":             payload.ChatGPT.ImageCommonSystemHint,
 			"image_private_system_hint":            privateSystemHint,
 			"image_system_hint":                    privateSystemHint,
@@ -503,6 +505,7 @@ func (s *Server) buildConfigPayloadFromConfig(cfg *config.Config) configPayload 
 	payload.ChatGPT.PaidImageModel = cfg.ChatGPT.PaidImageModel
 	payload.ChatGPT.StudioAllowDisabledImageAccounts = cfg.ChatGPT.StudioAllowDisabledImageAccounts
 	payload.ChatGPT.ImageAccountRetryTimes = cfg.ChatGPT.ImageAccountRetryTimes
+	payload.ChatGPT.MaxReferenceImages = cfg.MaxReferenceImages()
 	payload.ChatGPT.ImageCommonSystemHint = cfg.ChatGPT.ImageCommonSystemHint
 	payload.ChatGPT.ImagePrivateSystemHint = cfg.ImagePrivateSystemHint()
 	payload.ChatGPT.ImageSystemHint = cfg.ImagePrivateSystemHint()

@@ -56,6 +56,23 @@ func TestImageSystemHintAccessors(t *testing.T) {
 	}
 }
 
+func TestMaxReferenceImagesDefaultsAndBounds(t *testing.T) {
+	cfg := &Config{}
+	if got := cfg.MaxReferenceImages(); got != 4 {
+		t.Fatalf("MaxReferenceImages() default = %d, want 4", got)
+	}
+
+	cfg.ChatGPT.MaxReferenceImages = 8
+	if got := cfg.MaxReferenceImages(); got != 8 {
+		t.Fatalf("MaxReferenceImages() configured = %d, want 8", got)
+	}
+
+	cfg.ChatGPT.MaxReferenceImages = 99
+	if got := cfg.MaxReferenceImages(); got != 20 {
+		t.Fatalf("MaxReferenceImages() capped = %d, want 20", got)
+	}
+}
+
 func TestProxyURLs(t *testing.T) {
 	cfg := &Config{
 		Proxy: ProxyConfig{

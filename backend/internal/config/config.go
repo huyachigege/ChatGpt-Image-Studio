@@ -64,6 +64,7 @@ type ChatGPTConfig struct {
 	PaidImageModel                   string `toml:"paid_image_model"`
 	StudioAllowDisabledImageAccounts bool   `toml:"studio_allow_disabled_image_accounts"`
 	ImageAccountRetryTimes           int    `toml:"image_account_retry_times"`
+	MaxReferenceImages               int    `toml:"max_reference_images"`
 	ImageCommonSystemHint            string `toml:"image_common_system_hint"`
 	ImagePrivateSystemHint           string `toml:"image_private_system_hint"`
 	ImageSystemHint                  string `toml:"image_system_hint"`
@@ -614,6 +615,12 @@ func (c *Config) ImageAccountRetryTimes() int {
 	return retries
 }
 
+func (c *Config) MaxReferenceImages() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return normalizeMaxReferenceImages(c.ChatGPT.MaxReferenceImages)
+}
+
 func (c *Config) ImageCommonSystemHint() string {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -674,6 +681,7 @@ func (c *Config) validate() error {
 	if c.ChatGPT.ImageAccountRetryTimes > 10 {
 		c.ChatGPT.ImageAccountRetryTimes = 10
 	}
+	c.ChatGPT.MaxReferenceImages = normalizeMaxReferenceImages(c.ChatGPT.MaxReferenceImages)
 
 	if normalized, ok := normalizeImageMode(c.ChatGPT.ImageMode); !ok {
 		return fmt.Errorf("invalid chatgpt.image_mode %q: only studio or cpa are supported", strings.TrimSpace(c.ChatGPT.ImageMode))
@@ -782,6 +790,16 @@ func normalizeImageMode(mode string) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+func normalizeMaxReferenceImages(value int) int {
+	if value <= 0 {
+		return 4
+	}
+	if value > 20 {
+		return 20
+	}
+	return value
 }
 
 func normalizeStorageBackend(value string) string {

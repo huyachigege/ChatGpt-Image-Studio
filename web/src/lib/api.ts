@@ -387,6 +387,7 @@ export type ConfigPayload = {
     paidImageModel: string;
     studioAllowDisabledImageAccounts: boolean;
     imageAccountRetryTimes: number;
+    maxReferenceImages: number;
     imageCommonSystemHint: string;
     imagePrivateSystemHint: string;
     imageSystemHint: string;

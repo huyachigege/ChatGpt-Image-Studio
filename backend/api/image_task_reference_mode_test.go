@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"testing"
+
+	"chatgpt2api/internal/config"
 )
 
 func TestNormalizeCreateImageTaskRequestMovesGenerateSourceImagesToReferences(t *testing.T) {
@@ -62,9 +64,11 @@ func TestNormalizeCreateImageTaskRequestKeepsSingleImageEdit(t *testing.T) {
 }
 
 func TestNewTaskRejectsMoreThanMaxReferenceImages(t *testing.T) {
-	manager := &imageTaskManager{server: &Server{}}
-	references := make([]imageTaskReferenceImagePayload, 0, maxImageTaskReferenceImages+1)
-	for index := 0; index < maxImageTaskReferenceImages+1; index++ {
+	server := &Server{cfg: config.New(t.TempDir())}
+	server.cfg.ChatGPT.MaxReferenceImages = 2
+	manager := &imageTaskManager{server: server}
+	references := make([]imageTaskReferenceImagePayload, 0, 3)
+	for index := 0; index < 3; index++ {
 		references = append(references, imageTaskReferenceImagePayload{
 			ID:  "reference",
 			URL: "https://example.com/reference.png",
@@ -81,5 +85,8 @@ func TestNewTaskRejectsMoreThanMaxReferenceImages(t *testing.T) {
 	}
 	if code := requestErrorCode(err); code != "too_many_reference_images" {
 		t.Fatalf("requestErrorCode() = %q, want too_many_reference_images", code)
+	}
+	if got := err.Error(); got != "参考图最多只能使用 2 张" {
+		t.Fatalf("error = %q, want configured reference image limit", got)
 	}
 }

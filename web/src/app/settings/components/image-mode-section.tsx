@@ -400,6 +400,45 @@ export function ImageModeSection({
         ) : null}
         {isStudioMode ? (
           <Field
+            label="参考图数量上限"
+            hint="生成模式最多允许上传的参考图数量。默认 4，最大 20；后端也会按该值兜底限制。"
+            tooltip={
+              <TooltipDetails
+                items={[
+                  {
+                    title: "作用范围",
+                    body: <>影响前端上传参考图数量，以及后端创建图片任务时的最终校验。</>,
+                  },
+                  {
+                    title: "默认值",
+                    body: <>默认 4 张。调大后多图生成会消耗更多上传、压缩和上游处理时间。</>,
+                  },
+                ]}
+              />
+            }
+          >
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              step={1}
+              value={config.chatgpt.maxReferenceImages}
+              onChange={(event) => {
+                const next = Math.max(
+                  1,
+                  Math.min(20, Number(event.target.value) || 4),
+                );
+                setSection("chatgpt", {
+                  ...config.chatgpt,
+                  maxReferenceImages: next,
+                });
+              }}
+              className="h-11 rounded-2xl border-stone-200 bg-white shadow-none focus-visible:ring-0"
+            />
+          </Field>
+        ) : null}
+        {isStudioMode ? (
+          <Field
             label="Paid 模型"
             hint="Paid 图片统一走 external_responses，只保留 gpt-5.* 兼容模型；gpt-image-2 已移除。"
             tooltip={
