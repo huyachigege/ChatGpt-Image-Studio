@@ -2,16 +2,22 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"chatgpt2api/internal/config"
 )
 
-const maxPromptEnhanceReferenceImages = 4
+const (
+	maxPromptEnhanceReferenceImages       = 4
+	promptEnhanceReferenceReadyTimeout    = 2 * time.Second
+	promptEnhanceReferenceReadyPollPeriod = 50 * time.Millisecond
+)
 
 type imagePromptEnhanceRequest struct {
 	Prompt              string                        `json:"prompt"`
@@ -44,7 +50,7 @@ func (s *Server) handleEnhanceImagePrompt(w http.ResponseWriter, r *http.Request
 		writeAPIError(w, http.StatusBadRequest, "external_responses_not_configured", "external_responses 还未配置，请先设置至少一个可用 provider")
 		return
 	}
-	imageURLs, err := s.buildPromptEnhanceImageURLs(req.SourceImages, identityFromContext(r.Context()).UserID)
+	imageURLs, err := s.buildPromptEnhanceImageURLs(r.Context(), req.SourceImages, identityFromContext(r.Context()).UserID)
 	if err != nil {
 		writeAPIError(w, http.StatusBadRequest, "invalid_reference_image", err.Error())
 		return
@@ -79,7 +85,7 @@ func (s *Server) firstExternalResponsesProvider() (config.ExternalResponsesProvi
 	return providers[0], true
 }
 
-func (s *Server) buildPromptEnhanceImageURLs(sources []imageTaskSourceImagePayload, userID string) ([]string, error) {
+func (s *Server) buildPromptEnhanceImageURLs(ctx context.Context, sources []imageTaskSourceImagePayload, userID string) ([]string, error) {
 	urls := make([]string, 0, min(len(sources), maxPromptEnhanceReferenceImages))
 	for _, source := range sources {
 		if strings.EqualFold(strings.TrimSpace(source.Role), "mask") {
@@ -94,6 +100,9 @@ func (s *Server) buildPromptEnhanceImageURLs(sources []imageTaskSourceImagePaylo
 			return nil, err
 		}
 		if strings.TrimSpace(url) != "" {
+			if err := s.waitPromptEnhanceImageURLAvailable(ctx, url); err != nil {
+				return nil, err
+			}
 			urls = append(urls, url)
 		}
 		if len(urls) >= maxPromptEnhanceReferenceImages {
@@ -101,6 +110,41 @@ func (s *Server) buildPromptEnhanceImageURLs(sources []imageTaskSourceImagePaylo
 		}
 	}
 	return urls, nil
+}
+
+func (s *Server) waitPromptEnhanceImageURLAvailable(ctx context.Context, imageURL string) error {
+	name := promptEnhanceImageNameFromURL(imageURL)
+	if name == "" {
+		return nil
+	}
+	deadline := time.NewTimer(promptEnhanceReferenceReadyTimeout)
+	defer deadline.Stop()
+	ticker := time.NewTicker(promptEnhanceReferenceReadyPollPeriod)
+	defer ticker.Stop()
+	for {
+		if path := s.resolveImageFilePath(name); path != "" {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-deadline.C:
+			return fmt.Errorf("reference image is not available through %s", imagePathMarker+name)
+		case <-ticker.C:
+		}
+	}
+}
+
+func promptEnhanceImageNameFromURL(imageURL string) string {
+	imageURL = strings.TrimSpace(imageURL)
+	if !strings.Contains(imageURL, imagePathMarker) {
+		return ""
+	}
+	name := strings.TrimSpace(extractImagePathFromURL(imageURL))
+	if index := strings.Index(name, "?"); index >= 0 {
+		name = name[:index]
+	}
+	return strings.Trim(name, "/")
 }
 
 func runImagePromptEnhanceModel(r *http.Request, provider config.ExternalResponsesProviderConfig, req imagePromptEnhanceRequest, imageURLs []string) ([]string, error) {

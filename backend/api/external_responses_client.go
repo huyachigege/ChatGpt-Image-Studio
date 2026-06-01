@@ -121,11 +121,11 @@ func (c *externalResponsesClient) DownloadAsBase64(ctx context.Context, url stri
 }
 
 func (c *externalResponsesClient) GenerateImage(ctx context.Context, prompt, model string, n int, size, quality, background string) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, "", "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, "", "", "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithPreviousResponse(ctx context.Context, prompt, model string, n int, size, quality, background, previousResponseID string) ([]handler.ImageResult, error) {
-	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, previousResponseID, "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesPrompt(prompt), nil, nil, nil, size, quality, background, previousResponseID, "", "")
 }
 
 func (c *externalResponsesClient) GenerateImageWithReferenceImages(ctx context.Context, prompt, model string, n int, size, quality, background string, images [][]byte) ([]handler.ImageResult, error) {
@@ -136,14 +136,14 @@ func (c *externalResponsesClient) GenerateImageWithReferenceImages(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(references)), references, nil, nil, size, quality, background, "", "generate")
+	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(references)), references, nil, nil, size, quality, background, "", "generate", handler.ResponsesReferenceOutputFormat(len(references), size, quality))
 }
 
 func (c *externalResponsesClient) GenerateImageWithReferenceImageURLs(ctx context.Context, prompt, model string, n int, size, quality, background string, imageURLs []string) ([]handler.ImageResult, error) {
 	if len(imageURLs) == 0 {
 		return c.GenerateImage(ctx, prompt, model, n, size, quality, background)
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(imageURLs)), nil, nil, imageURLs, size, quality, background, "", "generate")
+	return c.generateViaResponses(ctx, handler.BuildResponsesReferencePrompt(prompt, len(imageURLs)), nil, nil, imageURLs, size, quality, background, "", "generate", handler.ResponsesReferenceOutputFormat(len(imageURLs), size, quality))
 }
 
 func (c *externalResponsesClient) EditImageByUpload(ctx context.Context, prompt, model string, images [][]byte, mask []byte, size, quality string) ([]handler.ImageResult, error) {
@@ -152,7 +152,7 @@ func (c *externalResponsesClient) EditImageByUpload(ctx context.Context, prompt,
 		if err != nil {
 			return nil, err
 		}
-		return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(references), false), references, nil, nil, size, quality, "", "", "edit")
+		return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(references), false), references, nil, nil, size, quality, "", "", "edit", handler.ResponsesReferenceOutputFormat(len(references), size, quality))
 	}
 	return c.EditImageByUploadWithPreviousResponse(ctx, prompt, model, images, mask, size, quality, "")
 }
@@ -164,14 +164,14 @@ func (c *externalResponsesClient) EditImageByUploadWithPreviousResponse(ctx cont
 	if !handler.SupportsResponsesInlineEdit(images, mask) {
 		return nil, fmt.Errorf("responses inline edit payload is too large")
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(images), len(mask) > 0), images, mask, nil, size, quality, "", previousResponseID, "")
+	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(images), len(mask) > 0), images, mask, nil, size, quality, "", previousResponseID, "", "")
 }
 
 func (c *externalResponsesClient) EditImageByUploadWithImageURLs(ctx context.Context, prompt, model string, imageURLs []string, mask []byte, size, quality string) ([]handler.ImageResult, error) {
 	if len(imageURLs) == 0 {
 		return nil, fmt.Errorf("at least one image is required")
 	}
-	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(imageURLs), len(mask) > 0), nil, mask, imageURLs, size, quality, "", "", "edit")
+	return c.generateViaResponses(ctx, handler.BuildResponsesEditPrompt(prompt, len(imageURLs), len(mask) > 0), nil, mask, imageURLs, size, quality, "", "", "edit", handler.ResponsesReferenceOutputFormat(len(imageURLs), size, quality))
 }
 
 func (c *externalResponsesClient) InpaintImageByMask(ctx context.Context, prompt string, model string, originalFileID string, originalGenID string, conversationID string, parentMessageID string, mask []byte, size string, quality string) ([]handler.ImageResult, error) {
@@ -256,15 +256,24 @@ func (c *externalResponsesClient) SetSessionID(sessionID string) {
 	_ = sessionID
 }
 
-func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string) ([]handler.ImageResult, error) {
-	payload, err := c.buildResponsesRequest(prompt, images, mask, imageURLs, size, quality, background, previousResponseID, action)
+func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string, outputFormat string) ([]handler.ImageResult, error) {
+	format := handler.NormalizeResponsesImageOutputFormat(outputFormat)
+	payload, err := c.buildResponsesRequest(prompt, images, mask, imageURLs, size, quality, background, previousResponseID, action, format)
 	if err != nil {
 		return nil, err
 	}
-	return c.executeResponsesRequest(ctx, payload)
+	results, err := c.executeResponsesRequest(ctx, payload)
+	if err != nil && ctx.Err() == nil && format != "jpeg" && isResponsesURLReferenceFallbackError(err) {
+		payload, buildErr := c.buildResponsesRequest(prompt, images, mask, imageURLs, size, quality, background, previousResponseID, action, "jpeg")
+		if buildErr != nil {
+			return nil, buildErr
+		}
+		return c.executeResponsesRequest(ctx, payload)
+	}
+	return results, err
 }
 
-func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string) (map[string]any, error) {
+func (c *externalResponsesClient) buildResponsesRequest(prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string, outputFormat string) (map[string]any, error) {
 	imageParts := make([]map[string]any, 0, len(images)+len(imageURLs))
 	for _, image := range images {
 		if len(image) == 0 {
@@ -301,6 +310,7 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 		Quality:        quality,
 		Background:     background,
 		Mask:           mask,
+		OutputFormat:   outputFormat,
 	})
 	if err != nil {
 		return nil, err

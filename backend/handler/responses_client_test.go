@@ -357,6 +357,104 @@ func TestPrepareResponsesReferenceImagesUsesCompactShortSideForFiveImages(t *tes
 	}
 }
 
+func TestBuildResponsesImageGenerationToolDefaultsAndOverridesOutputFormat(t *testing.T) {
+	tool, err := buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{})
+	if err != nil {
+		t.Fatalf("buildResponsesImageGenerationTool() returned error: %v", err)
+	}
+	if got := tool["output_format"]; got != "png" {
+		t.Fatalf("default output_format = %v, want png", got)
+	}
+
+	tool, err = buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{OutputFormat: "jpg"})
+	if err != nil {
+		t.Fatalf("buildResponsesImageGenerationTool() returned error: %v", err)
+	}
+	if got := tool["output_format"]; got != "jpeg" {
+		t.Fatalf("jpeg output_format = %v, want jpeg", got)
+	}
+}
+
+func TestResponsesReferenceOutputFormatUsesJPEGForFiveHighQuality4KReferences(t *testing.T) {
+	if got := ResponsesReferenceOutputFormat(5, "3840x2160", "high"); got != "jpeg" {
+		t.Fatalf("ResponsesReferenceOutputFormat() = %q, want jpeg", got)
+	}
+	if got := ResponsesReferenceOutputFormat(5, "2160x3840", "high"); got != "jpeg" {
+		t.Fatalf("ResponsesReferenceOutputFormat() portrait = %q, want jpeg", got)
+	}
+	if got := ResponsesReferenceOutputFormat(4, "3840x2160", "high"); got != "" {
+		t.Fatalf("four references output format = %q, want empty", got)
+	}
+	if got := ResponsesReferenceOutputFormat(5, "1536x1024", "high"); got != "" {
+		t.Fatalf("non-4k output format = %q, want empty", got)
+	}
+	if got := ResponsesReferenceOutputFormat(5, "3840x2160", "medium"); got != "" {
+		t.Fatalf("non-high output format = %q, want empty", got)
+	}
+}
+
+func TestResponsesClientUsesJPEGForFiveHighQuality4KReferences(t *testing.T) {
+	var requestBody map[string]any
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		body, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(body, &requestBody); err != nil {
+			return nil, err
+		}
+		stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"jpeg"}]}}` + "\n\n"
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+	})}
+
+	images := [][]byte{testPNGBytes(), testPNGBytes(), testPNGBytes(), testPNGBytes(), testPNGBytes()}
+	if _, err := client.GenerateImageWithReferenceImages(t.Context(), "draw", "gpt-5.5", 1, "3840x2160", "high", "", images); err != nil {
+		t.Fatalf("GenerateImageWithReferenceImages() returned error: %v", err)
+	}
+	tool := requestBody["tools"].([]any)[0].(map[string]any)
+	if got := tool["output_format"]; got != "jpeg" {
+		t.Fatalf("tool output_format = %v, want jpeg", got)
+	}
+}
+
+func TestResponsesClientRetriesServerErrorAsJPEG(t *testing.T) {
+	requests := make([]map[string]any, 0, 2)
+	client := NewResponsesClientWithProxyAndConfig("token", "", map[string]any{}, ImageRequestConfig{})
+	client.httpClient = &http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		var body map[string]any
+		raw, err := io.ReadAll(req.Body)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(raw, &body); err != nil {
+			return nil, err
+		}
+		requests = append(requests, body)
+		if len(requests) == 1 {
+			stream := `data: {"type":"response.failed","error":{"code":"server_error","message":"An error occurred while processing your request. You can retry your request."}}` + "\n\n"
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+		}
+		stream := `data: {"type":"response.completed","response":{"output":[{"type":"image_generation_call","result":"aGVsbG8=","output_format":"jpeg"}]}}` + "\n\n"
+		return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(stream)), Header: http.Header{}}, nil
+	})}
+
+	if _, err := client.GenerateImage(t.Context(), "draw", "gpt-5.5", 1, "1536x1024", "high", ""); err != nil {
+		t.Fatalf("GenerateImage() returned error: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	firstTool := requests[0]["tools"].([]any)[0].(map[string]any)
+	if got := firstTool["output_format"]; got != "png" {
+		t.Fatalf("first output_format = %v, want png", got)
+	}
+	secondTool := requests[1]["tools"].([]any)[0].(map[string]any)
+	if got := secondTool["output_format"]; got != "jpeg" {
+		t.Fatalf("second output_format = %v, want jpeg", got)
+	}
+}
+
 func TestBuildResponsesImageGenerationToolIncludesSupportedSize(t *testing.T) {
 	tool, err := buildResponsesImageGenerationToolWithOptions(responsesImageToolOptions{
 		RequestedModel: "gpt-image-2",

@@ -1,12 +1,21 @@
 package api
 
 import (
+	"bytes"
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"chatgpt2api/internal/accounts"
 	"chatgpt2api/internal/config"
@@ -43,14 +52,15 @@ func TestHandleEnhanceImagePromptUsesFixedImageURL(t *testing.T) {
 	defer upstream.Close()
 
 	server := newPromptEnhanceTestServer(t, upstream, nil)
-	body := `{
+	dataURL := validPromptEnhancePNGDataURL(t)
+	body := fmt.Sprintf(`{
 		"prompt":"换成雨夜",
 		"mode":"generate",
 		"sourceImages":[
-			{"id":"source-1","role":"image","name":"source.png","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"},
-			{"id":"mask-1","role":"mask","name":"mask.png","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"}
+			{"id":"source-1","role":"image","name":"source.png","dataUrl":%q},
+			{"id":"mask-1","role":"mask","name":"mask.png","dataUrl":%q}
 		]
-	}`
+	}`, dataURL, dataURL)
 	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -114,7 +124,7 @@ func TestHandleEnhanceImagePromptUsesConfiguredReferenceImageBaseURL(t *testing.
 	server := newPromptEnhanceTestServer(t, upstream, func(cfg *config.Config) {
 		cfg.ExternalResponses.ReferenceImageBaseURL = "https://proxy.example/http://origin.example"
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"}]}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(fmt.Sprintf(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":%q}]}`, validPromptEnhancePNGDataURL(t))))
 	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -151,7 +161,7 @@ func TestHandleEnhanceImagePromptUsesBase64ReferenceImage(t *testing.T) {
 	server := newPromptEnhanceTestServer(t, upstream, func(cfg *config.Config) {
 		cfg.ExternalResponses.ReferenceImageMode = "base64"
 	})
-	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC"}]}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/image/prompt-enhance", strings.NewReader(fmt.Sprintf(`{"prompt":"测试","sourceImages":[{"role":"image","dataUrl":%q}]}`, validPromptEnhancePNGDataURL(t))))
 	req.Header.Set("Authorization", "Bearer "+server.cfg.App.AuthKey)
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -163,6 +173,41 @@ func TestHandleEnhanceImagePromptUsesBase64ReferenceImage(t *testing.T) {
 	if !strings.HasPrefix(imageURL, "data:image/jpeg;base64,") {
 		t.Fatalf("image url = %q, want jpeg data url", imageURL)
 	}
+}
+
+func TestWaitPromptEnhanceImageURLAvailableWaitsForFile(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	server := NewServer(cfg, nil, nil)
+	t.Cleanup(func() { server.Close() })
+
+	imageDir := filepath.Join(cfg.ResolvePath(cfg.Storage.ImageDir), ".thumbs")
+	if err := os.MkdirAll(imageDir, 0o755); err != nil {
+		t.Fatalf("MkdirAll() returned error: %v", err)
+	}
+	go func() {
+		time.Sleep(100 * time.Millisecond)
+		_ = os.WriteFile(filepath.Join(imageDir, "delayed.png"), []byte("ready"), 0o644)
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := server.waitPromptEnhanceImageURLAvailable(ctx, externalResponsesPublicImageBaseURL+"/v1/files/image/.thumbs/delayed.png"); err != nil {
+		t.Fatalf("waitPromptEnhanceImageURLAvailable() returned error: %v", err)
+	}
+}
+
+func validPromptEnhancePNGDataURL(t *testing.T) string {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
+	img.Set(0, 0, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatalf("encode png: %v", err)
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
 func TestHandleEnhanceImagePromptReturnsUpstreamEmptyError(t *testing.T) {

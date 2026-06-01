@@ -360,6 +360,62 @@ func TestNewResponsesWorkflowClientFreeDoesNotFallbackToLegacyInsideResponsesRou
 	}
 }
 
+func TestExternalResponsesClientUsesJPEGForFiveHighQuality4KReferences(t *testing.T) {
+	var requestBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = fmt.Fprint(w, "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_ext\",\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aGVsbG8=\",\"output_format\":\"jpeg\"}]}}\n\n")
+	}))
+	defer server.Close()
+
+	client := newExternalResponsesClient(config.ExternalResponsesConfig{BaseURL: server.URL, APIKey: "key", Model: "external-model"})
+	images := [][]byte{apiTestPNGBytes(), apiTestPNGBytes(), apiTestPNGBytes(), apiTestPNGBytes(), apiTestPNGBytes()}
+	if _, err := client.GenerateImageWithReferenceImages(context.Background(), "draw", "ignored", 1, "3840x2160", "high", "", images); err != nil {
+		t.Fatalf("GenerateImageWithReferenceImages() returned error: %v", err)
+	}
+	tool := requestBody["tools"].([]any)[0].(map[string]any)
+	if got := tool["output_format"]; got != "jpeg" {
+		t.Fatalf("tool output_format = %v, want jpeg", got)
+	}
+}
+
+func TestExternalResponsesClientRetriesServerErrorAsJPEG(t *testing.T) {
+	requests := make([]map[string]any, 0, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		requests = append(requests, body)
+		w.Header().Set("Content-Type", "text/event-stream")
+		if len(requests) == 1 {
+			_, _ = fmt.Fprint(w, "data: {\"type\":\"response.failed\",\"error\":{\"code\":\"server_error\",\"message\":\"An error occurred while processing your request. You can retry your request.\"}}\n\n")
+			return
+		}
+		_, _ = fmt.Fprint(w, "data: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_ext\",\"output\":[{\"type\":\"image_generation_call\",\"result\":\"aGVsbG8=\",\"output_format\":\"jpeg\"}]}}\n\n")
+	}))
+	defer server.Close()
+
+	client := newExternalResponsesClient(config.ExternalResponsesConfig{BaseURL: server.URL, APIKey: "key", Model: "external-model"})
+	if _, err := client.GenerateImage(context.Background(), "draw", "ignored", 1, "1536x1024", "high", ""); err != nil {
+		t.Fatalf("GenerateImage() returned error: %v", err)
+	}
+	if len(requests) != 2 {
+		t.Fatalf("request count = %d, want 2", len(requests))
+	}
+	firstTool := requests[0]["tools"].([]any)[0].(map[string]any)
+	if got := firstTool["output_format"]; got != "png" {
+		t.Fatalf("first output_format = %v, want png", got)
+	}
+	secondTool := requests[1]["tools"].([]any)[0].(map[string]any)
+	if got := secondTool["output_format"]; got != "jpeg" {
+		t.Fatalf("second output_format = %v, want jpeg", got)
+	}
+}
+
 func TestExternalResponsesClientTimeoutDefault(t *testing.T) {
 	client := newExternalResponsesClient(config.ExternalResponsesConfig{BaseURL: "https://example.com", APIKey: "key", Model: "model"})
 	if client.httpClient.Timeout != 300*time.Second {
