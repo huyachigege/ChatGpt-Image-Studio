@@ -175,6 +175,24 @@ func TestHandleEnhanceImagePromptUsesBase64ReferenceImage(t *testing.T) {
 	}
 }
 
+func TestBuildExternalResponsesOriginalImageReferenceUsesBase64Mode(t *testing.T) {
+	cfg := config.New(t.TempDir())
+	if err := cfg.Load(); err != nil {
+		t.Fatalf("Load() returned error: %v", err)
+	}
+	cfg.ExternalResponses.ReferenceImageMode = "base64"
+	server := NewServer(cfg, nil, nil)
+	defer server.Close()
+
+	ref, err := server.buildExternalResponsesOriginalImageReference(decodePromptEnhanceDataURL(t, validPromptEnhancePNGDataURL(t)), "", "source")
+	if err != nil {
+		t.Fatalf("buildExternalResponsesOriginalImageReference() returned error: %v", err)
+	}
+	if !strings.HasPrefix(ref, "data:image/jpeg;base64,") {
+		t.Fatalf("reference = %q, want jpeg data url", ref)
+	}
+}
+
 func TestWaitPromptEnhanceImageURLAvailableWaitsForFile(t *testing.T) {
 	cfg := config.New(t.TempDir())
 	if err := cfg.Load(); err != nil {
@@ -208,6 +226,19 @@ func validPromptEnhancePNGDataURL(t *testing.T) string {
 		t.Fatalf("encode png: %v", err)
 	}
 	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func decodePromptEnhanceDataURL(t *testing.T, dataURL string) []byte {
+	t.Helper()
+	comma := strings.Index(dataURL, ",")
+	if comma < 0 {
+		t.Fatalf("data url missing comma: %q", dataURL)
+	}
+	data, err := base64.StdEncoding.DecodeString(dataURL[comma+1:])
+	if err != nil {
+		t.Fatalf("decode data url: %v", err)
+	}
+	return data
 }
 
 func TestHandleEnhanceImagePromptReturnsUpstreamEmptyError(t *testing.T) {

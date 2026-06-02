@@ -191,8 +191,6 @@ type imageTaskUnit struct {
 	NextAttemptAt     time.Time
 	Cancel            context.CancelFunc
 	Attempted         map[string]struct{}
-	ExternalStart     int
-	ExternalStartInit bool
 }
 
 type imageTask struct {

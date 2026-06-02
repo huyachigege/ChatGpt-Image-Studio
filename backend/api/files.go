@@ -105,6 +105,9 @@ func (s *Server) buildExternalResponsesImageReference(data []byte, userID, prefi
 }
 
 func (s *Server) buildExternalResponsesOriginalImageReference(data []byte, userID, prefix string) (string, error) {
+	if strings.EqualFold(strings.TrimSpace(s.cfg.ExternalResponsesImageReferenceMode()), "base64") {
+		return encodeJPEGReferenceImageDataURL(data)
+	}
 	name, err := s.saveOriginalImageBytesForURL(data, userID, prefix)
 	if err != nil {
 		return "", err

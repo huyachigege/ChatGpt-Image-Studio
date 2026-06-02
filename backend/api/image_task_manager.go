@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"strings"
 	"sync"
@@ -810,9 +809,7 @@ func (m *imageTaskManager) externalResponsesLeaseForTaskLocked(task *imageTask, 
 		return nil, imageTaskBlocker{}, newRequestError("external_responses_not_configured", "external_responses 还未配置，请先设置至少一个可用 provider")
 	}
 	attempted := imageTaskUnitAttemptedTokens(task, unitIndex)
-	start := m.ensureExternalProviderStart(task, unitIndex, len(providers))
-	for offset := 0; offset < len(providers); offset++ {
-		provider := providers[(start+offset)%len(providers)]
+	for _, provider := range providers {
 		if _, ok := attempted[externalResponsesAttemptToken(provider.ID)]; ok {
 			continue
 		}
@@ -830,23 +827,6 @@ func (m *imageTaskManager) clearExternalProviderAttemptsLocked(task *imageTask, 
 	if current := m.tasks[task.ID]; current != nil {
 		imageTaskUnitClearAttempts(current, unitIndex)
 	}
-}
-
-func (m *imageTaskManager) ensureExternalProviderStart(task *imageTask, unitIndex int, providerCount int) int {
-	if task == nil || unitIndex < 0 || unitIndex >= len(task.Units) || providerCount <= 1 {
-		return 0
-	}
-	if task.Units[unitIndex].ExternalStartInit {
-		return task.Units[unitIndex].ExternalStart % providerCount
-	}
-	start := rand.Intn(providerCount)
-	task.Units[unitIndex].ExternalStart = start
-	task.Units[unitIndex].ExternalStartInit = true
-	if current := m.tasks[task.ID]; current != nil && unitIndex < len(current.Units) {
-		current.Units[unitIndex].ExternalStart = start
-		current.Units[unitIndex].ExternalStartInit = true
-	}
-	return start
 }
 
 func (m *imageTaskManager) externalResponsesLease(provider config.ExternalResponsesProviderConfig) *imageTaskLease {
