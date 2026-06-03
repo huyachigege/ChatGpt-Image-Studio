@@ -83,6 +83,9 @@ func TestExternalResponsesClientUsesConfiguredEndpointKeyAndModel(t *testing.T) 
 		if got := r.Header.Get("Authorization"); got != "Bearer external-key" {
 			t.Fatalf("Authorization = %q, want bearer key", got)
 		}
+		if got := r.Header.Get("Session_id"); got != "session-1" {
+			t.Fatalf("Session_id = %q, want injected session", got)
+		}
 		if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
 			t.Fatalf("decode request body: %v", err)
 		}
@@ -101,6 +104,7 @@ func TestExternalResponsesClientUsesConfiguredEndpointKeyAndModel(t *testing.T) 
 	})
 	client.SetRequestedImageModel("gpt-5.5")
 	client.SetInstructions("follow system hint")
+	client.SetSessionID("session-1")
 	images, err := client.GenerateImage(context.Background(), "draw", "ignored", 1, "1024x1024", "high", "transparent")
 	if err != nil {
 		t.Fatalf("GenerateImage() returned error: %v", err)

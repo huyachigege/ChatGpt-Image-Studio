@@ -15,11 +15,15 @@ import (
 
 	"chatgpt2api/handler"
 	"chatgpt2api/internal/config"
+	"github.com/google/uuid"
 )
 
 var claudeResponsesUserAgent = "Codex Desktop/0.131.0-alpha.9 (Windows 10.0.26200; x86_64) unknown (Codex Desktop; 26.513.40821)"
 
-const maxExternalResponsesSSELineBytes = 128 << 20
+const (
+	codexResponsesOriginator         = "codex-tui"
+	maxExternalResponsesSSELineBytes = 128 << 20
+)
 
 type externalResponsesClient struct {
 	providerID          string
@@ -34,6 +38,7 @@ type externalResponsesClient struct {
 	lastModel           string
 	lastRequestBody     string
 	lastFallbackReason  string
+	sessionID           string
 }
 
 func newExternalResponsesClient(cfg config.ExternalResponsesConfig) *externalResponsesClient {
@@ -63,6 +68,7 @@ func newExternalResponsesClientForProvider(provider config.ExternalResponsesProv
 		baseURL:      strings.TrimRight(strings.TrimSpace(provider.BaseURL), "/"),
 		apiKey:       strings.TrimSpace(provider.APIKey),
 		model:        strings.TrimSpace(provider.Model),
+		sessionID:    uuid.NewString(),
 		httpClient: &http.Client{
 			Timeout: timeout,
 		},
@@ -253,7 +259,12 @@ func (c *externalResponsesClient) SetInstructions(instructions string) {
 }
 
 func (c *externalResponsesClient) SetSessionID(sessionID string) {
-	_ = sessionID
+	if c == nil {
+		return
+	}
+	if trimmed := strings.TrimSpace(sessionID); trimmed != "" {
+		c.sessionID = trimmed
+	}
 }
 
 func (c *externalResponsesClient) generateViaResponses(ctx context.Context, prompt string, images [][]byte, mask []byte, imageURLs []string, size, quality, background string, previousResponseID string, action string, outputFormat string) ([]handler.ImageResult, error) {
@@ -328,6 +339,7 @@ func (c *externalResponsesClient) buildResponsesRequest(prompt string, images []
 		"instructions": instructions,
 		"stream":       true,
 		"store":        false,
+		"include":      []string{"reasoning.encrypted_content"},
 	}
 	if previousResponseID = strings.TrimSpace(previousResponseID); previousResponseID != "" {
 		payload["previous_response_id"] = previousResponseID
@@ -350,6 +362,13 @@ func (c *externalResponsesClient) executeResponsesRequest(ctx context.Context, b
 	req.Header.Set("Accept", "text/event-stream")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", claudeResponsesUserAgent)
+	req.Header.Set("Originator", codexResponsesOriginator)
+	sessionID := strings.TrimSpace(c.sessionID)
+	if sessionID == "" {
+		sessionID = uuid.NewString()
+	}
+	req.Header.Set("Session_id", sessionID)
+	req.Header.Set("Connection", "Keep-Alive")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
